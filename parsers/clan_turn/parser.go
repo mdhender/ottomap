@@ -102,15 +102,11 @@ func sniffMovement(id string, input []byte) []byte {
 		if n == 0 {
 			location = line
 		} else if bytes.HasPrefix(line, []byte("Tribe Movement:")) {
-			// unit movement should skip the word "Tribe" and the space
-			unitMovement = line[6:]
+			unitMovement = line
 		} else if reScout.Match(line) {
-			// the scout needs to skip the scout id and colon
-			scoutMovements = append(scoutMovements, line[8:])
-			//scoutMovements = append(scoutMovements, line[8:])
+			scoutMovements = append(scoutMovements, line)
 		} else if reStatus.Match(line) {
-			// the status needs to skip the unit id and the space
-			unitStatus = line[len(id)+1:]
+			unitStatus = line
 		}
 	}
 
@@ -128,7 +124,7 @@ func sniffMovement(id string, input []byte) []byte {
 		results = append(results, '\n')
 	}
 	if unitStatus == nil {
-		results = append(results, []byte("Status: UNKNOWN, "+id)...)
+		results = append(results, []byte(id+" Status: UNKNOWN, "+id)...)
 	} else {
 		results = append(results, unitStatus...)
 	}
