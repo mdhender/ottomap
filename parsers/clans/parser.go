@@ -113,21 +113,17 @@ func sniffMovement(id string, input []byte) []byte {
 	var results []byte
 	results = append(results, location...)
 	results = append(results, '\n')
-	if unitMovement == nil {
-		results = append(results, []byte("Tribe Movement: Still\\")...)
-	} else {
+	if unitMovement != nil {
 		results = append(results, unitMovement...)
+		results = append(results, '\n')
 	}
-	results = append(results, '\n')
 	for _, scoutMovement := range scoutMovements {
 		results = append(results, scoutMovement...)
 		results = append(results, '\n')
 	}
-	if unitStatus == nil {
-		results = append(results, []byte(id+" Status: UNKNOWN, "+id)...)
-	} else {
+	if unitStatus != nil {
 		results = append(results, unitStatus...)
+		results = append(results, '\n')
 	}
-	results = append(results, '\n')
 	return results
 }
