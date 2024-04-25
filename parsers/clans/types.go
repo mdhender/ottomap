@@ -1,7 +1,7 @@
 // Copyright (c) 2024 Michael D Henderson. All rights reserved.
 
 // Package tribe_turn implements a parser for tribe turn files.
-package clan_turn
+package clans
 
 type InputFile struct {
 	Year  string // three digits

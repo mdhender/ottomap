@@ -5,7 +5,7 @@ package main
 import (
 	"fmt"
 	"github.com/mdhender/ottomap/cerrs"
-	"github.com/mdhender/ottomap/parsers/clan_turn"
+	"github.com/mdhender/ottomap/parsers/clans"
 	"github.com/spf13/cobra"
 	"log"
 	"os"
@@ -29,7 +29,7 @@ var cmdParseReports = &cobra.Command{
 		}
 
 		// find all turn reports in the input path
-		var inputFiles []clan_turn.InputFile
+		var inputFiles []clans.InputFile
 		entries, err := os.ReadDir(argsParse.input)
 		if err != nil {
 			log.Fatal(err)
@@ -44,7 +44,7 @@ var cmdParseReports = &cobra.Command{
 			if len(matches) != 4 {
 				continue
 			}
-			inputFiles = append(inputFiles, clan_turn.InputFile{
+			inputFiles = append(inputFiles, clans.InputFile{
 				Year:  matches[1],
 				Month: matches[2],
 				Clan:  matches[3],
@@ -53,7 +53,7 @@ var cmdParseReports = &cobra.Command{
 		}
 
 		for _, inputFile := range inputFiles {
-			clan, parseErr := clan_turn.Parse(inputFile)
+			clan, parseErr := clans.Parse(inputFile)
 			if parseErr != nil {
 				log.Printf("parse: reports: %s: error: %v\n", inputFile.File, parseErr)
 				err = cerrs.ErrParseFailed

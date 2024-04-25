@@ -1,6 +1,6 @@
 // Copyright (c) 2024 Michael D Henderson. All rights reserved.
 
-package clan_turn
+package clans
 
 import (
 	"bytes"
@@ -31,10 +31,10 @@ func Parse(input InputFile) (*Turn, error) {
 		break
 	}
 	if separator == nil {
-		log.Printf("clan_turn: %s: missing separator\n", input.File)
+		log.Printf("clans: %s: missing separator\n", input.File)
 		return nil, cerrs.ErrNoSeparator
 	}
-	log.Printf("clan_turn: %s: separator %q\n", input.File, separator)
+	log.Printf("clans: %s: separator %q\n", input.File, separator)
 
 	turn := &Turn{
 		Clan: input.Clan,
