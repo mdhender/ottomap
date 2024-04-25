@@ -10,7 +10,11 @@ type Error string
 func (e Error) Error() string { return string(e) }
 
 const (
-	ErrNoSeparator    = Error("no separator")
-	ErrNotImplemented = Error("not implemented")
-	ErrParseFailed    = Error("parse failed")
+	ErrInvalidInputPath  Error = "invalid input path"
+	ErrInvalidOutputPath Error = "invalid output path"
+	ErrInvalidPath             = Error("invalid path")
+	ErrNoSeparator             = Error("no separator")
+	ErrNotDirectory            = Error("not a directory")
+	ErrNotImplemented          = Error("not implemented")
+	ErrParseFailed             = Error("parse failed")
 )
