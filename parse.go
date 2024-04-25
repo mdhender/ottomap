@@ -27,17 +27,17 @@ var cmdParse = &cobra.Command{
 			argsParse.input = path
 		}
 
-		//log.Printf("parse: reports: output %s\n", argsParse.output)
+		//log.Printf("parse: output %s\n", argsParse.output)
 		if strings.TrimSpace(argsParse.output) != argsParse.output {
 			return errors.Join(cerrs.ErrInvalidPath, cerrs.ErrInvalidOutputPath, fmt.Errorf("leading or trailing spaces"))
-		} else if path, err := abspath(argsParse.input); err != nil {
+		} else if path, err := abspath(argsParse.output); err != nil {
 			return errors.Join(cerrs.ErrInvalidPath, cerrs.ErrInvalidOutputPath, err)
 		} else {
 			argsParse.output = path
 		}
 
-		//log.Printf("parse: reports: input  %s\n", argsParse.input)
-		//log.Printf("parse: reports: output %s\n", argsParse.output)
+		//log.Printf("parse: input  %s\n", argsParse.input)
+		//log.Printf("parse: output %s\n", argsParse.output)
 
 		return nil
 	},
