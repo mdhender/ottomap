@@ -21,31 +21,35 @@ var cmdParseReports = &cobra.Command{
 		log.Printf("parse: reports: input  %s\n", argsParse.input)
 		log.Printf("parse: reports: output %s\n", argsParse.output)
 
-		// find all turn report files in the input directory.
-		// they will be all files with a name like YEAR-MONTH.TRIBE.input.txt
+		// turn reports have names like YEAR-MONTH.CLAN.input.txt
+		pattern := `^(\d{3})-(\d{2})\.(0\d{3})\.input\.txt$`
+		re, err := regexp.Compile(pattern)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		// find all turn reports in the input path
 		var inputFiles []clan_turn.InputFile
 		entries, err := os.ReadDir(argsParse.input)
 		if err != nil {
 			log.Fatal(err)
-		} else {
-			// tribe input files have the pattern of YYY-MM.CLAN.input.txt.
-			pattern := `^\d{3}-\d{2}\.0\d{3}\.input\.txt$`
-			re, err := regexp.Compile(pattern)
-			if err != nil {
-				log.Fatal(err)
+		}
+		for _, entry := range entries {
+			if entry.IsDir() {
+				continue
 			}
-			for _, entry := range entries {
-				// If the entry is a file and the name matches our pattern...
-				if !entry.IsDir() && re.MatchString(entry.Name()) {
-					fileName := entry.Name()
-					inputFiles = append(inputFiles, clan_turn.InputFile{
-						Year:  fileName[0:3],
-						Month: fileName[4:6],
-						Clan:  fileName[7:11],
-						File:  filepath.Join(argsParse.input, fileName),
-					})
-				}
+			fileName := entry.Name()
+			matches := re.FindStringSubmatch(fileName)
+			//log.Printf("matches %2d %v\n", len(matches), matches)
+			if len(matches) != 4 {
+				continue
 			}
+			inputFiles = append(inputFiles, clan_turn.InputFile{
+				Year:  matches[1],
+				Month: matches[2],
+				Clan:  matches[3],
+				File:  filepath.Join(argsParse.input, fileName),
+			})
 		}
 
 		for _, inputFile := range inputFiles {
