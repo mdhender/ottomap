@@ -7,6 +7,7 @@ import (
 	"github.com/mdhender/ottomap/cerrs"
 	"log"
 	"os"
+	"regexp"
 )
 
 // Parse splits the input into individual sections.
@@ -51,19 +52,23 @@ func Parse(input InputFile) (*Turn, error) {
 		}
 		log.Printf("%3d: %6d: %q\n", n+1, len(section), string(slug))
 		if bytes.HasPrefix(section, []byte("Courier ")) {
-			unit := &Unit{Id: string(section[8:14]), Text: section}
+			id := string(section[8:14])
+			unit := &Unit{Id: id, Text: sniffMovement(id, section)}
 			//log.Printf("courier   unit id %q\n", unit.Id)
 			turn.Units = append(turn.Units, unit)
 		} else if bytes.HasPrefix(section, []byte("Element ")) {
-			unit := &Unit{Id: string(section[8:14]), Text: section}
+			id := string(section[8:14])
+			unit := &Unit{Id: id, Text: sniffMovement(id, section)}
 			//log.Printf("element   unit id %q\n", unit.Id)
 			turn.Units = append(turn.Units, unit)
 		} else if bytes.HasPrefix(section, []byte("Garrison ")) {
-			unit := &Unit{Id: string(section[9:15]), Text: section}
+			id := string(section[9:15])
+			unit := &Unit{Id: id, Text: sniffMovement(id, section)}
 			//log.Printf("garrison  unit id %q\n", unit.Id)
 			turn.Units = append(turn.Units, unit)
 		} else if bytes.HasPrefix(section, []byte("Tribe ")) {
-			unit := &Unit{Id: string(section[6:10]), Text: section}
+			id := string(section[6:10])
+			unit := &Unit{Id: id, Text: sniffMovement(id, section)}
 			//log.Printf("tribe     unit id %q\n", unit.Id)
 			turn.Units = append(turn.Units, unit)
 		} else if bytes.HasPrefix(section, []byte("Transfers\n")) {
@@ -76,4 +81,57 @@ func Parse(input InputFile) (*Turn, error) {
 	}
 
 	return turn, nil
+}
+
+func sniffMovement(id string, input []byte) []byte {
+	var location []byte
+	var unitMovement []byte
+	var unitStatus []byte
+	var scoutMovements [][]byte
+
+	reScout, err := regexp.Compile(`^Scout \d{1}:Scout`)
+	if err != nil {
+		log.Fatal(err)
+	}
+	reStatus, err := regexp.Compile("^" + id + " Status: ")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for n, line := range bytes.Split(input, []byte{'\n'}) {
+		if n == 0 {
+			location = line
+		} else if bytes.HasPrefix(line, []byte("Tribe Movement:")) {
+			// unit movement should skip the word "Tribe" and the space
+			unitMovement = line[6:]
+		} else if reScout.Match(line) {
+			// the scout needs to skip the scout id and colon
+			scoutMovements = append(scoutMovements, line[8:])
+			//scoutMovements = append(scoutMovements, line[8:])
+		} else if reStatus.Match(line) {
+			// the status needs to skip the unit id and the space
+			unitStatus = line[len(id)+1:]
+		}
+	}
+
+	var results []byte
+	results = append(results, location...)
+	results = append(results, '\n')
+	if unitMovement == nil {
+		results = append(results, []byte("Tribe Movement: Still\\")...)
+	} else {
+		results = append(results, unitMovement...)
+	}
+	results = append(results, '\n')
+	for _, scoutMovement := range scoutMovements {
+		results = append(results, scoutMovement...)
+		results = append(results, '\n')
+	}
+	if unitStatus == nil {
+		results = append(results, []byte("Status: UNKNOWN, "+id)...)
+	} else {
+		results = append(results, unitStatus...)
+	}
+	results = append(results, '\n')
+	return results
 }
