@@ -13,6 +13,7 @@ type Index struct {
 }
 
 // ReportFile is a single turn report file.
+//
 // The application handles parsing in stages. The first stage opens the report file
 // (which must be plain text) and splits it into sections, one section per unit.
 // Future stages will translate the raw text in the sections to usable turn data.
@@ -24,7 +25,8 @@ type ReportFile struct {
 }
 
 // ReportSection captures the text from a single section of the turn report.
-// Implementation note: These should be []byte, but string is easier to debug.
+//
+// NB: These should be []byte, but string is easier to debug.
 type ReportSection struct {
 	LocationLine string   `json:"locationLine,omitempty"` // location line from the section
 	MovementLine string   `json:"movementLine,omitempty"` // movement line from the section
@@ -34,24 +36,31 @@ type ReportSection struct {
 }
 
 // Turn defines the data extracted from the turn report.
-// Optimistically assumes we may include reports from multiple players.
+//
+// NB: Defined separately so we may include reports from multiple players in the future.
 type Turn struct {
 	Year  int   `json:"year"`  // 3 digit year (e.g. 901)
 	Month int   `json:"month"` // 2 digit month (e.g. 05)
 	Clan  *Clan `json:"clan,omitempty"`
 }
 
-// Clan defines the units in a single hierarchy (all the units that share a common prefix).
-// The Id of the clan is a 4-digit number, always starting with a zero.
-// That Id will match one of the units.
-// I'm using Clan here instead of Tribe to make the parsing easier for me to understand.
+// Clan defines the units in a single hierarchy.
+//
+// Tribes are the highest level; they are identified by a 4-digit number.
+// All tribes in a clan share the same last three digits. The tribe that
+// starts with a zero is special; it is the main tribe for the clan.
+//
+// NB: I'm using Clan here instead of Tribe to make the parsing easier
+// for me to understand.
 type Clan struct {
 	Id    string           `json:"id"` // 4 digit string (e.g. 1138)
 	Units map[string]*Unit `json:"units"`
 }
 
 // Unit is a unit which reports back up to the Clan.
-// NB: Tribes are units because it makes everything easier to understand.
+//
+// NB: All units that belong to a tribe share a common prefix which is
+// just the 4-digit Id for the tribe.
 type Unit struct {
 	Id       string   `json:"id"` // 4 or 6 char string (e.g. 0138 or 1138c3)
 	Type     UnitType `json:"type"`
@@ -67,7 +76,7 @@ type Settlement struct {
 }
 
 // GridHex is a hex on a single grid of the map.
-// It has three components, the Grid, Column, and Row.
+// It has three components: Grid, Column, and Row.
 //
 // Grid identifies the location of the map on the "big map."
 // The big map contains 26 columns by 26 rows of smaller maps
@@ -78,7 +87,7 @@ type Settlement struct {
 //
 // NB: The GM will sometimes hide the actual location of the grid,
 // usually when a player is just starting out. In that case, the
-// gird will show as "##" in the turn reports. Also, we tend to
+// grid will show as "##" in the turn reports. Also, we tend to
 // use "##" in examples where the actual location is not important.
 //
 // The Column and Row values for the hex are relative to the grid.
@@ -110,6 +119,7 @@ type GridHex struct {
 }
 
 // Hex captures the details needed to map out the hex.
+//
 // Be aware that Column and Row are the coordinates on an imaginary map,
 // not on the grid. That imaginary map is NOT the big map. It's a magical
 // thing centered on the clan's first hex. There's a lot of angry code
