@@ -19,3 +19,9 @@ type Movement struct {
 	Found     []string
 	Raw       string
 }
+
+type Step struct {
+	Direction string
+	Terrain   string
+	Edges     [6]string
+}

@@ -61,6 +61,22 @@ func ParseMovements(input []byte) (*Movements, error) {
 	DebugBuffer.WriteString(fmt.Sprintf("    ok  %v\n\n", ok))
 
 	var err error
+	log.Printf("het, moves be `%s`\n", string(moves))
+	for _, data := range bytes.Split(moves, []byte{'\\'}) {
+		log.Printf("het, data  be `%s`\n", string(data))
+		data = bytes.TrimRight(bytes.TrimSpace(data), ",")
+		log.Printf("het, data  be `%s`\n", string(data))
+		if prslt, err := Parse("movements.step", data); err != nil {
+			log.Fatalf("%s: %v\n", string(data), err)
+		} else if prslt == nil {
+			log.Fatalf("%s: parse result is nil\n", string(data))
+		} else if step, ok := prslt.(*Step); !ok {
+			log.Fatalf("%s: parse result is %T\n", string(data), step)
+		} else {
+			log.Printf("het, steps be %+v\n", *step)
+		}
+	}
+
 	if m.Moves, err = parseMoves(moves); err != nil {
 		log.Printf("moves: %q => %v\n", moves, err)
 		return nil, cerrs.ErrParseFailed
@@ -104,12 +120,12 @@ func ParseMovements(input []byte) (*Movements, error) {
 	return m, nil
 }
 
-// MOVES is MOVE (SPACE SPACE?)? BACKSLASH MOVE)* BACKSLASH FAIL_MSG?
-// MOVE  is DIRECTION DASH TERRAIN STUFF
+// MOVES is STEP (SPACE SPACE?)? BACKSLASH MOVE)* BACKSLASH FAIL_MSG?
+// STEP  is DIRECTION DASH TERRAIN STUFF
 // STUFF for an "empty hex" is COMMA SPACE SPACE
 // STUFF for other hexes    is OCEAN_EDGE? RIVER_EDGE? FORD_EDGE? SETTLEMENT?
-// FORD_EDGE  is COMMA SPACE           FORD DIRECTION (SPACE DIRECTION)*
 // OCEAN_EDGE is COMMA SPACE SPACE     OCEAN SPACE DIRECTION ((SPACE SPACE?) DIRECTION)*
+// FORD_EDGE  is COMMA SPACE           FORD DIRECTION (SPACE DIRECTION)*
 // RIVER_EDGE is COMMA (SPACE SPACE?)? RIVER SPACE DIRECTION (SPACE DIRECTION)*
 // SETTLEMENT is COMMA SPACE SPACE     SETTLEMENT_NAME
 //
