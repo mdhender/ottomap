@@ -1,0 +1,12 @@
+{
+// Package movements implements a Pigeon parser for unit movements.
+package movements
+
+import (
+        "strings"
+)
+
+/* Examples
+    900:04:0138:Tribe Movement: Move \
+*/
+}

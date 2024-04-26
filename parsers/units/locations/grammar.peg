@@ -1,0 +1,62 @@
+{
+// Package locations implements a Pigeon parser for unit location.
+package locations
+
+import (
+        "strings"
+)
+
+}
+
+Location <- (CourierID / ElementID / GarrisonID / TribeID) "," _ "," _ "Current Hex =" _ chi:Hex "," _ "(" "Previous Hex =" _ phi:Hex ")" EOF {
+    ch := chi.(Hex)
+    ph := phi.(Hex)
+    if ph.NA {
+        // replace not-available starting hex with current hex
+        ph = ch
+    }
+    return Location{
+        CurrentHex: ch,
+        PreviousHex: ph,
+    }, nil
+}
+
+CourierID <- "Courier" SP DIGIT DIGIT DIGIT DIGIT "c" DIGIT {
+    return string(c.text), nil
+}
+
+ElementID <- "Element" SP DIGIT DIGIT DIGIT DIGIT "e" DIGIT {
+    return string(c.text), nil
+}
+
+GarrisonID <- "Garrison" SP DIGIT DIGIT DIGIT DIGIT "g" DIGIT {
+    return string(c.text), nil
+}
+
+TribeID <- "Tribe" SP DIGIT DIGIT DIGIT DIGIT {
+    return string(c.text), nil
+}
+
+Hex <- "N/A" {
+    return Hex{NA: true}, nil
+} / "##" SP DIGIT DIGIT DIGIT DIGIT {
+    return Hex{
+        Grid: string(c.text[0:2]),
+        Col: string(c.text[3:5]),
+        Row: string(c.text[5:]),
+    }, nil
+} / LETTER LETTER SP DIGIT DIGIT DIGIT DIGIT {
+    return Hex{
+        Grid: string(c.text[0:2]),
+        Col: string(c.text[3:5]),
+        Row: string(c.text[5:]),
+    }, nil
+}
+
+
+EOF <- !.
+COMMA = ","
+DIGIT = [0-9]
+LETTER = [A-Z]
+SP = " "
+_ = [ \t]*

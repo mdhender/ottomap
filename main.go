@@ -27,7 +27,7 @@ func Execute() error {
 
 	cmdParse.PersistentFlags().StringVarP(&argsParse.input, "input", "i", ".", "path to read input from")
 	cmdParse.PersistentFlags().StringVarP(&argsParse.output, "output", "o", ".", "path to write output to")
-	cmdParse.AddCommand(cmdParseReports)
+	cmdParse.AddCommand(cmdParseReports, cmdParseUnits)
 
 	return cmdRoot.Execute()
 }
