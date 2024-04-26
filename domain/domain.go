@@ -6,8 +6,10 @@ package domain
 
 // Index is list of turn report files that will be sent to the parser.
 // It limits the number of files, which is helpful for development.
+//
+// NB: The key for the ReportFiles map is the name of the file without the path.
 type Index struct {
-	ReportFiles map[string]*ReportFile `json:"reportFiles"` // key is path to report file
+	ReportFiles map[string]*ReportFile `json:"reportFiles"`
 }
 
 // ReportFile is a single turn report file.
@@ -16,8 +18,9 @@ type Index struct {
 // Future stages will translate the raw text in the sections to usable turn data.
 type ReportFile struct {
 	Path     string           `json:"path"`             // path to the input file
+	Name     string           `json:"name"`             // name of the input file
 	Player   *Player          `json:"player,omitempty"` // optional link to information on player that owns the data in the file
-	Sections []*ReportSection `json:"sections"`
+	Sections []*ReportSection `json:"sections,omitempty"`
 }
 
 // ReportSection captures the text from a single section of the turn report.

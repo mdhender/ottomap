@@ -3,8 +3,10 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/mdhender/ottomap/cerrs"
+	"github.com/mdhender/ottomap/domain"
 	"github.com/mdhender/ottomap/parsers/clans"
 	"github.com/spf13/cobra"
 	"log"
@@ -21,34 +23,54 @@ var cmdParseReports = &cobra.Command{
 		log.Printf("parse: reports: input  %s\n", argsParse.input)
 		log.Printf("parse: reports: output %s\n", argsParse.output)
 
-		// turn reports have names like YEAR-MONTH.CLAN.input.txt
-		pattern := `^(\d{3})-(\d{2})\.(0\d{3})\.input\.txt$`
-		re, err := regexp.Compile(pattern)
+		// find all turn reports in the input path. the files have
+		// names that match the pattern YEAR-MONTH.CLAN_ID.input.txt
+		index := domain.Index{
+			ReportFiles: map[string]*domain.ReportFile{},
+		}
+		rxTurnReportFile, err := regexp.Compile(`^(\d{3})-(\d{2})\.(0\d{3})\.input\.txt$`)
 		if err != nil {
 			log.Fatal(err)
 		}
-
-		// find all turn reports in the input path
-		var inputFiles []clans.InputFile
 		entries, err := os.ReadDir(argsParse.input)
 		if err != nil {
 			log.Fatal(err)
 		}
 		for _, entry := range entries {
-			if entry.IsDir() {
-				continue
+			if !entry.IsDir() {
+				fileName := entry.Name()
+				if matches := rxTurnReportFile.FindStringSubmatch(fileName); len(matches) == 4 {
+					index.ReportFiles[fileName] = &domain.ReportFile{
+						Path: argsParse.input,
+						Name: fileName,
+					}
+				}
 			}
-			fileName := entry.Name()
-			matches := re.FindStringSubmatch(fileName)
-			//log.Printf("matches %2d %v\n", len(matches), matches)
+		}
+		for _, file := range index.ReportFiles {
+			log.Printf("parse: reports: %s\n", file.Path)
+		}
+		if data, err := json.MarshalIndent(index, "", "  "); err != nil {
+			log.Fatalf("parse: reports: marshal index: %v\n", err)
+		} else if err := os.WriteFile(filepath.Join(argsParse.output, "index.json"), data, 0644); err != nil {
+			log.Fatalf("parse: reports: create index: %v\n", err)
+		} else {
+			log.Printf("parse: reports: created %s\n", filepath.Join(argsParse.output, "index.json"))
+		}
+
+		// todo: remove this section and use the index directly
+		var inputFiles []clans.InputFile
+		for k, v := range index.ReportFiles {
+			matches := rxTurnReportFile.FindStringSubmatch(k)
 			if len(matches) != 4 {
-				continue
+				log.Printf("parse: reports: %s: matches %d, want 4!\n", k, len(matches))
+				panic("assert(matches(index.ReportFiles.Name) == 4)")
 			}
 			inputFiles = append(inputFiles, clans.InputFile{
 				Year:  matches[1],
 				Month: matches[2],
 				Clan:  matches[3],
-				File:  filepath.Join(argsParse.input, fileName),
+				File:  filepath.Join(v.Path, v.Name),
 			})
 		}
 
