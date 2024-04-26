@@ -101,8 +101,8 @@ type Settlement struct {
 // NB: See https://tribenet.wiki/mapping/grid for actual details on this system.
 type GridHex struct {
 	Grid   string `json:"grid,omitempty"` // "##", NN, or "N/A"
-	Column int    `json:"col,omitempty"`  // 00..21
-	Row    int    `json:"row,omitempty"`  // 00..30
+	Column int    `json:"col,omitempty"`  // 00..20
+	Row    int    `json:"row,omitempty"`  // 00..29
 	Hex    *Hex   `json:"hex,omitempty"`  // optional details for the hex
 }
 
