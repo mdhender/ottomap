@@ -18,12 +18,12 @@ type Clan struct {
 }
 
 type Unit struct {
-	Id        string     // four digits plus optional code plus optional number
-	Started   *Hex       // hex the unit started the turn in, nil if that is missing
-	Finished  *Hex       // hex the unit completed the turn in
-	Status    string     // status text
-	Movements *Movements // unit's movements
-	Scouts    []*Scout   // scouting results
+	Id       string    // four digits plus optional code plus optional number
+	Started  *Hex      // hex the unit started the turn in, nil if that is missing
+	Finished *Hex      // hex the unit completed the turn in
+	Status   string    // status text
+	Movement *Movement // unit's moves this turn
+	Scouts   []*Scout  // scouting results
 }
 
 // Hex is a hex on the grid map.
@@ -45,8 +45,9 @@ func (h *Hex) String() string {
 	return fmt.Sprintf("%s %04d", h.Grid, h.Col*100+h.Row)
 }
 
-type Movements struct {
-	Moves  []*Movement
+// Movement is the movement of a unit in a single turn
+type Movement struct {
+	Steps  []*Step
 	Failed struct {
 		Direction string
 		Edge      string
@@ -56,11 +57,14 @@ type Movements struct {
 	Found []string
 }
 
-type Movement struct {
-	Direction string
-	Result    string
-	Found     []string
-	Raw       string
+// Step is one part of a unit's movement
+type Step struct {
+	Direction  string
+	Terrain    string
+	Edges      [6]string
+	Found      []string
+	Settlement string
+	RawText    string
 }
 
 // Scout is

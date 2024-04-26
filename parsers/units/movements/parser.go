@@ -5,7 +5,6 @@ package movements
 import (
 	"bytes"
 	"fmt"
-	"github.com/mdhender/ottomap/cerrs"
 	"log"
 	"regexp"
 )
@@ -60,12 +59,12 @@ func ParseMovements(input []byte) (*Movements, error) {
 	DebugBuffer.WriteString(fmt.Sprintf("  stat `%s`\n", string(results)))
 	DebugBuffer.WriteString(fmt.Sprintf("    ok  %v\n\n", ok))
 
-	var err error
-	log.Printf("het, moves be `%s`\n", string(moves))
+	//log.Printf("het, moves be `%s`\n", string(moves))
 	for _, data := range bytes.Split(moves, []byte{'\\'}) {
-		log.Printf("het, data  be `%s`\n", string(data))
+		rawText := string(data)
+		//log.Printf("het, data  be `%s`\n", string(data))
 		data = bytes.TrimRight(bytes.TrimSpace(data), ",")
-		log.Printf("het, data  be `%s`\n", string(data))
+		//log.Printf("het, data  be `%s`\n", string(data))
 		if prslt, err := Parse("movements.step", data); err != nil {
 			log.Fatalf("%s: %v\n", string(data), err)
 		} else if prslt == nil {
@@ -73,22 +72,19 @@ func ParseMovements(input []byte) (*Movements, error) {
 		} else if step, ok := prslt.(*Step); !ok {
 			log.Fatalf("%s: parse result is %T\n", string(data), step)
 		} else {
-			log.Printf("het, steps be %+v\n", *step)
+			//log.Printf("het, steps be %+v\n", *step)
+			step.RawText = rawText
+			m.Steps = append(m.Steps, step)
 		}
-	}
-
-	if m.Moves, err = parseMoves(moves); err != nil {
-		log.Printf("moves: %q => %v\n", moves, err)
-		return nil, cerrs.ErrParseFailed
 	}
 
 	if len(results) == 0 {
 		//
 	} else {
-		m.Failed.Text = string(results)
+		m.Failed.RawText = string(results)
 		if bytes.HasPrefix(results, []byte("Not enough M.P's")) {
 			// Not enough M.P's to move to SW into GRASSY HILLS
-			if matches := rxTerrainCost.FindStringSubmatch(m.Failed.Text); len(matches) == 0 {
+			if matches := rxTerrainCost.FindStringSubmatch(m.Failed.RawText); len(matches) == 0 {
 				log.Printf("parse: unit: terrain: failed but no terrain found\n")
 			} else {
 				// log.Printf("parse: unit: terrain: found %d %v\n", len(matches), matches)
@@ -98,7 +94,7 @@ func ParseMovements(input []byte) (*Movements, error) {
 		} else if bytes.HasPrefix(results, []byte("Can't Move on ")) {
 			// Can't Move on Lake to S of HEX
 			// Can't Move on Ocean to NW of HEX
-			if matches := rxWaterEdge.FindStringSubmatch(m.Failed.Text); len(matches) == 0 {
+			if matches := rxWaterEdge.FindStringSubmatch(m.Failed.RawText); len(matches) == 0 {
 				log.Printf("parse: unit: water: failed but no water found\n")
 			} else {
 				// log.Printf("parse: unit: water: found %d %v\n", len(matches), matches)
@@ -107,7 +103,7 @@ func ParseMovements(input []byte) (*Movements, error) {
 			}
 		} else if bytes.HasPrefix(results, []byte("No Ford on River to ")) {
 			// No Ford on River to NW of HEX
-			if matches := rxRiverEdge.FindStringSubmatch(m.Failed.Text); len(matches) == 0 {
+			if matches := rxRiverEdge.FindStringSubmatch(m.Failed.RawText); len(matches) == 0 {
 				log.Printf("parse: unit: river: failed but no river found\n")
 			} else {
 				// log.Printf("parse: unit: river: found %d %v\n", len(matches), matches)
@@ -118,37 +114,6 @@ func ParseMovements(input []byte) (*Movements, error) {
 	}
 
 	return m, nil
-}
-
-// MOVES is STEP (SPACE SPACE?)? BACKSLASH MOVE)* BACKSLASH FAIL_MSG?
-// STEP  is DIRECTION DASH TERRAIN STUFF
-// STUFF for an "empty hex" is COMMA SPACE SPACE
-// STUFF for other hexes    is OCEAN_EDGE? RIVER_EDGE? FORD_EDGE? SETTLEMENT?
-// OCEAN_EDGE is COMMA SPACE SPACE     OCEAN SPACE DIRECTION ((SPACE SPACE?) DIRECTION)*
-// FORD_EDGE  is COMMA SPACE           FORD DIRECTION (SPACE DIRECTION)*
-// RIVER_EDGE is COMMA (SPACE SPACE?)? RIVER SPACE DIRECTION (SPACE DIRECTION)*
-// SETTLEMENT is COMMA SPACE SPACE     SETTLEMENT_NAME
-//
-// ^N-GH,  \NW-PR,  \NW-PR,  \SW-CH,  O SW,  NW,  S$
-// ^S-PR, \S-PR,  O S,River SE\SW-CH,  O SE, SW, S$
-// ^SW-PR,  River S\SW-PR,  River SE\S-PR,  River NE SE S\SW-PR,  River SE S\SW-PR,  O S, Ford SE\SW-CH,  O SE,  SW,  S$
-
-func parseMoves(input []byte) ([]*Movement, error) {
-	if len(input) == 0 {
-		return nil, nil
-	}
-	var moves []*Movement
-	log.Printf("input %s\n", string(input))
-	for n, step := range bytes.Split(input, []byte{'\\'}) {
-		log.Printf("  step %2d  %s", n+1, string(step))
-		for i, field := range bytes.Split(step, []byte{','}) {
-			log.Printf("    field %2d  %s\n", i+1, string(field))
-		}
-		moves = append(moves, &Movement{
-			Raw: string(step),
-		})
-	}
-	return moves, nil
 }
 
 // the input looks something like STUFF BACKSLASH STATUS.

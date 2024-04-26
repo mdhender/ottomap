@@ -28,7 +28,7 @@ func toAnySlice(v any) []any {
 //    return string(c.text), nil
 //}
 
-Step <- d:DIRECTION "-" t:TERRAIN _ oei:OceanEdges? _ rei:RiverEdges? _ fei:FordEdges? _ Settlement? EOF {
+Step <- d:DIRECTION "-" t:TERRAIN _ oei:OceanEdges? _ rei:RiverEdges? _ fei:FordEdges? _ si:Settlement? EOF {
     var step Step
     step.Direction = d.(string)
     step.Terrain = t.(string)
@@ -70,6 +70,10 @@ Step <- d:DIRECTION "-" t:TERRAIN _ oei:OceanEdges? _ rei:RiverEdges? _ fei:Ford
         default:
             panic(fmt.Errorf("step: ford edges: unknown type %T", v))
         }
+    }
+
+    if si != nil {
+        step.Settlement = si.(string)
     }
 
     return &step, nil
@@ -200,12 +204,14 @@ FordEdges <- "," _ "Ford" _ d:DIRECTION dli:optSpaceDirection* {
     return edges, nil
 }
 
-Settlement <- "," _ SETTLEMENT_NAME {
+Settlement <- "," _ n:SettlementName {
+    return n.(string), nil
+}
+
+SettlementName <- [A-Z][A-Za-z]+ {
     return string(c.text), nil
 }
 
 EOF <- !.
-BACKSLASH = "\\"
-SETTLEMENT_NAME = [A-Z][A-Za-z]+
 SP = " "
 _ = [ \t]*

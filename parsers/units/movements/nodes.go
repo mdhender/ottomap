@@ -3,25 +3,20 @@
 package movements
 
 type Movements struct {
-	Moves  []*Movement
+	Steps  []*Step
 	Failed struct {
 		Direction string
 		Edge      string
 		Terrain   string
-		Text      string
+		RawText   string
 	}
 	Found []string
 }
 
-type Movement struct {
-	Direction string
-	Result    string
-	Found     []string
-	Raw       string
-}
-
 type Step struct {
-	Direction string
-	Terrain   string
-	Edges     [6]string
+	Direction  string
+	Terrain    string
+	Edges      [6]string
+	Settlement string
+	RawText    string
 }

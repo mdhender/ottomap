@@ -64,23 +64,26 @@ func Parse(input InputFile) (*Unit, error) {
 
 	if moves, err := movements.ParseMovements(movementLine); err != nil {
 		return nil, fmt.Errorf("unit: movement: %w", err)
-	} else { // convert the movements
-		unit.Movements = &Movements{}
-		unit.Movements.Moves = make([]*Movement, len(moves.Moves))
-		for i, m := range moves.Moves {
-			unit.Movements.Moves[i] = &Movement{
+	} else { // convert the movement steps
+		unit.Movement = &Movement{}
+		unit.Movement.Steps = make([]*Step, len(moves.Steps))
+		for i, m := range moves.Steps {
+			unit.Movement.Steps[i] = &Step{
 				Direction: m.Direction,
-				Result:    m.Result,
-				Raw:       m.Raw,
+				Terrain:   m.Terrain,
+				Edges:     m.Edges,
+				// Found: ?
+				Settlement: m.Settlement,
+				RawText:    m.RawText,
 			}
 		}
-		unit.Movements.Failed.Direction = moves.Failed.Direction
-		unit.Movements.Failed.Edge = moves.Failed.Edge
-		unit.Movements.Failed.Terrain = moves.Failed.Terrain
-		unit.Movements.Failed.Text = moves.Failed.Text
-		unit.Movements.Found = make([]string, len(moves.Found))
+		unit.Movement.Failed.Direction = moves.Failed.Direction
+		unit.Movement.Failed.Edge = moves.Failed.Edge
+		unit.Movement.Failed.Terrain = moves.Failed.Terrain
+		unit.Movement.Failed.Text = moves.Failed.RawText
+		unit.Movement.Found = make([]string, len(moves.Found))
 		for i, found := range moves.Found {
-			unit.Movements.Found[i] = found
+			unit.Movement.Found[i] = found
 		}
 	}
 

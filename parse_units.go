@@ -72,20 +72,23 @@ var cmdParseUnits = &cobra.Command{
 			}
 			clan.Units = append(clan.Units, unit)
 			log.Printf("clan %s: unit %6s: %-7s => %-7s\n", clan.Id, unit.Id, unit.Started, unit.Finished)
-			if unit.Movements == nil {
+			if unit.Movement == nil {
 				log.Printf("clan %s: unit %s: missing movement\n", clan.Id, unit.Id)
 			} else {
-				var raw string
-				for n, move := range unit.Movements.Moves {
+				var raw, buf string
+				for n, step := range unit.Movement.Steps {
 					if n != 0 {
 						raw += ", "
+						buf += ", "
 					}
-					raw += fmt.Sprintf("{%q}", move.Raw)
+					raw += fmt.Sprintf("{%s}", step.RawText)
+					buf += fmt.Sprintf("%v", *step)
 				}
-				log.Printf("clan %s: unit %s: moves %d => %s\n", clan.Id, unit.Id, len(unit.Movements.Moves), raw)
+				log.Printf("clan %s: unit %s: steps %d => %s\n", clan.Id, unit.Id, len(unit.Movement.Steps), raw)
+				log.Printf("clan %s: unit %s: steps %d => %s\n", clan.Id, unit.Id, len(unit.Movement.Steps), buf)
 			}
-			if unit.Movements.Failed.Direction != "" {
-				log.Printf("clan %s: unit %s: failed %+v\n", clan.Id, unit.Id, unit.Movements.Failed)
+			if unit.Movement.Failed.Direction != "" {
+				log.Printf("clan %s: unit %s: failed %+v\n", clan.Id, unit.Id, unit.Movement.Failed)
 			}
 		}
 
