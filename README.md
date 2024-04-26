@@ -1,7 +1,13 @@
 # OttoMap
 
-## TODO
+OttoMap is a tool that translates TribeNet turn report files into JSON data.
 
-1. Edges can have multiple types.
-An example from the TribeNet discord shows `Also there are mountain passes.  They appear as Pass.  Hsm NE, SE, N, S, Pass SE\`.
-That SE edge seems to have type `HSM` and `PASS`.
+A future version of the tool will convert the JSON data into a map.
+
+## Overview
+I'm planning on translating a small subset of the turn report.
+See the files in the `domain` directory to get an idea of what we're looking at.
+
+I think that will be enough data to feed the map generator.
+Let me know if you think that there's something missing.
+
