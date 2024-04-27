@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/mdhender/ottomap/domain"
 	"github.com/mdhender/ottomap/parsers/turn_reports/headers"
+	"github.com/mdhender/ottomap/parsers/turn_reports/locations"
 	"github.com/mdhender/ottomap/parsers/turn_reports/sections"
 	"log"
 	"os"
@@ -70,7 +71,16 @@ func Parse(rpf *domain.ReportFile, debugSlugs, captureRawText bool) ([]*domain.R
 		unit := &domain.ReportUnit{}
 		rs.Unit = unit
 		unit.Id, unit.Type = sections.ParseUnitType(lines[0])
-		unit.Location = string(sections.ParseLocationLine(rs.Id, lines))
+		location := sections.ParseLocationLine(rs.Id, lines)
+		if hi, err := locations.Parse(rpf.Id, location); err != nil {
+			log.Printf("turn_reports: %s: location %q: parse %v\n", rpf.Id, unit.Location, err)
+		} else if hi == nil {
+			log.Printf("turn_reports: %s: location %q: parse => nil!\n", rpf.Id, unit.Location)
+		} else if hexes, ok := hi.([2]*domain.GridHex); ok {
+			unit.PrevHex = hexes[0]
+			unit.CurrHex = hexes[1]
+		}
+		log.Printf("turn_reports: %s: location %q: ==> %q %q\n", rpf.Id, unit.Location, unit.PrevHex, unit.CurrHex)
 		unit.Movement = string(sections.ParseMovementLine(rs.Id, lines))
 		for _, line := range sections.ParseScoutLines(rs.Id, lines) {
 			unit.ScoutLines = append(unit.ScoutLines, string(line))

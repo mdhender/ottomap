@@ -1,0 +1,56 @@
+{
+// Package locations implements a Pigeon parser for unit location.
+package locations
+
+import (
+    "github.com/mdhender/ottomap/domain"
+    "strconv"
+    "strings"
+)
+
+}
+
+Location <- UnitID "," _ "," _ "Current Hex =" _ chi:Hex "," _ "(" "Previous Hex =" _ phi:Hex ")" EOF {
+    ch := chi.(*domain.GridHex)
+    ph := phi.(*domain.GridHex)
+    return [2]*domain.GridHex{ph, ch}, nil
+}
+
+UnitID <- "Courier" SP DIGIT DIGIT DIGIT DIGIT "c" DIGIT {
+    return string(c.text), nil
+} / "Element" SP DIGIT DIGIT DIGIT DIGIT "e" DIGIT {
+    return string(c.text), nil
+} / "Garrison" SP DIGIT DIGIT DIGIT DIGIT "g" DIGIT {
+    return string(c.text), nil
+} / "Tribe" SP DIGIT DIGIT DIGIT DIGIT {
+    return string(c.text), nil
+}
+
+Hex <- "N/A" {
+    // return the zero-value grid hex to signal "not available"
+    return &domain.GridHex{}, nil
+} / "##" SP DIGIT DIGIT DIGIT DIGIT {
+    column, _ := strconv.Atoi(string(c.text[3:5]))
+    row, _ := strconv.Atoi(string(c.text[5:]))
+    return &domain.GridHex{
+        Grid:   "##",
+        Column: column,
+        Row:    row,
+    }, nil
+} / LETTER LETTER SP DIGIT DIGIT DIGIT DIGIT {
+    column, _ := strconv.Atoi(string(c.text[3:5]))
+    row, _ := strconv.Atoi(string(c.text[5:]))
+    return &domain.GridHex{
+        Grid:   string(c.text[0:2]),
+        Column: column,
+        Row:    row,
+    }, nil
+}
+
+
+EOF <- !.
+COMMA = ","
+DIGIT = [0-9]
+LETTER = [A-Z]
+SP = " "
+_ = [ \t]*
