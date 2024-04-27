@@ -65,7 +65,6 @@ var cmdParseReports = &cobra.Command{
 			log.Printf("parse: reports: error parsing input: %v\n", err)
 		}
 
-		log.Printf("parse: reports: todo: push section data into the domain model structs instead of files\n")
 		log.Printf("parse: reports: todo: ignore the temptation to push section data into a database\n")
 	},
 }

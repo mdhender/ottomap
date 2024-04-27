@@ -43,7 +43,7 @@ type Date struct {
 TurnReportHeader <- cl:ClanLine EOL tl:TurnLine EOL {
     clan := cl.(clanLine)
     turn := tl.(turnLine)
-    return Header{
+    return &Header{
         ClanId:  clan.id,
         CurrHex: clan.currHex,
         PrevHex: clan.prevHex,

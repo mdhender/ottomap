@@ -15,18 +15,16 @@ import (
 func Parse(rpf *domain.ReportFile, debugSlugs, captureRawText bool) ([]*domain.ReportSection, error) {
 	// read the entire input file into memory
 	input, err := os.ReadFile(rpf.Path)
-	//log.Printf("clans: %s: %8d: %v\n", rpf.Id, len(input), err)
 	if err != nil {
+		//log.Printf("clans: %s: %8d: %v\n", rpf.Id, len(input), err)
 		return nil, err
 	}
 
 	// extract the header from the input so that we can verify the settings
-	header, err := sniffHeader(rpf.Id, input)
-	//log.Printf("clans: %s: header %+v: %v\n", rpf.Id, header, err)
+	header, err := parsers.ParseHeader(rpf.Id, input)
 	if err != nil {
 		return nil, err
-	}
-	if header.ClanId != fmt.Sprintf("%04d", rpf.Clan) {
+	} else if header.ClanId != fmt.Sprintf("%04d", rpf.Clan) {
 		log.Fatalf("clans: %s: mismatched clan: id %q: want %q\n", rpf.Id, header.ClanId, fmt.Sprintf("%04d", rpf.Clan))
 	} else if header.Game.Year != fmt.Sprintf("%03d", rpf.Year) {
 		log.Fatalf("clans: %s: mismatched clan: year %q: want %q\n", rpf.Id, header.Game.Year, fmt.Sprintf("%03d", rpf.Year))
