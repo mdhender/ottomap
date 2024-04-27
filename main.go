@@ -23,7 +23,16 @@ func main() {
 }
 
 func Execute() error {
-	cmdRoot.AddCommand(cmdParse, cmdVersion)
+	cmdRoot.AddCommand(cmdIndex, cmdParse, cmdVersion)
+
+	cmdIndex.AddCommand(cmdIndexReports)
+	cmdIndexReports.Flags().StringVarP(&argsParse.input, "input", "i", ".", "path to read input from")
+	cmdIndexReports.Flags().StringVarP(&argsParse.output, "output", "o", ".", "path to write output to")
+	if err := cmdIndexReports.MarkFlagRequired("input"); err != nil {
+		log.Fatalf("input: parse: input: mark required: %v\n", err)
+	} else if err = cmdIndexReports.MarkFlagRequired("output"); err != nil {
+		log.Fatalf("input: parse: output: mark required: %v\n", err)
+	}
 
 	cmdParse.PersistentFlags().StringVarP(&argsParse.input, "input", "i", ".", "path to read input from")
 	cmdParse.PersistentFlags().StringVarP(&argsParse.output, "output", "o", ".", "path to write output to")
