@@ -5,15 +5,15 @@ package clans
 import (
 	"bytes"
 	"github.com/mdhender/ottomap/cerrs"
-	"github.com/mdhender/ottomap/parsers/clans/headers"
+	"github.com/mdhender/ottomap/parsers/clans/parsers"
 	"log"
 	"regexp"
 )
 
 // sniffHeader extracts the clan id, year, and month from the input.
-func sniffHeader(name string, input []byte) (headers.Header, error) {
+func sniffHeader(name string, input []byte) (parsers.Header, error) {
 	if !bytes.HasPrefix(input, []byte("Tribe ")) {
-		return headers.Header{}, cerrs.ErrNotATurnReport
+		return parsers.Header{}, cerrs.ErrNotATurnReport
 	}
 
 	// the header will be the first two lines of the input
@@ -25,16 +25,16 @@ func sniffHeader(name string, input []byte) (headers.Header, error) {
 		length++
 	}
 	if nlCount != 2 {
-		return headers.Header{}, cerrs.ErrNotATurnReport
+		return parsers.Header{}, cerrs.ErrNotATurnReport
 	}
 	input = input[:length]
 
 	// parse the header
-	hi, err := headers.Parse(name, input)
+	hi, err := parsers.Parse(name, input)
 	if err != nil {
-		return headers.Header{}, cerrs.ErrNotATurnReport
+		return parsers.Header{}, cerrs.ErrNotATurnReport
 	}
-	header, ok := hi.(headers.Header)
+	header, ok := hi.(parsers.Header)
 	if !ok {
 		log.Fatalf("clans: %s: internal error: want headers.Header, got %T\n", name, hi)
 	}

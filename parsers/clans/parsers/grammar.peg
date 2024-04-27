@@ -1,6 +1,6 @@
 {
-// Package headers implements a Pigeon parser for section headers.
-package headers
+// Package parsers implements parsers (Pigeon and hand-crafted) parser for sections.
+package parsers
 
 import (
     "bytes"

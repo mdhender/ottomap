@@ -14,6 +14,13 @@ import (
 	"path/filepath"
 )
 
+var argsParseReports struct {
+	debug struct {
+		clanShowSlugs      bool
+		clanCaptureRawText bool
+	}
+}
+
 var cmdParseReports = &cobra.Command{
 	Use:   "reports",
 	Short: "Parse all reports in the index file",
@@ -32,20 +39,25 @@ var cmdParseReports = &cobra.Command{
 
 		var err error
 		for _, rpf := range index.ReportFiles {
-			clan, parseErr := clans.Parse(rpf)
+			rss, parseErr := clans.Parse(rpf, argsParseReports.debug.clanShowSlugs, argsParseReports.debug.clanCaptureRawText)
 			if parseErr != nil {
 				log.Printf("parse: reports: %s: error: %v\n", rpf.Id, parseErr)
 				err = cerrs.ErrParseFailed
 				continue
 			}
-			log.Printf("parse: reports: %s: clan %s: units %3d: transfers %6d: settlements %6d\n", rpf.Id, clan.Clan, len(clan.Units), len(clan.Transfers), len(clan.Settlements))
+			// log.Printf("parse: reports: %s: sections %3d\n", rpf.Id, len(rss))
 
-			for _, unit := range clan.Units {
-				path := filepath.Join(argsParse.output, fmt.Sprintf("%s.%s.input.txt", rpf.Id, unit.Id))
-				log.Printf("parse: reports: %s: %-8s => %s\n", rpf.Id, unit.Id, path)
-				if err := os.WriteFile(path, unit.Text, 0644); err != nil {
+			for _, rs := range rss {
+				path := filepath.Join(argsParse.output, fmt.Sprintf("%s.%s.json", rpf.Id, rs.Id))
+				data, err := json.MarshalIndent(rs, "", "  ")
+				if err != nil {
 					log.Fatalf("parse: reports: %s: %v\n", rpf.Id, err)
 				}
+				err = os.WriteFile(path, data, 0644)
+				if err != nil {
+					log.Fatalf("parse: reports: %s: %s: %v\n", rpf.Id, rs.Id, err)
+				}
+				log.Printf("parse: reports: %s: %-8s ==> %s\n", rpf.Id, rs.Id, path)
 			}
 		}
 

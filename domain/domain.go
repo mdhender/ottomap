@@ -32,16 +32,31 @@ type ReportFile struct {
 //
 // NB: These should be []byte, but string is easier to debug.
 type ReportSection struct {
-	LocationLine string   `json:"locationLine,omitempty"` // location line from the section
-	MovementLine string   `json:"movementLine,omitempty"` // movement line from the section
-	ScoutLines   []string `json:"scoutLines,omitempty"`   // scout lines from the section
-	StatusLine   string   `json:"statusLine,omitempty"`   // status line from the section
-	RawText      string   `json:"rawText"`                // this is the un-parsed text of the entire section
+	Id         string `json:"id"` // non-unique identifier for the section, derived from Type
+	Type       ReportSectionType
+	Location   string   `json:"location,omitempty"`   // location line from the section
+	Movement   string   `json:"movement,omitempty"`   // movement line from the section
+	ScoutLines []string `json:"scoutLines,omitempty"` // scout lines from the section
+	Status     string   `json:"status,omitempty"`     // status line from the section
+	RawText    string   `json:"rawText,omitempty"`    // this is the un-parsed text of the entire section
+}
+
+// ReportUnit captures the text for a single unit in the turn report.
+//
+// NB: These should be []byte, but string is easier to debug.
+type ReportUnit struct {
+	Id         string `json:"id"` // unit Id, should be unique within the turn
+	Type       UnitType
+	Location   string   `json:"location,omitempty"`   // location line from the section
+	Movement   string   `json:"movement,omitempty"`   // movement line from the section
+	ScoutLines []string `json:"scoutLines,omitempty"` // scout lines from the section
+	Status     string   `json:"status,omitempty"`     // status line from the section
+	RawText    string   `json:"rawText,omitempty"`    // this is the un-parsed text of the entire section
 }
 
 // Turn defines the data extracted from the turn report.
 //
-// NB: Defined separately so we may include reports from multiple players in the future.
+// NB: Defined separately, so we may include reports from multiple players in the future.
 type Turn struct {
 	Year  int   `json:"year"`  // 3 digit year (e.g. 901)
 	Month int   `json:"month"` // 2 digit month (e.g. 05)
@@ -116,7 +131,7 @@ type Settlement struct {
 // happens to be the zero-value for the struct in Go, so we're happy.
 //
 // NB: See https://tribenet.wiki/mapping/grid for actual details on this system.
-// Also https://tribenet.wiki/blank_template_numbered.png for the numbering.
+// See https://tribenet.wiki/blank_template_numbered.png for the numbering.
 type GridHex struct {
 	Grid   string `json:"grid,omitempty"` // "##", NN, or "N/A"
 	Column int    `json:"col,omitempty"`  // 01..30

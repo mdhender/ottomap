@@ -13,6 +13,58 @@ import (
 	"fmt"
 )
 
+// ReportSectionType is an enum for the type of report section.
+type ReportSectionType int
+
+const (
+	RSUnknown ReportSectionType = iota
+	RSUnit
+	RSSettlements
+	RSTransfers
+)
+
+// MarshalJSON implements the json.Marshaler interface.
+func (t ReportSectionType) MarshalJSON() ([]byte, error) {
+	return json.Marshal(reportSectionTypeEnumToString[t])
+}
+
+// UnmarshalJSON implements the json.Unmarshaler interface.
+func (t *ReportSectionType) UnmarshalJSON(data []byte) error {
+	var s string
+	var ok bool
+	if err := json.Unmarshal(data, &s); err != nil {
+		return err
+	} else if *t, ok = reportSectionTypeStringToEnum[s]; !ok {
+		return fmt.Errorf("invalid ReportSectionType %q", s)
+	}
+	return nil
+}
+
+// String implements the fmt.Stringer interface.
+func (t ReportSectionType) String() string {
+	if str, ok := reportSectionTypeEnumToString[t]; ok {
+		return str
+	}
+	return fmt.Sprintf("ReportSectionType(%d)", int(t))
+}
+
+var (
+	// helper map for marshalling the enum
+	reportSectionTypeEnumToString = map[ReportSectionType]string{
+		RSUnknown:     "Unknown",
+		RSUnit:        "Unit",
+		RSSettlements: "Settlements",
+		RSTransfers:   "Transfers",
+	}
+	// helper map for unmarshalling the enum
+	reportSectionTypeStringToEnum = map[string]ReportSectionType{
+		"Unknown":     RSUnknown,
+		"Unit":        RSUnit,
+		"Settlements": RSSettlements,
+		"Transfers":   RSTransfers,
+	}
+)
+
 // UnitType is an enum for the type of unit.
 // Having Tribe as a unit type makes the unit code easier to understand.
 type UnitType int
@@ -25,28 +77,28 @@ const (
 )
 
 // MarshalJSON implements the json.Marshaler interface.
-func (k UnitType) MarshalJSON() ([]byte, error) {
-	return json.Marshal(unitTypeEnumToString[k])
+func (t UnitType) MarshalJSON() ([]byte, error) {
+	return json.Marshal(unitTypeEnumToString[t])
 }
 
 // UnmarshalJSON implements the json.Unmarshaler interface.
-func (k *UnitType) UnmarshalJSON(data []byte) error {
+func (t *UnitType) UnmarshalJSON(data []byte) error {
 	var s string
 	var ok bool
 	if err := json.Unmarshal(data, &s); err != nil {
 		return err
-	} else if *k, ok = unitTypeStringToEnum[s]; !ok {
+	} else if *t, ok = unitTypeStringToEnum[s]; !ok {
 		return fmt.Errorf("invalid UnitType %q", s)
 	}
 	return nil
 }
 
 // String implements the fmt.Stringer interface.
-func (k UnitType) String() string {
-	if str, ok := unitTypeEnumToString[k]; ok {
+func (t UnitType) String() string {
+	if str, ok := unitTypeEnumToString[t]; ok {
 		return str
 	}
-	return fmt.Sprintf("UnitType(%d)", int(k))
+	return fmt.Sprintf("UnitType(%d)", int(t))
 }
 
 var (
