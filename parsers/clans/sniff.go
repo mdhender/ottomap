@@ -7,7 +7,6 @@ import (
 	"github.com/mdhender/ottomap/cerrs"
 	"github.com/mdhender/ottomap/parsers/clans/parsers"
 	"log"
-	"regexp"
 )
 
 // sniffHeader extracts the clan id, year, and month from the input.
@@ -40,55 +39,4 @@ func sniffHeader(name string, input []byte) (parsers.Header, error) {
 	}
 
 	return header, nil
-}
-
-// sniffMovement extracts only the movement lines from the input.
-// these include tribe movement and scout results.
-//
-// that is a lie. it looks like we also grab the unit's location
-// and final status.
-func sniffMovement(id string, input []byte) []byte {
-	var location []byte
-	var unitMovement []byte
-	var unitStatus []byte
-	var scoutMovements [][]byte
-
-	reScout, err := regexp.Compile(`^Scout \d{1}:Scout`)
-	if err != nil {
-		log.Fatal(err)
-	}
-	reStatus, err := regexp.Compile("^" + id + " Status: ")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	for n, line := range bytes.Split(input, []byte{'\n'}) {
-		if n == 0 {
-			location = line
-		} else if bytes.HasPrefix(line, []byte("Tribe Movement:")) {
-			unitMovement = line
-		} else if reScout.Match(line) {
-			scoutMovements = append(scoutMovements, line)
-		} else if reStatus.Match(line) {
-			unitStatus = line
-		}
-	}
-
-	var results []byte
-	results = append(results, location...)
-	results = append(results, '\n')
-	if unitMovement != nil {
-		results = append(results, unitMovement...)
-		results = append(results, '\n')
-	}
-	for _, scoutMovement := range scoutMovements {
-		results = append(results, scoutMovement...)
-		results = append(results, '\n')
-	}
-	if unitStatus != nil {
-		results = append(results, unitStatus...)
-		results = append(results, '\n')
-	}
-
-	return results
 }

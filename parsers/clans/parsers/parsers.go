@@ -6,7 +6,6 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/mdhender/ottomap/domain"
-	"log"
 	"regexp"
 )
 
@@ -14,28 +13,22 @@ var (
 	rxScout *regexp.Regexp
 )
 
-// ParseSectionType returns the section's type.
-func ParseSectionType(lines [][]byte) (domain.ReportSectionType, string) {
+// ParseSectionType returns the section's identifier and type.
+func ParseSectionType(lines [][]byte) (string, domain.ReportSectionType) {
 	if len(lines) == 0 {
-		return domain.RSUnknown, ""
+		return "", domain.RSUnknown
 	}
 
 	// use the first few bytes of the line to determine the unit
 	line := lines[0]
-	if bytes.HasPrefix(line, []byte("Courier ")) {
-		return domain.RSUnit, string(lines[0][8:14])
-	} else if bytes.HasPrefix(line, []byte("Element ")) {
-		return domain.RSUnit, string(line[8:14])
-	} else if bytes.HasPrefix(line, []byte("Garrison ")) {
-		return domain.RSUnit, string(line[9:15])
-	} else if bytes.HasPrefix(line, []byte("Tribe ")) {
-		return domain.RSUnit, string(line[6:10])
+	if id, ut := ParseUnitType(line); ut != domain.UTUnknown {
+		return id, domain.RSUnit
 	} else if bytes.HasPrefix(line, []byte("Settlements\n")) {
-		return domain.RSSettlements, ""
+		return "", domain.RSSettlements
 	} else if bytes.HasPrefix(line, []byte("Transfers\n")) {
-		return domain.RSTransfers, ""
+		return "", domain.RSTransfers
 	}
-	return domain.RSUnknown, ""
+	return "", domain.RSUnknown
 }
 
 // ParseLocationLine returns the unit's location line.
@@ -88,53 +81,17 @@ func ParseStatusLine(id string, lines [][]byte) []byte {
 	return nil
 }
 
-// sniffMovement extracts only the movement lines from the input.
-// these include tribe movement and scout results.
-//
-// that is a lie. it looks like we also grab the unit's location
-// and final status.
-func sniffMovement(id string, input []byte) []byte {
-	var location []byte
-	var unitMovement []byte
-	var unitStatus []byte
-	var scoutMovements [][]byte
-
-	reScout, err := regexp.Compile(`^Scout \d{1}:Scout`)
-	if err != nil {
-		log.Fatal(err)
+// ParseUnitType returns the unit's type and identifier.
+func ParseUnitType(line []byte) (string, domain.UnitType) {
+	// use the first few bytes of the line to determine the unit
+	if bytes.HasPrefix(line, []byte("Courier ")) {
+		return string(line[8:14]), domain.UTCourier
+	} else if bytes.HasPrefix(line, []byte("Element ")) {
+		return string(line[8:14]), domain.UTElement
+	} else if bytes.HasPrefix(line, []byte("Garrison ")) {
+		return string(line[9:15]), domain.UTGarrison
+	} else if bytes.HasPrefix(line, []byte("Tribe ")) {
+		return string(line[6:10]), domain.UTTribe
 	}
-	reStatus, err := regexp.Compile("^" + id + " Status: ")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	for n, line := range bytes.Split(input, []byte{'\n'}) {
-		if n == 0 {
-			location = line
-		} else if bytes.HasPrefix(line, []byte("Tribe Movement:")) {
-			unitMovement = line
-		} else if reScout.Match(line) {
-			scoutMovements = append(scoutMovements, line)
-		} else if reStatus.Match(line) {
-			unitStatus = line
-		}
-	}
-
-	var results []byte
-	results = append(results, location...)
-	results = append(results, '\n')
-	if unitMovement != nil {
-		results = append(results, unitMovement...)
-		results = append(results, '\n')
-	}
-	for _, scoutMovement := range scoutMovements {
-		results = append(results, scoutMovement...)
-		results = append(results, '\n')
-	}
-	if unitStatus != nil {
-		results = append(results, unitStatus...)
-		results = append(results, '\n')
-	}
-
-	return results
+	return "", domain.UTUnknown
 }

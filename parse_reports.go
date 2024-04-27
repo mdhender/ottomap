@@ -45,7 +45,7 @@ var cmdParseReports = &cobra.Command{
 				err = cerrs.ErrParseFailed
 				continue
 			}
-			// log.Printf("parse: reports: %s: sections %3d\n", rpf.Id, len(rss))
+			//log.Printf("parse: reports: %s: sections %3d\n", rpf.Id, len(rss))
 
 			for _, rs := range rss {
 				path := filepath.Join(argsParse.output, fmt.Sprintf("%s.%s.json", rpf.Id, rs.Id))

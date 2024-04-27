@@ -70,10 +70,11 @@ var (
 type UnitType int
 
 const (
-	TRIBE UnitType = iota
-	ELEMENT
-	COURIER
-	GARRISON
+	UTUnknown UnitType = iota
+	UTTribe
+	UTCourier
+	UTElement
+	UTGarrison
 )
 
 // MarshalJSON implements the json.Marshaler interface.
@@ -104,16 +105,18 @@ func (t UnitType) String() string {
 var (
 	// helper map for marshalling the enum
 	unitTypeEnumToString = map[UnitType]string{
-		TRIBE:    "TRIBE",
-		ELEMENT:  "ELEMENT",
-		COURIER:  "COURIER",
-		GARRISON: "GARRISON",
+		UTUnknown:  "Unknown",
+		UTTribe:    "Tribe",
+		UTCourier:  "Courier",
+		UTElement:  "Element",
+		UTGarrison: "Garrison",
 	}
 	// helper map for unmarshalling the enum
 	unitTypeStringToEnum = map[string]UnitType{
-		"TRIBE":    TRIBE,
-		"ELEMENT":  ELEMENT,
-		"COURIER":  COURIER,
-		"GARRISON": GARRISON,
+		"Unknown":  UTUnknown,
+		"Tribe":    UTTribe,
+		"Courier":  UTCourier,
+		"Element":  UTElement,
+		"Garrison": UTGarrison,
 	}
 )

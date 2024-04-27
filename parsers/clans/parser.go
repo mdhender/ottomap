@@ -15,12 +15,14 @@ import (
 func Parse(rpf *domain.ReportFile, debugSlugs, captureRawText bool) ([]*domain.ReportSection, error) {
 	// read the entire input file into memory
 	input, err := os.ReadFile(rpf.Path)
+	//log.Printf("clans: %s: %8d: %v\n", rpf.Id, len(input), err)
 	if err != nil {
 		return nil, err
 	}
 
 	// extract the header from the input so that we can verify the settings
 	header, err := sniffHeader(rpf.Id, input)
+	//log.Printf("clans: %s: header %+v: %v\n", rpf.Id, header, err)
 	if err != nil {
 		return nil, err
 	}
@@ -33,6 +35,7 @@ func Parse(rpf *domain.ReportFile, debugSlugs, captureRawText bool) ([]*domain.R
 	}
 
 	sections, separator := splitSections(input)
+	//log.Printf("clans: %s: sections %d\n", rpf.Id, len(sections))
 	if separator == nil {
 		log.Printf("clans: %s: missing separator\n", rpf.Id)
 		return nil, err
@@ -42,6 +45,7 @@ func Parse(rpf *domain.ReportFile, debugSlugs, captureRawText bool) ([]*domain.R
 	// capture only the unit sections
 	var rss []*domain.ReportSection
 	for n, section := range sections {
+		//log.Printf("clans: %s: section %2d/%2d: %8d\n", rpf.Id, n+1, len(sections), len(section))
 		if debugSlugs {
 			var slug []byte
 			if len(section) > 40 {
@@ -58,17 +62,22 @@ func Parse(rpf *domain.ReportFile, debugSlugs, captureRawText bool) ([]*domain.R
 		}
 
 		rs := &domain.ReportSection{}
-		rs.Type, rs.Id = parsers.ParseSectionType(lines)
+		rs.Id, rs.Type = parsers.ParseSectionType(lines)
+		//log.Printf("clans: %s: rs %q %q\n", rpf.Id, rs.Id, rs.Type)
 		if rs.Type != domain.RSUnit {
 			continue
 		}
 
-		rs.Location = string(parsers.ParseLocationLine(rs.Id, lines))
-		rs.Movement = string(parsers.ParseMovementLine(rs.Id, lines))
+		unit := &domain.ReportUnit{}
+		rs.Unit = unit
+		unit.Id, unit.Type = parsers.ParseUnitType(lines[0])
+		unit.Location = string(parsers.ParseLocationLine(rs.Id, lines))
+		unit.Movement = string(parsers.ParseMovementLine(rs.Id, lines))
 		for _, line := range parsers.ParseScoutLines(rs.Id, lines) {
-			rs.ScoutLines = append(rs.ScoutLines, string(line))
+			unit.ScoutLines = append(unit.ScoutLines, string(line))
 		}
-		rs.Status = string(parsers.ParseStatusLine(rs.Id, lines))
+		unit.Status = string(parsers.ParseStatusLine(rs.Id, lines))
+
 		if captureRawText {
 			rs.RawText = string(section)
 		}

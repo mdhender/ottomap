@@ -32,21 +32,18 @@ type ReportFile struct {
 //
 // NB: These should be []byte, but string is easier to debug.
 type ReportSection struct {
-	Id         string `json:"id"` // non-unique identifier for the section, derived from Type
-	Type       ReportSectionType
-	Location   string   `json:"location,omitempty"`   // location line from the section
-	Movement   string   `json:"movement,omitempty"`   // movement line from the section
-	ScoutLines []string `json:"scoutLines,omitempty"` // scout lines from the section
-	Status     string   `json:"status,omitempty"`     // status line from the section
-	RawText    string   `json:"rawText,omitempty"`    // this is the un-parsed text of the entire section
+	Id      string            `json:"id"` // non-unique identifier for the section, derived from Type
+	Type    ReportSectionType `json:"type"`
+	Unit    *ReportUnit       `json:"unit,omitempty"`    // populated only if this section contains unit data
+	RawText string            `json:"rawText,omitempty"` // this is the un-parsed text of the entire section
 }
 
 // ReportUnit captures the text for a single unit in the turn report.
 //
 // NB: These should be []byte, but string is easier to debug.
 type ReportUnit struct {
-	Id         string `json:"id"` // unit Id, should be unique within the turn
-	Type       UnitType
+	Id         string   `json:"id"`                   // unit Id, should be unique within the turn
+	Type       UnitType `json:"type"`                 // unit type, not implemented
 	Location   string   `json:"location,omitempty"`   // location line from the section
 	Movement   string   `json:"movement,omitempty"`   // movement line from the section
 	ScoutLines []string `json:"scoutLines,omitempty"` // scout lines from the section
