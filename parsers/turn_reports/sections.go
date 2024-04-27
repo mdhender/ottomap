@@ -1,6 +1,6 @@
 // Copyright (c) 2024 Michael D Henderson. All rights reserved.
 
-package clans
+package turn_reports
 
 import (
 	"bytes"

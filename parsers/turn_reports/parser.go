@@ -1,12 +1,12 @@
 // Copyright (c) 2024 Michael D Henderson. All rights reserved.
 
-package clans
+package turn_reports
 
 import (
 	"bytes"
 	"fmt"
 	"github.com/mdhender/ottomap/domain"
-	"github.com/mdhender/ottomap/parsers/clans/parsers"
+	"github.com/mdhender/ottomap/parsers/turn_reports/headers"
 	"log"
 	"os"
 )
@@ -21,7 +21,7 @@ func Parse(rpf *domain.ReportFile, debugSlugs, captureRawText bool) ([]*domain.R
 	}
 
 	// extract the header from the input so that we can verify the settings
-	header, err := parsers.ParseHeader(rpf.Id, input)
+	header, err := headers.ParseHeader(rpf.Id, input)
 	if err != nil {
 		return nil, err
 	} else if header.ClanId != fmt.Sprintf("%04d", rpf.Clan) {
@@ -60,7 +60,7 @@ func Parse(rpf *domain.ReportFile, debugSlugs, captureRawText bool) ([]*domain.R
 		}
 
 		rs := &domain.ReportSection{}
-		rs.Id, rs.Type = parsers.ParseSectionType(lines)
+		rs.Id, rs.Type = headers.ParseSectionType(lines)
 		//log.Printf("clans: %s: rs %q %q\n", rpf.Id, rs.Id, rs.Type)
 		if rs.Type != domain.RSUnit {
 			continue
@@ -68,13 +68,13 @@ func Parse(rpf *domain.ReportFile, debugSlugs, captureRawText bool) ([]*domain.R
 
 		unit := &domain.ReportUnit{}
 		rs.Unit = unit
-		unit.Id, unit.Type = parsers.ParseUnitType(lines[0])
-		unit.Location = string(parsers.ParseLocationLine(rs.Id, lines))
-		unit.Movement = string(parsers.ParseMovementLine(rs.Id, lines))
-		for _, line := range parsers.ParseScoutLines(rs.Id, lines) {
+		unit.Id, unit.Type = headers.ParseUnitType(lines[0])
+		unit.Location = string(headers.ParseLocationLine(rs.Id, lines))
+		unit.Movement = string(headers.ParseMovementLine(rs.Id, lines))
+		for _, line := range headers.ParseScoutLines(rs.Id, lines) {
 			unit.ScoutLines = append(unit.ScoutLines, string(line))
 		}
-		unit.Status = string(parsers.ParseStatusLine(rs.Id, lines))
+		unit.Status = string(headers.ParseStatusLine(rs.Id, lines))
 
 		if captureRawText {
 			rs.RawText = string(section)

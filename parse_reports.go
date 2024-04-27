@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"github.com/mdhender/ottomap/cerrs"
 	"github.com/mdhender/ottomap/domain"
-	"github.com/mdhender/ottomap/parsers/clans"
+	"github.com/mdhender/ottomap/parsers/turn_reports"
 	"github.com/spf13/cobra"
 	"log"
 	"os"
@@ -39,7 +39,7 @@ var cmdParseReports = &cobra.Command{
 
 		var err error
 		for _, rpf := range index.ReportFiles {
-			rss, parseErr := clans.Parse(rpf, argsParseReports.debug.clanShowSlugs, argsParseReports.debug.clanCaptureRawText)
+			rss, parseErr := turn_reports.Parse(rpf, argsParseReports.debug.clanShowSlugs, argsParseReports.debug.clanCaptureRawText)
 			if parseErr != nil {
 				log.Printf("parse: reports: %s: error: %v\n", rpf.Id, parseErr)
 				err = cerrs.ErrParseFailed
