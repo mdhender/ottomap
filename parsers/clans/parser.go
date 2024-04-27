@@ -4,9 +4,7 @@ package clans
 
 import (
 	"bytes"
-	"github.com/mdhender/ottomap/cerrs"
 	"github.com/mdhender/ottomap/domain"
-	"github.com/mdhender/ottomap/parsers/clans/headers"
 	"log"
 	"os"
 	"path/filepath"
@@ -46,146 +44,53 @@ func Parse(rpf *domain.ReportFile) (*Turn, error) {
 		log.Fatalf("clans: %s: mismatched clan: month %q, want %q\n", rpf.Name, header.Game.Month, month)
 	}
 
-	// scan the input to find the section separator
-	var separator []byte
-	for _, pattern := range [][]byte{
-		[]byte{0xE2, 0x80, 0x83},                         // MS Word section break
-		[]byte{0x0a, 0x2f, 0x2f, 0x2d, 0x2d, 0x2d, 0x2d}, // \n//----
-		[]byte{'\f'}, // simple form feed
-	} {
-		if bytes.Index(input, pattern) == -1 {
-			continue
-		}
-		separator = pattern
-		break
-	}
+	sections, separator := splitSections(input)
 	if separator == nil {
 		log.Printf("clans: %s: missing separator\n", rpf.Name)
-		return nil, cerrs.ErrNoSeparator
+		return nil, err
 	}
 	log.Printf("clans: %s: separator %q\n", rpf.Name, separator)
 
-	//
-	//turn := &Turn{
-	//	Clan: input.Clan,
-	//}
-	//
-	//sections := bytes.Split(data, separator)
-	//for n, section := range sections {
-	//	section = bytes.TrimRight(bytes.TrimLeft(section, "\n"), "\n")
-	//	section = append(section, '\n')
-	//	var slug []byte
-	//	if len(section) > 40 {
-	//		slug = section[:40]
-	//	} else {
-	//		slug = section
-	//	}
-	//	log.Printf("%3d: %6d: %q\n", n+1, len(section), string(slug))
-	//	if bytes.HasPrefix(section, []byte("Courier ")) {
-	//		id := string(section[8:14])
-	//		unit := &Unit{Id: id, Text: sniffMovement(id, section)}
-	//		//log.Printf("courier   unit id %q\n", unit.Id)
-	//		turn.Units = append(turn.Units, unit)
-	//	} else if bytes.HasPrefix(section, []byte("Element ")) {
-	//		id := string(section[8:14])
-	//		unit := &Unit{Id: id, Text: sniffMovement(id, section)}
-	//		//log.Printf("element   unit id %q\n", unit.Id)
-	//		turn.Units = append(turn.Units, unit)
-	//	} else if bytes.HasPrefix(section, []byte("Garrison ")) {
-	//		id := string(section[9:15])
-	//		unit := &Unit{Id: id, Text: sniffMovement(id, section)}
-	//		//log.Printf("garrison  unit id %q\n", unit.Id)
-	//		turn.Units = append(turn.Units, unit)
-	//	} else if bytes.HasPrefix(section, []byte("Tribe ")) {
-	//		id := string(section[6:10])
-	//		unit := &Unit{Id: id, Text: sniffMovement(id, section)}
-	//		//log.Printf("tribe     unit id %q\n", unit.Id)
-	//		turn.Units = append(turn.Units, unit)
-	//	} else if bytes.HasPrefix(section, []byte("Transfers\n")) {
-	//		turn.Transfers = string(section)
-	//	} else if bytes.HasPrefix(section, []byte("Settlements\n")) {
-	//		turn.Settlements = string(section)
-	//	} else {
-	//		log.Printf("%3d: %6d: error: unknown section\n", n+1, len(section))
-	//	}
-	//}
-	//
-	//return turn, nil
-	return nil, cerrs.ErrNotImplemented
-}
-
-func sniffHeader(name string, input []byte) (headers.Header, error) {
-	if !bytes.HasPrefix(input, []byte("Tribe ")) {
-		return headers.Header{}, cerrs.ErrNotATurnReport
+	// process all the sections, adding each to the turn.
+	turn := &Turn{
+		Clan: clan,
 	}
-
-	// the header will be the first two lines of the input
-	nlCount, length := 0, 0
-	for pos := 0; nlCount < 2 && pos < len(input); pos++ {
-		if input[pos] == '\n' {
-			nlCount++
+	for n, section := range sections {
+		var slug []byte
+		if len(section) > 40 {
+			slug = section[:40]
+		} else {
+			slug = section
 		}
-		length++
-	}
-	if nlCount != 2 {
-		return headers.Header{}, cerrs.ErrNotATurnReport
-	}
-	input = input[:length]
-
-	// parse the header
-	hi, err := headers.Parse(name, input)
-	if err != nil {
-		return headers.Header{}, cerrs.ErrNotATurnReport
-	}
-	header, ok := hi.(headers.Header)
-	if !ok {
-		log.Fatalf("clans: %s: internal error: want headers.Header, got %T\n", name, hi)
-	}
-
-	return header, nil
-}
-
-func sniffMovement(id string, input []byte) []byte {
-	var location []byte
-	var unitMovement []byte
-	var unitStatus []byte
-	var scoutMovements [][]byte
-
-	reScout, err := regexp.Compile(`^Scout \d{1}:Scout`)
-	if err != nil {
-		log.Fatal(err)
-	}
-	reStatus, err := regexp.Compile("^" + id + " Status: ")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	for n, line := range bytes.Split(input, []byte{'\n'}) {
-		if n == 0 {
-			location = line
-		} else if bytes.HasPrefix(line, []byte("Tribe Movement:")) {
-			unitMovement = line
-		} else if reScout.Match(line) {
-			scoutMovements = append(scoutMovements, line)
-		} else if reStatus.Match(line) {
-			unitStatus = line
+		log.Printf("%3d: %6d: %q\n", n+1, len(section), string(slug))
+		if bytes.HasPrefix(section, []byte("Courier ")) {
+			id := string(section[8:14])
+			unit := &Unit{Id: id, Text: sniffMovement(id, section)}
+			//log.Printf("courier   unit id %q\n", unit.Id)
+			turn.Units = append(turn.Units, unit)
+		} else if bytes.HasPrefix(section, []byte("Element ")) {
+			id := string(section[8:14])
+			unit := &Unit{Id: id, Text: sniffMovement(id, section)}
+			//log.Printf("element   unit id %q\n", unit.Id)
+			turn.Units = append(turn.Units, unit)
+		} else if bytes.HasPrefix(section, []byte("Garrison ")) {
+			id := string(section[9:15])
+			unit := &Unit{Id: id, Text: sniffMovement(id, section)}
+			//log.Printf("garrison  unit id %q\n", unit.Id)
+			turn.Units = append(turn.Units, unit)
+		} else if bytes.HasPrefix(section, []byte("Tribe ")) {
+			id := string(section[6:10])
+			unit := &Unit{Id: id, Text: sniffMovement(id, section)}
+			//log.Printf("tribe     unit id %q\n", unit.Id)
+			turn.Units = append(turn.Units, unit)
+		} else if bytes.HasPrefix(section, []byte("Transfers\n")) {
+			turn.Transfers = string(section)
+		} else if bytes.HasPrefix(section, []byte("Settlements\n")) {
+			turn.Settlements = string(section)
+		} else {
+			log.Fatalf("%3d: %6d: error: unknown section\n", n+1, len(section))
 		}
 	}
 
-	var results []byte
-	results = append(results, location...)
-	results = append(results, '\n')
-	if unitMovement != nil {
-		results = append(results, unitMovement...)
-		results = append(results, '\n')
-	}
-	for _, scoutMovement := range scoutMovements {
-		results = append(results, scoutMovement...)
-		results = append(results, '\n')
-	}
-	if unitStatus != nil {
-		results = append(results, unitStatus...)
-		results = append(results, '\n')
-	}
-	return results
+	return turn, nil
 }

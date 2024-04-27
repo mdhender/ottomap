@@ -38,7 +38,11 @@ var cmdParseReports = &cobra.Command{
 			}
 			log.Printf("parse: reports: %s: clan %p\n", reportFile.Name, clan)
 
-			//log.Printf("parse: reports: %s: units %3d: transfers %6d: settlements %6d\n", inputFile.File, len(clan.Units), len(clan.Transfers), len(clan.Settlements))
+			log.Printf("parse: reports: %s: units %3d: transfers %6d: settlements %6d\n", reportFile.Name, len(clan.Units), len(clan.Transfers), len(clan.Settlements))
+
+			log.Printf("parse: reports: todo: year, month, and clan must be added to the ReportFile struct\n")
+			log.Printf("parse: reports: todo: push section data into the domain model structs instead of files\n")
+			log.Printf("parse: reports: todo: ignore the temptation to push section data into a database\n")
 
 			//for _, unit := range clan.Units {
 			//	path := filepath.Join(argsParse.output, fmt.Sprintf("%s-%s.%s.%s.input.txt", inputFile.Year, inputFile.Month, inputFile.Clan, unit.Id))
