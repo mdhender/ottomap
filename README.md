@@ -59,3 +59,31 @@ input/900-05.0138.input.txt:        Unicode text, UTF-8 text
 
 Spaces, line breaks, page breaks, and section breaks are important to the parser.
 Please try to avoid altering them.
+
+
+## Grids and the Big Map
+The big map is divided into 676 grids arranged in 26 columns and 26 rows.
+The grids use letters, not digits, for their coordinates on the big map.
+The grid at the top left is (A, A) and the grid at the bottom right is (Z, Z).
+
+Each grid has 30 columns and 21 rows.
+The hex at the top left is 1, 1 and the hex at the bottom right is 30, 21.
+Hexes are "flat" on the top and even rows are shifted down.
+For example, hex (13, 10) has
+
+1. (13, 9) to the north
+2. (14, 9) to the north-east
+3. (14, 10) to the south-east
+4. (13, 11) to the south
+5. (12, 10) to the south-west
+6. (12, 9) to the north-west
+
+In turn reports, a hex in the grid is usually displayed as "AA 1310."
+
+You can convert grid coordinates to big map coordinates.
+A coordinate like "VN 0810" is "(V8, N10)" on the big map.
+
+You can convert also convert grid coordinates to absolute coordinates by scaling the column and row values.
+For our coordinate of "VN 0810," "V" is the 22nd grid from the left and "N" is the 14th grid from the top.
+This gives us a column of (22 - 1) * 30 + (8 - 1) = 637 and row of (14 - 1) * 21 + (10 - 1) = 282, or (637, 282)
+(We subtract one before multiplying because absolute coordinates start at zero, not one.)
