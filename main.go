@@ -26,8 +26,8 @@ func Execute() error {
 	cmdRoot.AddCommand(cmdIndex, cmdParse, cmdVersion)
 
 	cmdIndex.AddCommand(cmdIndexReports)
-	cmdIndexReports.Flags().StringVarP(&argsParse.input, "input", "i", ".", "path to read input from")
-	cmdIndexReports.Flags().StringVarP(&argsParse.output, "output", "o", ".", "path to write output to")
+	cmdIndexReports.Flags().StringVarP(&argsIndexReports.input, "input", "i", ".", "path to read input from")
+	cmdIndexReports.Flags().StringVarP(&argsIndexReports.output, "output", "o", ".", "path to write output to")
 	if err := cmdIndexReports.MarkFlagRequired("input"); err != nil {
 		log.Fatalf("input: parse: input: mark required: %v\n", err)
 	} else if err = cmdIndexReports.MarkFlagRequired("output"); err != nil {

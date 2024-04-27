@@ -48,7 +48,7 @@ var cmdIndexReports = &cobra.Command{
 		if err != nil {
 			log.Fatal(err)
 		}
-		entries, err := os.ReadDir(argsParse.input)
+		entries, err := os.ReadDir(argsIndexReports.input)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -58,7 +58,7 @@ var cmdIndexReports = &cobra.Command{
 				if matches := rxTurnReportFile.FindStringSubmatch(fileName); len(matches) == 4 {
 					log.Printf("index: reports: %s\n", filepath.Join(argsIndexReports.input, fileName))
 					index.ReportFiles[fileName] = &domain.ReportFile{
-						Path: argsParse.input,
+						Path: argsIndexReports.input,
 						Name: fileName,
 					}
 				}
@@ -66,13 +66,12 @@ var cmdIndexReports = &cobra.Command{
 		}
 
 		// save the index to a JSON file in the output path
-		indexFile := filepath.Join(argsParse.output, "index.json")
+		indexFile := filepath.Join(argsIndexReports.output, "index.json")
 		if data, err := json.MarshalIndent(index, "", "  "); err != nil {
 			log.Fatalf("index: reports: marshal index: %v\n", err)
 		} else if err := os.WriteFile(indexFile, data, 0644); err != nil {
 			log.Fatalf("index: reports: create index: %v\n", err)
 		}
-
 		log.Printf("index: reports: created %s\n", indexFile)
 	},
 }
