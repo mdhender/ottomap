@@ -34,7 +34,7 @@ func Execute() error {
 		log.Fatalf("input: parse: output: mark required: %v\n", err)
 	}
 
-	cmdParse.PersistentFlags().StringVarP(&argsParse.input, "input", "i", ".", "path to read input from")
+	cmdParse.PersistentFlags().StringVarP(&argsParse.index, "index", "i", ".", "index file to process")
 	cmdParse.PersistentFlags().StringVarP(&argsParse.output, "output", "o", ".", "path to write output to")
 	cmdParse.AddCommand(cmdParseReports, cmdParseUnits)
 

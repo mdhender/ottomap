@@ -7,27 +7,29 @@ import (
 	"fmt"
 	"github.com/mdhender/ottomap/cerrs"
 	"github.com/spf13/cobra"
+	"log"
+	"os"
 	"strings"
 )
 
 var argsParse struct {
-	input  string // path to read input files from
+	index  string // index file to process
 	output string // path to create output files in
 }
 
 var cmdParse = &cobra.Command{
 	Use: "parse",
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		//log.Printf("parse: input  %s\n", argsParse.input)
-		if strings.TrimSpace(argsParse.input) != argsParse.input {
-			return errors.Join(cerrs.ErrInvalidPath, cerrs.ErrInvalidInputPath, fmt.Errorf("leading or trailing spaces"))
-		} else if path, err := abspath(argsParse.input); err != nil {
-			return errors.Join(cerrs.ErrInvalidPath, cerrs.ErrInvalidInputPath, err)
-		} else {
-			argsParse.input = path
+		log.Printf("parse: index  %s\n", argsParse.index)
+		if sb, err := os.Stat(argsParse.index); err != nil && os.IsNotExist(err) {
+			return cerrs.ErrInvalidIndexFile
+		} else if os.IsNotExist(err) {
+			return cerrs.ErrMissingIndexFile
+		} else if sb.IsDir() {
+			return cerrs.ErrInvalidIndexFile
 		}
 
-		//log.Printf("parse: output %s\n", argsParse.output)
+		log.Printf("parse: output %s\n", argsParse.output)
 		if strings.TrimSpace(argsParse.output) != argsParse.output {
 			return errors.Join(cerrs.ErrInvalidPath, cerrs.ErrInvalidOutputPath, fmt.Errorf("leading or trailing spaces"))
 		} else if path, err := abspath(argsParse.output); err != nil {
@@ -36,8 +38,8 @@ var cmdParse = &cobra.Command{
 			argsParse.output = path
 		}
 
-		//log.Printf("parse: input  %s\n", argsParse.input)
-		//log.Printf("parse: output %s\n", argsParse.output)
+		log.Printf("parse: index  %s\n", argsParse.index)
+		log.Printf("parse: output %s\n", argsParse.output)
 
 		return nil
 	},
