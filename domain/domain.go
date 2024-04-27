@@ -47,8 +47,9 @@ type Turn struct {
 // Clan defines the units in a single hierarchy.
 //
 // Tribes are the highest level; they are identified by a 4-digit number.
-// All tribes in a clan share the same last three digits. The tribe that
-// starts with a zero is special; it is the main tribe for the clan.
+// All tribes in a clan share the same last three digits (0138, 1138,
+// 2138, etc.). The tribe that starts with a zero is special; it is the main
+// tribe for the clan.
 //
 // NB: I'm using Clan here instead of Tribe to make the parsing easier
 // for me to understand.
@@ -133,10 +134,21 @@ type Hex struct {
 	Settlement *Settlement `json:"settlement,omitempty"`
 }
 
-// Step captures the results of a unit's attempt to move from one hex
-// to another.
+// Step captures data from a unit's attempt to move from one hex to another.
+//
+// Results include terrain and edge features, units encountered,
+// settlements, and other things of interest. Note that even a move
+// that fails because of M.P.'s can reveal what terrain is in that
+// destination hex.
+//
+// NB: The From and To hexes are helpful when plotting moves. We have to
+// take some care to avoid duplicates. Imagine a unit moves N S N S N.
+// The naive implementation creates a chain of 5 hexes. There should be
+// only two.
 type Step struct {
-	Direction string `json:"direction,omitempty"`
-	Results   string `json:"results,omitempty"`
-	RawText   string `json:"rawText,omitempty"`
+	From      *GridHex `json:"from,omitempty"`
+	To        *GridHex `json:"to,omitempty"`
+	Direction string   `json:"direction,omitempty"`
+	Results   string   `json:"results,omitempty"`
+	RawText   string   `json:"rawText,omitempty"`
 }
