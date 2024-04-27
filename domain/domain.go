@@ -42,15 +42,23 @@ type ReportSection struct {
 //
 // NB: These should be []byte, but string is easier to debug.
 type ReportUnit struct {
-	Id         string   `json:"id"`                 // unit Id, should be unique within the turn
-	Type       UnitType `json:"type"`               // unit type, not implemented
-	Location   string   `json:"location,omitempty"` // location line from the section
-	PrevHex    *GridHex `json:"prevHex,omitempty"`
-	CurrHex    *GridHex `json:"currHex,omitempty"`
+	Id         string         `json:"id"`   // unit Id, should be unique within the turn
+	Type       UnitType       `json:"type"` // unit type, not implemented
+	PrevHex    *GridHex       `json:"prevHex,omitempty"`
+	CurrHex    *GridHex       `json:"currHex,omitempty"`
+	Movement   string         `json:"movement,omitempty"`   // movement line from the section
+	ScoutLines []string       `json:"scoutLines,omitempty"` // scout lines from the section
+	Status     string         `json:"status,omitempty"`     // status line from the section
+	Raw        *ReportUnitRaw `json:"raw,omitempty"`        // text captured for debugging
+}
+
+// ReportUnitRaw captures input for debugging.
+type ReportUnitRaw struct {
+	Text       string   `json:"text,omitempty"`       // this is the un-parsed text of the entire section
+	Location   string   `json:"location,omitempty"`   // location line from the section
 	Movement   string   `json:"movement,omitempty"`   // movement line from the section
 	ScoutLines []string `json:"scoutLines,omitempty"` // scout lines from the section
 	Status     string   `json:"status,omitempty"`     // status line from the section
-	RawText    string   `json:"rawText,omitempty"`    // this is the un-parsed text of the entire section
 }
 
 // Turn defines the data extracted from the turn report.

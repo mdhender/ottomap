@@ -69,19 +69,32 @@ func Parse(rpf *domain.ReportFile, debugSlugs, captureRawText bool) ([]*domain.R
 		}
 
 		unit := &domain.ReportUnit{}
+		if captureRawText {
+			unit.Raw = &domain.ReportUnitRaw{}
+		}
 		rs.Unit = unit
 		unit.Id, unit.Type = sections.ParseUnitType(lines[0])
+
 		location := sections.ParseLocationLine(rs.Id, lines)
+		if unit.Raw != nil {
+			unit.Raw.Location = string(location)
+		}
 		if hi, err := locations.Parse(rpf.Id, location); err != nil {
-			log.Printf("turn_reports: %s: location %q: parse %v\n", rpf.Id, unit.Location, err)
+			log.Printf("turn_reports: %s: location %q: parse %v\n", rpf.Id, string(location), err)
 		} else if hi == nil {
-			log.Printf("turn_reports: %s: location %q: parse => nil!\n", rpf.Id, unit.Location)
+			log.Printf("turn_reports: %s: location %q: parse => nil!\n", rpf.Id, string(location))
 		} else if hexes, ok := hi.([2]*domain.GridHex); ok {
 			unit.PrevHex = hexes[0]
 			unit.CurrHex = hexes[1]
 		}
-		log.Printf("turn_reports: %s: location %q: ==> %q %q\n", rpf.Id, unit.Location, unit.PrevHex, unit.CurrHex)
-		unit.Movement = string(sections.ParseMovementLine(rs.Id, lines))
+		log.Printf("turn_reports: %s: location %q: ==> %q %q\n", rpf.Id, string(location), unit.PrevHex, unit.CurrHex)
+
+		movement := sections.ParseMovementLine(rs.Id, lines)
+		if unit.Raw != nil {
+			unit.Raw.Movement = string(movement)
+		}
+		unit.Movement = string(movement)
+
 		for _, line := range sections.ParseScoutLines(rs.Id, lines) {
 			unit.ScoutLines = append(unit.ScoutLines, string(line))
 		}

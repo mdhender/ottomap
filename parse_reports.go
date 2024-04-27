@@ -16,8 +16,8 @@ import (
 
 var argsParseReports struct {
 	debug struct {
-		clanShowSlugs      bool
-		clanCaptureRawText bool
+		clanShowSlugs  bool
+		captureRawText bool
 	}
 }
 
@@ -39,7 +39,7 @@ var cmdParseReports = &cobra.Command{
 
 		var err error
 		for _, rpf := range index.ReportFiles {
-			rss, parseErr := turn_reports.Parse(rpf, argsParseReports.debug.clanShowSlugs, argsParseReports.debug.clanCaptureRawText)
+			rss, parseErr := turn_reports.Parse(rpf, argsParseReports.debug.clanShowSlugs, argsParseReports.debug.captureRawText)
 			if parseErr != nil {
 				log.Printf("parse: reports: %s: error: %v\n", rpf.Id, parseErr)
 				err = cerrs.ErrParseFailed
