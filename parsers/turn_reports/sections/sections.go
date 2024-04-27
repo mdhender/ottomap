@@ -1,43 +1,18 @@
 // Copyright (c) 2024 Michael D Henderson. All rights reserved.
 
-package headers
+// Package sections implements parsers for lines in a report section
+package sections
 
 import (
 	"bytes"
 	"fmt"
-	"github.com/mdhender/ottomap/cerrs"
 	"github.com/mdhender/ottomap/domain"
-	"log"
 	"regexp"
 )
 
 var (
 	rxScout *regexp.Regexp
 )
-
-// ParseHeader returns
-func ParseHeader(id string, input []byte) (*Header, error) {
-	// the header is the first two lines of the report and must start with "Tribe: "
-	input = theFirstTwoLines(input)
-	if !bytes.HasPrefix(input, []byte("Tribe ")) {
-		return nil, cerrs.ErrNotATurnReport
-	}
-	if input[len(input)-1] != '\n' {
-		panic("hey, bad function")
-	}
-
-	// parse the header
-	hi, err := Parse(id, input)
-	if err != nil {
-		log.Printf("clans: header: %v\n", err)
-		return nil, cerrs.ErrNotATurnReport
-	}
-	header, ok := hi.(*Header)
-	if !ok {
-		log.Fatalf("clans: %s: internal error: want *Header, got %T\n", id, hi)
-	}
-	return header, nil
-}
 
 // ParseSectionType returns the section's identifier and type.
 func ParseSectionType(lines [][]byte) (string, domain.ReportSectionType) {
@@ -120,18 +95,4 @@ func ParseUnitType(line []byte) (string, domain.UnitType) {
 		return string(line[6:10]), domain.UTTribe
 	}
 	return "", domain.UTUnknown
-}
-
-// theFirstTwoLines returns the first two lines of the input as a single slice.
-// returns nil if there are not at least two lines in the input.
-func theFirstTwoLines(input []byte) []byte {
-	for pos, nlCount := 0, 0; nlCount < 2 && pos < len(input); pos++ {
-		if input[pos] == '\n' {
-			nlCount++
-			if nlCount == 2 {
-				return input[:pos+1]
-			}
-		}
-	}
-	return nil
 }

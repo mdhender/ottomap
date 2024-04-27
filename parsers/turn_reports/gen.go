@@ -2,4 +2,4 @@
 
 package turn_reports
 
-//go:generate pigeon -o parsers/grammar.go parsers/grammar.peg
+//go:generate pigeon -o headers/grammar.go headers/grammar.peg

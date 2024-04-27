@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/mdhender/ottomap/domain"
 	"github.com/mdhender/ottomap/parsers/turn_reports/headers"
+	"github.com/mdhender/ottomap/parsers/turn_reports/sections"
 	"log"
 	"os"
 )
@@ -32,18 +33,18 @@ func Parse(rpf *domain.ReportFile, debugSlugs, captureRawText bool) ([]*domain.R
 		log.Fatalf("clans: %s: mismatched clan: month %q, want %q\n", rpf.Id, header.Game.Month, fmt.Sprintf("%02d", rpf.Month))
 	}
 
-	sections, separator := splitSections(input)
-	//log.Printf("clans: %s: sections %d\n", rpf.Id, len(sections))
+	ss, separator := splitSections(input)
+	//log.Printf("clans: %s: sections %d\n", rpf.Id, len(ss))
 	if separator == nil {
 		log.Printf("clans: %s: missing separator\n", rpf.Id)
 		return nil, err
 	}
-	// log.Printf("clans: %s: sections %3d: separator %q\n", rpf.Id, len(sections), separator)
+	// log.Printf("clans: %s: sections %3d: separator %q\n", rpf.Id, len(ss), separator)
 
 	// capture only the unit sections
 	var rss []*domain.ReportSection
-	for n, section := range sections {
-		//log.Printf("clans: %s: section %2d/%2d: %8d\n", rpf.Id, n+1, len(sections), len(section))
+	for n, section := range ss {
+		//log.Printf("clans: %s: section %2d/%2d: %8d\n", rpf.Id, n+1, len(ss), len(section))
 		if debugSlugs {
 			var slug []byte
 			if len(section) > 40 {
@@ -60,7 +61,7 @@ func Parse(rpf *domain.ReportFile, debugSlugs, captureRawText bool) ([]*domain.R
 		}
 
 		rs := &domain.ReportSection{}
-		rs.Id, rs.Type = headers.ParseSectionType(lines)
+		rs.Id, rs.Type = sections.ParseSectionType(lines)
 		//log.Printf("clans: %s: rs %q %q\n", rpf.Id, rs.Id, rs.Type)
 		if rs.Type != domain.RSUnit {
 			continue
@@ -68,13 +69,13 @@ func Parse(rpf *domain.ReportFile, debugSlugs, captureRawText bool) ([]*domain.R
 
 		unit := &domain.ReportUnit{}
 		rs.Unit = unit
-		unit.Id, unit.Type = headers.ParseUnitType(lines[0])
-		unit.Location = string(headers.ParseLocationLine(rs.Id, lines))
-		unit.Movement = string(headers.ParseMovementLine(rs.Id, lines))
-		for _, line := range headers.ParseScoutLines(rs.Id, lines) {
+		unit.Id, unit.Type = sections.ParseUnitType(lines[0])
+		unit.Location = string(sections.ParseLocationLine(rs.Id, lines))
+		unit.Movement = string(sections.ParseMovementLine(rs.Id, lines))
+		for _, line := range sections.ParseScoutLines(rs.Id, lines) {
 			unit.ScoutLines = append(unit.ScoutLines, string(line))
 		}
-		unit.Status = string(headers.ParseStatusLine(rs.Id, lines))
+		unit.Status = string(sections.ParseStatusLine(rs.Id, lines))
 
 		if captureRawText {
 			rs.RawText = string(section)
