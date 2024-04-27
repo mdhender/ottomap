@@ -4,56 +4,43 @@ package clans
 
 import (
 	"bytes"
+	"fmt"
 	"github.com/mdhender/ottomap/domain"
 	"log"
 	"os"
-	"path/filepath"
-	"regexp"
 )
 
 // Parse splits the input into individual sections.
 func Parse(rpf *domain.ReportFile) (*Turn, error) {
-	// extract clan, year, and month from the file name
-	rxTurnReportFile, err := regexp.Compile(`^(\d{3})-(\d{2})\.(0\d{3})\.input\.txt$`)
-	if err != nil {
-		log.Fatal(err)
-	}
-	var year, month, clan string
-	if matches := rxTurnReportFile.FindStringSubmatch(rpf.Name); len(matches) != 4 {
-		log.Fatalf("clans: %s: internal error: regex did not match clan/year/month\n", rpf.Name)
-	} else {
-		year, month, clan = matches[1], matches[2], matches[3]
-	}
-
 	// read the entire input file into memory
-	input, err := os.ReadFile(filepath.Join(rpf.Path, rpf.Name))
+	input, err := os.ReadFile(rpf.Path)
 	if err != nil {
 		return nil, err
 	}
 
 	// extract the header from the input so that we can verify the settings
-	header, err := sniffHeader(rpf.Name, input)
+	header, err := sniffHeader(rpf.Id, input)
 	if err != nil {
 		return nil, err
 	}
-	if header.ClanId != clan {
-		log.Fatalf("clans: %s: mismatched clan: id %q: want %q\n", rpf.Name, header.ClanId, clan)
-	} else if header.Game.Year != year {
-		log.Fatalf("clans: %s: mismatched clan: year %q: want %q\n", rpf.Name, header.Game.Year, year)
-	} else if header.Game.Month != month {
-		log.Fatalf("clans: %s: mismatched clan: month %q, want %q\n", rpf.Name, header.Game.Month, month)
+	if header.ClanId != fmt.Sprintf("%04d", rpf.Clan) {
+		log.Fatalf("clans: %s: mismatched clan: id %q: want %q\n", rpf.Id, header.ClanId, fmt.Sprintf("%04d", rpf.Clan))
+	} else if header.Game.Year != fmt.Sprintf("%03d", rpf.Year) {
+		log.Fatalf("clans: %s: mismatched clan: year %q: want %q\n", rpf.Id, header.Game.Year, fmt.Sprintf("%03d", rpf.Year))
+	} else if header.Game.Month != fmt.Sprintf("%02d", rpf.Month) {
+		log.Fatalf("clans: %s: mismatched clan: month %q, want %q\n", rpf.Id, header.Game.Month, fmt.Sprintf("%02d", rpf.Month))
 	}
 
 	sections, separator := splitSections(input)
 	if separator == nil {
-		log.Printf("clans: %s: missing separator\n", rpf.Name)
+		log.Printf("clans: %s: missing separator\n", rpf.Id)
 		return nil, err
 	}
-	log.Printf("clans: %s: separator %q\n", rpf.Name, separator)
+	// log.Printf("clans: %s: sections %3d: separator %q\n", rpf.Id, len(sections), separator)
 
 	// process all the sections, adding each to the turn.
 	turn := &Turn{
-		Clan: clan,
+		Clan: fmt.Sprintf("%04d", rpf.Clan),
 	}
 	for n, section := range sections {
 		var slug []byte

@@ -18,10 +18,14 @@ type Index struct {
 // (which must be plain text) and splits it into sections, one section per unit.
 // Future stages will translate the raw text in the sections to usable turn data.
 type ReportFile struct {
-	Path     string           `json:"path"`             // path to the input file
-	Name     string           `json:"name"`             // name of the input file
-	Player   *Player          `json:"player,omitempty"` // optional link to information on player that owns the data in the file
-	Sections []*ReportSection `json:"sections,omitempty"`
+	Id         string           `json:"id"`                   // unique identifier for this file
+	Path       string           `json:"path"`                 // full path to the input file
+	Player     *Player          `json:"player,omitempty"`     // optional link to information on player that owns the data in the file
+	Clan       int              `json:"clan,omitempty"`       // Id of the clan being reported on
+	Year       int              `json:"year,omitempty"`       // Game year of the report
+	Month      int              `json:"month,omitempty"`      // Game month of the report
+	ReportDate string           `json:"reportDate,omitempty"` // Date reported generated (YYYY/MM/DD)
+	Sections   []*ReportSection `json:"sections,omitempty"`
 }
 
 // ReportSection captures the text from a single section of the turn report.

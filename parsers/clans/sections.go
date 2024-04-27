@@ -39,7 +39,7 @@ func splitSections(input []byte) ([][]byte, []byte) {
 	if separator == nil {
 		sections = [][]byte{input}
 	} else {
-		bytes.Split(input, separator)
+		sections = bytes.Split(input, separator)
 	}
 
 	// our parsers expect sections to not start or end with blank lines.

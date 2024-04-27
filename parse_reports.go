@@ -4,12 +4,14 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/mdhender/ottomap/cerrs"
 	"github.com/mdhender/ottomap/domain"
 	"github.com/mdhender/ottomap/parsers/clans"
 	"github.com/spf13/cobra"
 	"log"
 	"os"
+	"path/filepath"
 )
 
 var cmdParseReports = &cobra.Command{
@@ -29,32 +31,29 @@ var cmdParseReports = &cobra.Command{
 		log.Printf("parse: reports: loaded index file\n")
 
 		var err error
-		for _, reportFile := range index.ReportFiles {
-			clan, parseErr := clans.Parse(reportFile)
+		for _, rpf := range index.ReportFiles {
+			clan, parseErr := clans.Parse(rpf)
 			if parseErr != nil {
-				log.Printf("parse: reports: %s: error: %v\n", reportFile.Name, parseErr)
+				log.Printf("parse: reports: %s: error: %v\n", rpf.Id, parseErr)
 				err = cerrs.ErrParseFailed
 				continue
 			}
-			log.Printf("parse: reports: %s: clan %p\n", reportFile.Name, clan)
+			log.Printf("parse: reports: %s: clan %s: units %3d: transfers %6d: settlements %6d\n", rpf.Id, clan.Clan, len(clan.Units), len(clan.Transfers), len(clan.Settlements))
 
-			log.Printf("parse: reports: %s: units %3d: transfers %6d: settlements %6d\n", reportFile.Name, len(clan.Units), len(clan.Transfers), len(clan.Settlements))
-
-			log.Printf("parse: reports: todo: year, month, and clan must be added to the ReportFile struct\n")
-			log.Printf("parse: reports: todo: push section data into the domain model structs instead of files\n")
-			log.Printf("parse: reports: todo: ignore the temptation to push section data into a database\n")
-
-			//for _, unit := range clan.Units {
-			//	path := filepath.Join(argsParse.output, fmt.Sprintf("%s-%s.%s.%s.input.txt", inputFile.Year, inputFile.Month, inputFile.Clan, unit.Id))
-			//	log.Printf("parse: reports: %s: %-8s => %s\n", inputFile.File, unit.Id, path)
-			//	if err := os.WriteFile(path, unit.Text, 0644); err != nil {
-			//		log.Fatalf("parse: reports: %s: %v\n", inputFile.File, err)
-			//	}
-			//}
+			for _, unit := range clan.Units {
+				path := filepath.Join(argsParse.output, fmt.Sprintf("%s.%s.input.txt", rpf.Id, unit.Id))
+				log.Printf("parse: reports: %s: %-8s => %s\n", rpf.Id, unit.Id, path)
+				if err := os.WriteFile(path, unit.Text, 0644); err != nil {
+					log.Fatalf("parse: reports: %s: %v\n", rpf.Id, err)
+				}
+			}
 		}
 
 		if err != nil {
 			log.Printf("parse: reports: error parsing input: %v\n", err)
 		}
+
+		log.Printf("parse: reports: todo: push section data into the domain model structs instead of files\n")
+		log.Printf("parse: reports: todo: ignore the temptation to push section data into a database\n")
 	},
 }
