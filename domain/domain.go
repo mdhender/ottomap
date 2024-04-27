@@ -101,13 +101,13 @@ type Settlement struct {
 // it as "column * 100 + row" with leading zeroes.)
 //
 // Column starts at 00 on the left side of the map. There are 30
-// columns on each grid, so the value ranges from 00 to 29.
+// columns on each grid, so the value ranges from 01 to 30.
 //
 // Row starts at 00 on the top of the map. There are 21 rows on
-// each grid, so the value ranges from 00 to 20.
+// each grid, so the value ranges from 01 to 21.
 //
-// The hex in the top left corner of a grid is "## 0000" and the
-// hex in the bottom right corner is "## 2920." (The reports
+// The hex in the top left corner of a grid is "## 0101" and the
+// hex in the bottom right corner is "## 3021." (The reports
 // always put a space between the grid and the column/row numbers.)
 //
 // NB: Sometimes the location isn't known or available. When that
@@ -116,10 +116,11 @@ type Settlement struct {
 // happens to be the zero-value for the struct in Go, so we're happy.
 //
 // NB: See https://tribenet.wiki/mapping/grid for actual details on this system.
+// Also https://tribenet.wiki/blank_template_numbered.png for the numbering.
 type GridHex struct {
 	Grid   string `json:"grid,omitempty"` // "##", NN, or "N/A"
-	Column int    `json:"col,omitempty"`  // 00..20
-	Row    int    `json:"row,omitempty"`  // 00..29
+	Column int    `json:"col,omitempty"`  // 01..30
+	Row    int    `json:"row,omitempty"`  // 01..21
 	Hex    *Hex   `json:"hex,omitempty"`  // optional details for the hex
 }
 
@@ -127,9 +128,12 @@ type GridHex struct {
 //
 // Be aware that Column and Row are the coordinates on an imaginary map,
 // not on the grid. That imaginary map is NOT the big map. It's a magical
-// thing centered on the clan's first hex. There's a lot of angry code
-// that needs to be written to allow multiple clans to exist in this
-// magical coordinate system. That code probably will never happen.
+// thing centered on the clan's first hex.
+//
+// It's not obvious, but if players can agree "hex (12, 10) on map A
+// is (-5, -3) on map B," that's enough to translate the coordinates and
+// merge the two players into a single map. (If my math is right, map B's
+// origin is (17, 16) on map A.)
 type Hex struct {
 	Column     int         `json:"col,omitempty"` // coordinates on the big map
 	Row        int         `json:"row,omitempty"` // coordinates on the big map
