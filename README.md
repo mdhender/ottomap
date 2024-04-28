@@ -90,3 +90,26 @@ You can convert also convert grid coordinates to absolute coordinates by scaling
 For our coordinate of "VN 0810," "V" is the 22nd grid from the left and "N" is the 14th grid from the top.
 This gives us a column of (22 - 1) * 30 + (8 - 1) = 637 and row of (14 - 1) * 21 + (10 - 1) = 282, or (637, 282)
 (We subtract one before multiplying because absolute coordinates start at zero, not one.)
+
+## Parsing Errors
+The report processor has been updated to fail on unexpected input.
+I know this is annoying, but it prevents bad data from going into the map.
+
+There are two causes for this: typos and new scenarios.
+
+### Fixing typos in the input
+Typos don't happen often, but when they do, you need to fix them and restart.
+If you don't understand what needs to be fixed, please ask for help on the TribeNet Discord's `#mapping` channel.
+
+### New scenarios
+This is more common than typos since TribeNet supports so many actions.
+
+You'll usually find a new scenario in the Scouting results.
+I need to update the code and the test suites, so please ask for help on the TribeNet Discords `#mapping-tool` channel.
+
+Adding code can take a while.
+In the meantime, the only work-around is to delete the new scenario from the input and restart.
+Results for that unit are going to be "off" until the code is fixed, but you'll be able to map out the rest of the turn.
+
+
+###
