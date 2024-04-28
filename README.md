@@ -4,6 +4,9 @@ OttoMap is a tool that translates TribeNet turn report files into JSON data.
 
 A future version of the tool will convert the JSON data into a map.
 
+> WARNING OttoMap is in early development. 
+> I am breaking things and changing types almost daily. 
+ 
 ## Overview
 I'm planning on translating a small subset of the turn report.
 See the files in the `domain` directory to get an idea of what we're looking at.
