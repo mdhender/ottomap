@@ -5,9 +5,11 @@ package turn_reports
 import (
 	"bytes"
 	"fmt"
+	"github.com/mdhender/ottomap/cerrs"
 	"github.com/mdhender/ottomap/domain"
 	"github.com/mdhender/ottomap/parsers/turn_reports/headers"
 	"github.com/mdhender/ottomap/parsers/turn_reports/locations"
+	"github.com/mdhender/ottomap/parsers/turn_reports/movements"
 	"github.com/mdhender/ottomap/parsers/turn_reports/sections"
 	"log"
 	"os"
@@ -32,6 +34,12 @@ func Parse(rpf *domain.ReportFile, debugSlugs, captureRawText bool) ([]*domain.R
 		log.Fatalf("clans: %s: mismatched clan: year %q: want %q\n", rpf.Id, header.Game.Year, fmt.Sprintf("%03d", rpf.Year))
 	} else if header.Game.Month != fmt.Sprintf("%02d", rpf.Month) {
 		log.Fatalf("clans: %s: mismatched clan: month %q, want %q\n", rpf.Id, header.Game.Month, fmt.Sprintf("%02d", rpf.Month))
+	}
+
+	// debug logic to limit testing to just one interesting turn
+	if !(rpf.Year == 900 && rpf.Month == 2) {
+		log.Printf("turn_reports: parse: skipping %03d-%02d.%04d\n", rpf.Year, rpf.Month, rpf.Clan)
+		return nil, cerrs.ErrNotImplemented
 	}
 
 	ss, separator := splitSections(input)
@@ -61,6 +69,17 @@ func Parse(rpf *domain.ReportFile, debugSlugs, captureRawText bool) ([]*domain.R
 			continue
 		}
 
+		// debug logic to test one tribe that has units with follows and movement in the same turn
+		//if !(bytes.HasPrefix(lines[0], []byte("Tribe 2138")) || bytes.HasPrefix(lines[0], []byte("Element 2138e1"))) {
+		//	log.Printf("turn_reports: parse: skipping %s\n", string(lines[0]))
+		//	continue
+		//}
+
+		log.Printf("turn_reports: parse: parsing %s\n", string(lines[0]))
+		//for n, line := range lines {
+		//	log.Printf("section: line %3d: %s\n", n+1, string(line))
+		//}
+
 		rs := &domain.ReportSection{}
 		rs.Id, rs.Type = sections.ParseSectionType(lines)
 		//log.Printf("clans: %s: rs %q %q\n", rpf.Id, rs.Id, rs.Type)
@@ -80,20 +99,28 @@ func Parse(rpf *domain.ReportFile, debugSlugs, captureRawText bool) ([]*domain.R
 			unit.Raw.Location = string(location)
 		}
 		if hi, err := locations.Parse(rpf.Id, location); err != nil {
-			log.Printf("turn_reports: %s: location %q: parse %v\n", rpf.Id, string(location), err)
+			log.Printf("turn_reports: %s: %s: location %q: parse %v\n", rpf.Id, unit.Id, string(location), err)
 		} else if hi == nil {
-			log.Printf("turn_reports: %s: location %q: parse => nil!\n", rpf.Id, string(location))
+			log.Printf("turn_reports: %s: %s: location %q: parse => nil!\n", rpf.Id, unit.Id, string(location))
 		} else if hexes, ok := hi.([2]*domain.GridHex); ok {
 			unit.PrevHex = hexes[0]
 			unit.CurrHex = hexes[1]
 		}
-		log.Printf("turn_reports: %s: location %q: ==> %q %q\n", rpf.Id, string(location), unit.PrevHex, unit.CurrHex)
+		//log.Printf("turn_reports: %s: location %q: ==> %q %q\n", rpf.Id, string(location), unit.PrevHex, unit.CurrHex)
 
 		movement := sections.ParseMovementLine(rs.Id, lines)
 		if unit.Raw != nil {
 			unit.Raw.Movement = string(movement)
 		}
-		unit.Movement = string(movement)
+		log.Printf("turn_reports: %s: %s: movements: input <== %q\n", rpf.Id, unit.Id, string(movement))
+		log.Printf("turn_reports: %s: movements: start %q end %q\n", rpf.Id, unit.PrevHex, unit.CurrHex)
+		m, err := movements.ParseMovements(fmt.Sprintf("%-6s %s", rpf.Id, unit.Id), movement)
+		if err != nil {
+			log.Printf("turn_reports: %s: %s: movements: parse: error %v\n", rpf.Id, unit.Id, err)
+		} else if m != nil && m.Follows != "" {
+			unit.Follows = m.Follows
+			log.Printf("turn_reports: %s: %s: movements: parse: follows %q\n", rpf.Id, unit.Id, m.Follows)
+		}
 
 		for _, line := range sections.ParseScoutLines(rs.Id, lines) {
 			unit.ScoutLines = append(unit.ScoutLines, string(line))

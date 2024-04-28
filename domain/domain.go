@@ -46,7 +46,8 @@ type ReportUnit struct {
 	Type       UnitType       `json:"type"` // unit type, not implemented
 	PrevHex    *GridHex       `json:"prevHex,omitempty"`
 	CurrHex    *GridHex       `json:"currHex,omitempty"`
-	Movement   string         `json:"movement,omitempty"`   // movement line from the section
+	Movement   *Movement      `json:"movement,omitempty"`   // movement line from the section
+	Follows    string         `json:"follows,omitempty"`    // set when unit follows another unit
 	ScoutLines []string       `json:"scoutLines,omitempty"` // scout lines from the section
 	Status     string         `json:"status,omitempty"`     // status line from the section
 	Raw        *ReportUnitRaw `json:"raw,omitempty"`        // text captured for debugging
@@ -181,4 +182,8 @@ type Step struct {
 	Direction string   `json:"direction,omitempty"`
 	Results   string   `json:"results,omitempty"`
 	RawText   string   `json:"rawText,omitempty"`
+}
+
+type Movement struct {
+	Follows string `json:"follows,omitempty"` // set only if the unit is following another
 }

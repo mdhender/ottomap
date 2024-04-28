@@ -42,9 +42,9 @@ func ParseLocationLine(id string, lines [][]byte) []byte {
 
 // ParseMovementLine returns the unit's movement line.
 func ParseMovementLine(id string, lines [][]byte) []byte {
-	pfx := []byte("Tribe Movement:")
+	pfxMoves, pfxFollows := []byte("Tribe Movement: "), []byte("Tribe Follows ")
 	for _, line := range lines {
-		if bytes.HasPrefix(line, pfx) {
+		if bytes.HasPrefix(line, pfxMoves) || bytes.HasPrefix(line, pfxFollows) {
 			return line
 		}
 	}

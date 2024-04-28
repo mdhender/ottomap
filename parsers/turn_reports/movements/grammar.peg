@@ -1,0 +1,270 @@
+{
+// Package movements implements a Pigeon parser for unit movements.
+package movements
+
+// I'm not happy with the abstraction here, but...
+//
+// Movement captures a series of "wants" and "results."
+// The unit wants to move N and here are the results.
+//
+// Step is one piece of that movement. It captures the hex where
+// the unit started (From), the direction, and the result (where
+// the unit ended up (which could be where it started!), reasons
+// why the step failed (it was blocked by an edge feature, it was
+// blocked by the destination's terrain (water or mountains?), or
+// didn't have enough movement points. Maybe even something like
+// wagons can't enter a swamp hex. If the step failed because of a
+// lack of movement points, we'll usually be told what the terrain
+// type of the would-be destination hex it. If the step succeeded,
+// we'll be told the terrain type and (usually) details about the
+// edges, too. I don't think that occupants are mentioned when
+// moving; that's reserved for scouting.
+
+// STEPS is STEP (SPACE SPACE?)? BACKSLASH STEP)*
+// STEP  is DIRECTION DASH TERRAIN STUFF
+// STUFF is OCEAN_EDGES? RIVER_EDGES? FORD_EDGES? SETTLEMENT?
+// OCEAN_EDGES is COMMA SPACE SPACE     OCEAN SPACE DIRECTION ((SPACE SPACE?) DIRECTION)*
+// RIVER_EDGES is COMMA (SPACE SPACE?)? RIVER SPACE DIRECTION (SPACE DIRECTION)*
+// FORD_EDGES  is COMMA SPACE           FORD  SPACE DIRECTION (SPACE DIRECTION)*
+// SETTLEMENT  is COMMA SPACE SPACE     SETTLEMENT_NAME
+
+import (
+    "log"
+    "strings"
+)
+
+func toAnySlice(v any) []any {
+    if v == nil {
+        return nil
+    }
+    return v.([]any)
+}
+
+type Follows struct {
+    Id string
+}
+
+}
+
+TribeMovement <- "Tribe" _ li:(Follows / Moves) EOF {
+    log.Printf("pigeon: TribeMovement: %T %q\n", li, string(c.text))
+    switch v := li.(type) {
+    case *Follows:
+        return v, nil
+    default:
+        return string(c.text), nil
+    }
+}
+
+Follows <- "Follows" _ id:(DIGIT DIGIT DIGIT DIGIT ([cefg] DIGIT)?) {
+    log.Printf("pigeon: Follows: %T %q\n", string(c.text), string(c.text))
+    return &Follows{Id: string(c.text)}, nil
+}
+
+Moves <- "Movement:" _ sti:Steps {
+    log.Printf("pigeon: Moves: %T %q\n", string(c.text), string(c.text))
+    return string(c.text), nil
+}
+
+Steps <- st:Step stli:(_ "\\" Step)* {
+    log.Printf("pigeon: Steps: %T %q\n", string(c.text), string(c.text))
+    return string(c.text), nil
+}
+
+Step <- [^\\]* {
+    log.Printf("pigeon: Step: %T %q\n", string(c.text), string(c.text))
+    return string(c.text), nil
+}
+
+Results <- .* {
+    return string(c.text), nil
+}
+
+StepS <- d:DIRECTION "-" t:TERRAIN _ oei:OceanEdges? _ rei:RiverEdges? _ fei:FordEdges? _ si:Settlement? EOF {
+    var step Step
+    step.Direction = d.(string)
+    step.Terrain = t.(string)
+
+    if oei != nil {
+        switch v := oei.(type) {
+        case [6]string:
+            for i, x := range v {
+                if x != "" {
+                    step.Edges[i] = "Ocean"
+                }
+            }
+        default:
+            panic(fmt.Errorf("step: ocean edges: unknown type %T", v))
+        }
+    }
+
+    if rei != nil {
+        switch v := rei.(type) {
+        case [6]string:
+            for i, x := range v {
+                if x != "" {
+                    step.Edges[i] = "River"
+                }
+            }
+        default:
+            panic(fmt.Errorf("step: river edges: unknown type %T", v))
+        }
+    }
+
+    if fei != nil {
+        switch v := fei.(type) {
+        case [6]string:
+            for i, x := range v {
+                if x != "" {
+                    step.Edges[i] = "Ford"
+                }
+            }
+        default:
+            panic(fmt.Errorf("step: ford edges: unknown type %T", v))
+        }
+    }
+
+    if si != nil {
+        step.Settlement = si.(string)
+    }
+
+    return &step, nil
+}
+
+DIRECTION <- ("NE" / "SE" / "SW" / "NW" / "N" / "S") {
+    return string(c.text), nil
+}
+
+TERRAIN <-    (
+    "CONIFER HILLS" /
+    "GRASSY HILLS"  /
+    "OCEAN"         /
+    "PRAIRIE"       /
+    "ROCKY HILLS"   /
+    "SWAMP"         /
+    "CH" / "GH" / "PR" / "RH" / "SW"
+    "O"
+) {
+    s := string(c.text)
+    switch s {
+    case "CH", "CONIFER HILLS":
+        return "CH", nil
+    case "GH", "GRASSY HILLS":
+        return "GH", nil
+    case "O", "OCEAN":
+        return "O", nil
+    case "PR", "PRAIRIE":
+        return "PR", nil
+    case "RH", "ROCKY HILLS":
+        return "RH", nil
+    case "SW", "SWAMP":
+        return "SW", nil
+    default:
+        return string(c.text), fmt.Errorf("unknown terrain")
+    }
+}
+
+OceanEdges <- "," _ "O" _ d:DIRECTION dli:optCommaDirection* {
+    directions := []string{d.(string)}
+    if dli != nil {
+        for _, dir := range toAnySlice(dli) {
+            if dir != nil {
+                switch v := dir.(type) {
+                case string:
+                    directions = append(directions, v)
+                default:
+                    panic(fmt.Errorf("ocean edges: unknown type %T", v))
+                }
+            }
+        }
+    }
+    var edges [6]string
+    for _, dir := range directions {
+        switch dir {
+        case "N": edges[0] = "*"
+        case "NE": edges[1] = "*"
+        case "SE": edges[2] = "*"
+        case "S": edges[3] = "*"
+        case "SW": edges[4] = "*"
+        case "NW": edges[5] = "*"
+        }
+    }
+    return edges, nil
+}
+
+optCommaDirection <- _ "," _ d:DIRECTION {
+    return d.(string), nil
+}
+
+RiverEdges <- "," _ "River" _ d:DIRECTION dli:optSpaceDirection* {
+    directions := []string{d.(string)}
+    if dli != nil {
+        for _, dir := range toAnySlice(dli) {
+            if dir != nil {
+                switch v := dir.(type) {
+                case string:
+                    directions = append(directions, v)
+                default:
+                    panic(fmt.Errorf("river edges: unknown type %T", v))
+                }
+            }
+        }
+    }
+    var edges [6]string
+    for _, dir := range directions {
+        switch dir {
+        case "N": edges[0] = "*"
+        case "NE": edges[1] = "*"
+        case "SE": edges[2] = "*"
+        case "S": edges[3] = "*"
+        case "SW": edges[4] = "*"
+        case "NW": edges[5] = "*"
+        }
+    }
+    return edges, nil
+}
+
+optSpaceDirection <- _ d:DIRECTION {
+    return d.(string), nil
+}
+
+FordEdges <- "," _ "Ford" _ d:DIRECTION dli:optSpaceDirection* {
+    directions := []string{d.(string)}
+    if dli != nil {
+        for _, dir := range toAnySlice(dli) {
+            if dir != nil {
+                switch v := dir.(type) {
+                case string:
+                    directions = append(directions, v)
+                default:
+                    panic(fmt.Errorf("ford edges: unknown type %T", v))
+                }
+            }
+        }
+    }
+    var edges [6]string
+    for _, dir := range directions {
+        switch dir {
+        case "N": edges[0] = "*"
+        case "NE": edges[1] = "*"
+        case "SE": edges[2] = "*"
+        case "S": edges[3] = "*"
+        case "SW": edges[4] = "*"
+        case "NW": edges[5] = "*"
+        }
+    }
+    return edges, nil
+}
+
+Settlement <- "," _ n:SettlementName {
+    return n.(string), nil
+}
+
+SettlementName <- [A-Z][A-Za-z]+ {
+    return string(c.text), nil
+}
+
+EOF <- !.
+DIGIT = [0-9]
+SP = " "
+_ = [ \t]*

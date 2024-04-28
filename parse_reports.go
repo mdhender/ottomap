@@ -8,6 +8,7 @@ import (
 	"github.com/mdhender/ottomap/cerrs"
 	"github.com/mdhender/ottomap/domain"
 	"github.com/mdhender/ottomap/parsers/turn_reports"
+	"github.com/mdhender/ottomap/parsers/turn_reports/movements"
 	"github.com/spf13/cobra"
 	"log"
 	"os"
@@ -61,10 +62,18 @@ var cmdParseReports = &cobra.Command{
 			}
 		}
 
+		// write out our debug log
+		if b := movements.DebugBuffer.Bytes(); len(b) > 0 {
+			if err := os.WriteFile(filepath.Join(argsParse.output, "debug_turn_report_movements.txt"), b, 0644); err != nil {
+				log.Fatal(err)
+			}
+		}
+
 		if err != nil {
 			log.Printf("parse: reports: error parsing input: %v\n", err)
 		}
 
+		log.Printf("parse: reports: todo: find that one scouting step that i had to modify back in the day\n")
 		log.Printf("parse: reports: todo: ignore the temptation to push section data into a database\n")
 	},
 }
