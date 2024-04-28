@@ -5,7 +5,6 @@ package movements
 import (
 	"bytes"
 	"fmt"
-	"github.com/mdhender/ottomap/domain"
 	"log"
 	"regexp"
 )
@@ -17,9 +16,19 @@ var (
 	rxWaterEdge   *regexp.Regexp
 )
 
+type ParsedMovement struct {
+	Follows string
+	Moves   []*ParsedMove
+	Results string
+}
+type ParsedMove struct {
+	Step    string
+	Results []string
+}
+
 // ParseMovements parses the unit's movements.
 // Accepts either "Tribe Follows ..." or "Tribe Movements: ..."
-func ParseMovements(id string, input []byte) (*domain.Movement, error) {
+func ParseMovements(id string, input []byte) (*ParsedMovement, error) {
 	if rxRiverEdge == nil || rxTerrainCost == nil || rxWaterEdge == nil {
 		// No Ford on River to NW of HEX
 		if rx, err := regexp.Compile(`^No Ford on River to ([A-Z]+) of HEX$`); err != nil {
@@ -54,9 +63,7 @@ func ParseMovements(id string, input []byte) (*domain.Movement, error) {
 	if bytes.HasPrefix(input, []byte("Tribe Follows ")) {
 		// expect "Tribe Follows UNIT"
 		if fields := bytes.Split(input, []byte{' '}); len(fields) == 3 {
-			return &domain.Movement{
-				Follows: string(fields[2]),
-			}, nil
+			return &ParsedMovement{Follows: string(fields[2])}, nil
 		}
 		return nil, fmt.Errorf("invalid follows input")
 	}
@@ -84,11 +91,38 @@ func ParseMovements(id string, input []byte) (*domain.Movement, error) {
 		// again, aggressively trim spaces from the input
 		steps = append(steps, bytes.TrimSpace(step))
 	}
+	log.Printf("movements: todo: split by commas\n")
+
+	// suss out the nightmare of DIRECTION COMMA ONE-OR-MORE-SPACES DIRECTION
+	pm := &ParsedMovement{Results: string(rawResults)}
 	for n, step := range steps {
 		DebugBuffer.WriteString(fmt.Sprintf("  step %2d `%s`\n", n+1, string(step)))
+		for x, ch := range step {
+			if ch == ',' && validDirFollows(step[x:]) {
+				step[x] = ' '
+			}
+		}
+		//// spaces are important (maybe?) so don't trim them
+		//for nn, boo := range bytes.Split(step, []byte{','}) {
+		//	DebugBuffer.WriteString(fmt.Sprintf("       %2d %2d `%s`\n", n+1, nn+1, string(boo)))
+		//}
+		// just to see what it does to the parser, trim those spaces
+		var move *ParsedMove
+		for nn, boo := range bytes.Split(step, []byte{','}) {
+			DebugBuffer.WriteString(fmt.Sprintf("       %2d %2d `%s`\n", n+1, nn+1, string(boo)))
+			if nn == 0 {
+				move = &ParsedMove{Step: string(boo)}
+				pm.Moves = append(pm.Moves, move)
+				continue
+			}
+			result := string(bytes.TrimSpace(boo))
+			if result != "" {
+				move.Results = append(move.Results, result)
+			}
+		}
 	}
 
-	return nil, nil
+	return pm, nil
 }
 
 // the input looks something like STUFF BACKSLASH STATUS.
@@ -99,4 +133,18 @@ func stepsSlashResults(input []byte) ([]byte, []byte, bool) {
 		return input[:pos], input[pos+1:], true
 	}
 	return input, nil, false
+}
+
+var (
+	rxDirFollows *regexp.Regexp
+)
+
+// validDirFollows returns true if the input starts with a comma followed by
+// one or two spaces followed by a direction followed by a terminator
+// (either a comma or end of input).
+func validDirFollows(input []byte) bool {
+	if rxDirFollows == nil {
+		rxDirFollows = regexp.MustCompile(`^,[ ]{1,2}(NW|NE|SW|SE|N|S)(,|$)`)
+	}
+	return rxDirFollows.Match(input)
 }

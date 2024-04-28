@@ -185,5 +185,12 @@ type Step struct {
 }
 
 type Movement struct {
-	Follows string `json:"follows,omitempty"` // set only if the unit is following another
+	Follows string         `json:"follows,omitempty"` // set only if the unit is following another
+	Steps   []*StepResults `json:"steps,omitempty"`
+	Results string         `json:"results,omitempty"`
+}
+
+type StepResults struct {
+	Step    string   `json:"step"`
+	Results []string `json:"results,omitempty"`
 }
