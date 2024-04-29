@@ -10,14 +10,15 @@ type Error string
 func (e Error) Error() string { return string(e) }
 
 const (
-	ErrInvalidInputPath  Error = "invalid input path"
-	ErrInvalidIndexFile  Error = "invalid index file"
-	ErrInvalidOutputPath Error = "invalid output path"
-	ErrInvalidPath             = Error("invalid path")
-	ErrMissingIndexFile  Error = "missing index file"
-	ErrNoSeparator             = Error("no separator")
-	ErrNotATurnReport          = Error("not a turn report")
-	ErrNotDirectory            = Error("not a directory")
-	ErrNotImplemented          = Error("not implemented")
-	ErrParseFailed             = Error("parse failed")
+	ErrInvalidInputPath       = Error("invalid input path")
+	ErrInvalidIndexFile       = Error("invalid index file")
+	ErrInvalidOutputPath      = Error("invalid output path")
+	ErrInvalidPath            = Error("invalid path")
+	ErrMissingIndexFile       = Error("missing index file")
+	ErrMissingMovementResults = Error("missing movement results")
+	ErrNoSeparator            = Error("no separator")
+	ErrNotATurnReport         = Error("not a turn report")
+	ErrNotDirectory           = Error("not a directory")
+	ErrNotImplemented         = Error("not implemented")
+	ErrParseFailed            = Error("parse failed")
 )

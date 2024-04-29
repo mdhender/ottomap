@@ -15,6 +15,9 @@ import (
 var argsParse struct {
 	index  string // index file to process
 	output string // path to create output files in
+	debug  struct {
+		units bool
+	}
 }
 
 var cmdParse = &cobra.Command{

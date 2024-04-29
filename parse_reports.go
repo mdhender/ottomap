@@ -5,7 +5,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/mdhender/ottomap/cerrs"
 	"github.com/mdhender/ottomap/domain"
 	"github.com/mdhender/ottomap/parsers/turn_reports"
 	"github.com/mdhender/ottomap/parsers/turn_reports/movements"
@@ -13,12 +12,13 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sort"
 )
 
 var argsParseReports struct {
 	debug struct {
-		clanShowSlugs  bool
 		captureRawText bool
+		clanShowSlugs  bool
 	}
 }
 
@@ -29,6 +29,9 @@ var cmdParseReports = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		log.Printf("parse: reports: index  %s\n", argsParse.index)
 		log.Printf("parse: reports: output %s\n", argsParse.output)
+		if argsParse.debug.units {
+			log.Printf("parse: reports: debug: units %v\n", argsParse.debug.units)
+		}
 
 		var index *domain.Index
 		if data, err := os.ReadFile(argsParse.index); err != nil {
@@ -38,13 +41,47 @@ var cmdParseReports = &cobra.Command{
 		}
 		log.Printf("parse: reports: loaded index file\n")
 
-		var err error
-		for _, rpf := range index.ReportFiles {
-			rss, parseErr := turn_reports.Parse(rpf, argsParseReports.debug.clanShowSlugs, argsParseReports.debug.captureRawText)
-			if parseErr != nil {
-				log.Printf("parse: reports: %s: error: %v\n", rpf.Id, parseErr)
-				err = cerrs.ErrParseFailed
-				continue
+		// for consistency in reporting, sort the indexes
+		var ids []string
+		for id := range index.ReportFiles {
+			ids = append(ids, id)
+		}
+		sort.Strings(ids)
+		log.Printf("parse: reports: sorted index file\n")
+
+		// enable debug buffers
+		movements.EnableDebugBuffer()
+
+		log.Printf("parse: reports: todo: fail on first parsing error\n")
+
+		errCount := 0
+		for _, id := range ids {
+			rpf := index.ReportFiles[id]
+
+			// skip if we're debugging units and this report doesn't have
+			// a debug section or any units in that section.
+			if argsParse.debug.units {
+				if rpf.Debug == nil {
+					log.Printf("parse: reports: %s: debug: units: skipping (unset)\n", rpf.Id)
+					continue
+				} else if rpf.Debug.Units == nil {
+					log.Printf("parse: reports: %s: debug: units: skipping (no map)\n", rpf.Id)
+					continue
+				} else if len(rpf.Debug.Units) == 0 {
+					log.Printf("parse: reports: %s: debug: units: skipping (empty map)\n", rpf.Id)
+					continue
+				}
+				log.Printf("parse: reports: %s: debug: units: %d entries\n", rpf.Id, len(rpf.Debug.Units))
+				for k, v := range rpf.Debug.Units {
+					log.Printf("parse: reports: %s: debug: unit %-6s: %v\n", rpf.Id, k, v)
+				}
+			}
+
+			rss, err := turn_reports.Parse(rpf, argsParseReports.debug.clanShowSlugs, argsParseReports.debug.captureRawText)
+			if err != nil {
+				log.Printf("parse: reports: %s: error: %v\n", rpf.Id, err)
+				errCount++
+				break
 			}
 			//log.Printf("parse: reports: %s: sections %3d\n", rpf.Id, len(rss))
 
@@ -62,15 +99,13 @@ var cmdParseReports = &cobra.Command{
 			}
 		}
 
-		// write out our debug log
-		if b := movements.DebugBuffer.Bytes(); len(b) > 0 {
-			if err := os.WriteFile(filepath.Join(argsParse.output, "debug_turn_report_movements.txt"), b, 0644); err != nil {
-				log.Fatal(err)
-			}
+		// write out our debug logs
+		if err := os.WriteFile(filepath.Join(argsParse.output, "debug_turn_report_movements.txt"), movements.GetDebugBuffer(), 0644); err != nil {
+			log.Fatal(err)
 		}
 
-		if err != nil {
-			log.Printf("parse: reports: error parsing input: %v\n", err)
+		if errCount != 0 {
+			log.Fatalf("parse: reports: halting due to %d errors above\n", errCount)
 		}
 
 		log.Printf("parse: reports: todo: find that one scouting step that i had to modify back in the day\n")

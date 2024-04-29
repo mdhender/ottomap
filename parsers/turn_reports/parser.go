@@ -5,7 +5,6 @@ package turn_reports
 import (
 	"bytes"
 	"fmt"
-	"github.com/mdhender/ottomap/cerrs"
 	"github.com/mdhender/ottomap/domain"
 	"github.com/mdhender/ottomap/parsers/turn_reports/headers"
 	"github.com/mdhender/ottomap/parsers/turn_reports/locations"
@@ -36,12 +35,6 @@ func Parse(rpf *domain.ReportFile, debugSlugs, captureRawText bool) ([]*domain.R
 		log.Fatalf("clans: %s: mismatched clan: month %q, want %q\n", rpf.Id, header.Game.Month, fmt.Sprintf("%02d", rpf.Month))
 	}
 
-	// debug logic to limit testing to just one interesting turn
-	if !(rpf.Year == 900 && rpf.Month == 2) {
-		log.Printf("turn_reports: parse: skipping %03d-%02d.%04d\n", rpf.Year, rpf.Month, rpf.Clan)
-		return nil, cerrs.ErrNotImplemented
-	}
-
 	ss, separator := splitSections(input)
 	//log.Printf("clans: %s: sections %d\n", rpf.Id, len(ss))
 	if separator == nil {
@@ -68,12 +61,6 @@ func Parse(rpf *domain.ReportFile, debugSlugs, captureRawText bool) ([]*domain.R
 		if len(lines) == 0 { // skip empty sections
 			continue
 		}
-
-		// debug logic to test one tribe that has units with follows and movement in the same turn
-		//if !(bytes.HasPrefix(lines[0], []byte("Tribe 2138")) || bytes.HasPrefix(lines[0], []byte("Element 2138e1"))) {
-		//	log.Printf("turn_reports: parse: skipping %s\n", string(lines[0]))
-		//	continue
-		//}
 
 		log.Printf("turn_reports: parse: parsing %s\n", string(lines[0]))
 		//for n, line := range lines {

@@ -10,7 +10,6 @@ import (
 )
 
 var (
-	DebugBuffer   = &bytes.Buffer{}
 	rxRiverEdge   *regexp.Regexp
 	rxTerrainCost *regexp.Regexp
 	rxWaterEdge   *regexp.Regexp
@@ -26,9 +25,34 @@ type ParsedMove struct {
 	Results []string
 }
 
-// ParseMovements parses the unit's movements.
-// Accepts either "Tribe Follows ..." or "Tribe Movements: ..."
+// ParseMovements parses the unit's movements or follows lines.
+// Accepts either "Tribe Follows ..." or  lines.
+//
+// Returns nil, nil if the input is empty. It's up to the caller to
+// decide if this is an error.
+//
+// Returns an error on any unexpected input. Previous versions of this
+// function attempted to clean up the input, but that caused issues down
+// the line.
+//
+// For "Tribe Follows ..." lines, the unit being followed is returned
+// in the ParseMovement struct.
+//
+// For "Tribe Movements: ..." lines, the input will be split into individual
+// "steps," with a backslash used to separate the steps.
+//
+// An empty movements line looks like "Tribe Movements: \" and is returned
+// as the zero value for ParsedMovement.
+//
+// Updated to loudly fail on unexpected input. It's annoying, but likely
+// better than returning invalid data. The user is expected to fix the
+// input and restart.
 func ParseMovements(id string, input []byte) (*ParsedMovement, error) {
+	log.Printf("parsers: turn_reports: movements: todo: parse steps as DIRECTION .* &(\\ DIRECTION)\n")
+	// AndExpr = "A" &"B" // matches "A" if followed by a "B" (does not consume "B")
+	// NotExpr = "A" !"B" // matches "A" if not followed by a "B" (does not consume "B")
+
+	// initialize the regex machines. should probably be moved to an init function.
 	if rxRiverEdge == nil || rxTerrainCost == nil || rxWaterEdge == nil {
 		// No Ford on River to NW of HEX
 		if rx, err := regexp.Compile(`^No Ford on River to ([A-Z]+) of HEX$`); err != nil {
@@ -54,12 +78,12 @@ func ParseMovements(id string, input []byte) (*ParsedMovement, error) {
 	// aggressively ignore leading and trailing spaces
 	input = bytes.TrimSpace(input)
 
-	// do nothing if the unit has no movement to report on
+	// do nothing if the unit has no movement to process
 	if len(input) == 0 {
 		return nil, nil
 	}
 
-	// if this is a follows movement, just return the unit we're following
+	// if this is a follows line, return the unit we're following
 	if bytes.HasPrefix(input, []byte("Tribe Follows ")) {
 		// expect "Tribe Follows UNIT"
 		if fields := bytes.Split(input, []byte{' '}); len(fields) == 3 {
@@ -68,59 +92,74 @@ func ParseMovements(id string, input []byte) (*ParsedMovement, error) {
 		return nil, fmt.Errorf("invalid follows input")
 	}
 
-	// we're expecting the input to look like "Tribe Movement: STEPS? BACKSLASH RESULTS?".
-	// return an error if that's not the case.
+	// if this is not a movements line, return an error
 	if !bytes.HasPrefix(input, []byte("Tribe Movement: ")) {
 		return nil, fmt.Errorf("invalid movement input")
 	}
-	// skip the prefix when splitting the input into steps and results
-	rawSteps, rawResults, ok := stepsSlashResults(input[21:])
-	if !ok {
-		return nil, fmt.Errorf("invalid movement input")
-	}
-	DebugBuffer.WriteString(fmt.Sprintf("%-16s --------------------------------------------\n", id))
-	DebugBuffer.WriteString(fmt.Sprintf("input_ `%s`\n", string(input)))
-	DebugBuffer.WriteString(fmt.Sprintf(" steps `%s`\n", string(rawSteps)))
-	DebugBuffer.WriteString(fmt.Sprintf(" rslts `%s`\n", string(rawResults)))
-	DebugBuffer.WriteString(fmt.Sprintf("    ok  %v\n", ok))
-	log.Printf("steps %q: results %q\n", string(rawSteps), string(rawResults))
 
-	// steps should look like STEP (BACKSLASH STEP)*
-	var steps [][]byte
-	for _, step := range bytes.Split(rawSteps, []byte{'\\'}) {
-		// again, aggressively trim spaces from the input
-		steps = append(steps, bytes.TrimSpace(step))
-	}
-	log.Printf("movements: todo: split by commas\n")
+	// start a new section in the debug log
+	debugf(fmt.Sprintf("%-16s --------------------------------------------\n", id))
+	debugf(fmt.Sprintf("input_ `%s`\n", string(input)))
 
-	// suss out the nightmare of DIRECTION COMMA ONE-OR-MORE-SPACES DIRECTION
-	pm := &ParsedMovement{Results: string(rawResults)}
-	for n, step := range steps {
-		DebugBuffer.WriteString(fmt.Sprintf("  step %2d `%s`\n", n+1, string(step)))
-		for x, ch := range step {
-			if ch == ',' && validDirFollows(step[x:]) {
-				step[x] = ' '
-			}
-		}
-		//// spaces are important (maybe?) so don't trim them
-		//for nn, boo := range bytes.Split(step, []byte{','}) {
-		//	DebugBuffer.WriteString(fmt.Sprintf("       %2d %2d `%s`\n", n+1, nn+1, string(boo)))
-		//}
-		// just to see what it does to the parser, trim those spaces
-		var move *ParsedMove
-		for nn, boo := range bytes.Split(step, []byte{','}) {
-			DebugBuffer.WriteString(fmt.Sprintf("       %2d %2d `%s`\n", n+1, nn+1, string(boo)))
-			if nn == 0 {
-				move = &ParsedMove{Step: string(boo)}
-				pm.Moves = append(pm.Moves, move)
-				continue
-			}
-			result := string(bytes.TrimSpace(boo))
-			if result != "" {
-				move.Results = append(move.Results, result)
-			}
-		}
+	// trim the prefix and split on backslashes
+	input = bytes.TrimPrefix(input, []byte("Tribe Movement: "))
+	inputMoves := bytes.Split(input, []byte{'\\'})
+	for n, inputMove := range inputMoves {
+		debugf(fmt.Sprintf(" moves %2d 《%s》\n", n+1, string(inputMove)))
 	}
+	var pm *ParsedMovement
+
+	//// the report uses backslashes to separate each step in the set of steps,
+	//// so we'll use that character to split them up.
+	//var steps [][]byte
+	//for n, step := range bytes.Split(inputSteps, []byte{'\\'}) {
+	//	// trim spaces from the start of the step
+	//	// (this seems to only happen when there's a typo in the input)
+	//	step = bytes.TrimSpace(step)
+	//	// trim spaces and commas from the end of the step
+	//	step = bytes.TrimRight(step, ", ")
+	//	debugf("  step %2d 《%s》\n", n+1, string(step))
+	//	steps = append(steps, step)
+	//	// just to see what the parser will see, split up the step
+	//	for nn, ss := range bytes.Split(step, []byte{','}) {
+	//		debugf("       %2d %2d 《%s》\n", n+1, nn+1, string(ss))
+	//	}
+	//}
+	//log.Printf("movements: call the parser to parse every step\n")
+	//log.Printf("movements: todo: split by commas\n")
+	//
+	//// suss out the nightmare of DIRECTION COMMA ONE-OR-MORE-SPACES DIRECTION
+	//pm := &ParsedMovement{Results: string(inputResults)}
+	//for n, step := range steps {
+	//	debugf("  step %2d `%s`\n", n+1, string(step))
+	//	for x, ch := range step {
+	//		if ch == ',' && validDirFollows(step[x:]) {
+	//			step[x] = ' '
+	//		}
+	//	}
+	//	//// spaces are important (maybe?) so don't trim them
+	//	//for nn, boo := range bytes.Split(step, []byte{','}) {
+	//	//	debugf("       %2d %2d `%s`\n", n+1, nn+1, string(boo))
+	//	//}
+	//	// just to see what it does to the parser, trim those spaces
+	//	var move *ParsedMove
+	//	for nn, boo := range bytes.Split(step, []byte{','}) {
+	//		debugf("       %2d %2d `%s`\n", n+1, nn+1, string(boo))
+	//		if nn == 0 {
+	//			move = &ParsedMove{Step: string(boo)}
+	//			pm.Moves = append(pm.Moves, move)
+	//			continue
+	//		}
+	//		result := string(bytes.TrimSpace(boo))
+	//		if result != "" {
+	//			move.Results = append(move.Results, result)
+	//		}
+	//	}
+	//}
+	//
+	//// these are the results for the entire movement.
+	//// that's not the same as the results for a single step.
+	//debugf(" rslts 《%s》\n", string(inputResults))
 
 	return pm, nil
 }
@@ -147,4 +186,30 @@ func validDirFollows(input []byte) bool {
 		rxDirFollows = regexp.MustCompile(`^,[ ]{1,2}(NW|NE|SW|SE|N|S)(,|$)`)
 	}
 	return rxDirFollows.Match(input)
+}
+
+var (
+	debug struct {
+		buf *bytes.Buffer
+	}
+)
+
+func EnableDebugBuffer() {
+	debug.buf = &bytes.Buffer{}
+}
+
+func GetDebugBuffer() []byte {
+	if debug.buf == nil {
+		return nil
+	}
+	buf := append([]byte{}, debug.buf.Bytes()...)
+	debug.buf = &bytes.Buffer{}
+	return buf
+}
+
+func debugf(format string, args ...any) {
+	if debug.buf == nil {
+		return
+	}
+	debug.buf.WriteString(fmt.Sprintf(format, args...))
 }

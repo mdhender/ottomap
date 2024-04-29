@@ -26,6 +26,9 @@ type ReportFile struct {
 	Month      int              `json:"month,omitempty"`      // Game month of the report
 	ReportDate string           `json:"reportDate,omitempty"` // Date reported generated (YYYY/MM/DD)
 	Sections   []*ReportSection `json:"sections,omitempty"`
+	Debug      *struct {
+		Units map[string]bool `json:"units,omitempty"` // list of units for debugging
+	} `json:"debug,omitempty"` // debugging flags and values
 }
 
 // ReportSection captures the text from a single section of the turn report.
