@@ -10,36 +10,53 @@ import "bytes"
 // AcceptMovementStep returns the step and the remainder of the input.
 // If there is no step, returns nil, original input.
 //
-// Step is MOVE? DIRECTION TEXT? &(EOF | (BACKSLASH STEP))
+// Step is MOVE? DIRECTION_CODE DASH TERRAIN_CODE STEP_TEXT? &TERMINATOR
 //
 // NB: That '&' means that the token is expected but never consumed.
 func AcceptMovementStep(input []byte) ([]byte, []byte) {
-	if len(input) == 0 {
-		return nil, nil
+	token, rest := AcceptMove(input)
+	length := len(token)
+	if token != nil {
+		// accept SPACE*
+		token, rest = AcceptSpaces(rest)
+		length += len(token)
 	}
-	// accept SPACE*
-	token, rest := AcceptSpaces(input)
-	// accept MOVE?
-	token, rest = AcceptMove(rest)
-	// accept SPACE*
-	_, rest = AcceptSpaces(rest)
-	// expect DIRECTION
-	token, rest = AcceptDirection(rest)
-	if token == nil { // not a movement step
+	// expect DIRECTION_CODE
+	token, rest = AcceptDirectionCode(rest)
+	if token == nil {
 		return nil, input
 	}
-	step := token
-	// accept SPACE*
-	token, rest = AcceptSpaces(rest)
-	if token != nil {
-		step = append(step, token...)
+	length += len(token)
+	// expect DASH
+	token, rest = AcceptDash(rest)
+	if token == nil {
+		return nil, input
 	}
-	// accept TEXT?
-	// accept &(EOF | (BACKSLASH STEP))
-	return nil, rest
+	length += len(token)
+	// expect TERRAIN_CODE
+	token, rest = AcceptTerrainCode(rest)
+	if token == nil {
+		return nil, input
+	}
+	length += len(token)
+	// accept STEP_TEXT
+	token, rest = AcceptStepText(rest)
+	length += len(token)
+
+	if length == len(input) {
+		return input, nil
+	}
+	return input[:length], input[length:]
 }
 
-// AcceptDirection is a function that checks the beginning of the input for a valid direction pattern.
+func AcceptCantMoveToEndOfStep(input []byte) ([]byte, []byte) {
+	if !bytes.HasPrefix(input, []byte{'C', 'a', 'n', '\'', 't', ' ', 'M', 'o', 'v', 'e'}) {
+		return nil, input
+	}
+	return input, nil
+}
+
+// AcceptDirectionCode is a function that checks the beginning of the input for a valid direction pattern.
 // The function iterates over a predefined list of directions ['N', 'NE', 'SE', 'S', 'SW', 'NW'] and
 // checks if the input starts with any of these directions.
 // If a match is found, the function ensures the following character is a valid terminator, i.e.,
@@ -53,7 +70,7 @@ func AcceptMovementStep(input []byte) ([]byte, []byte) {
 // Returns:
 //   - ([]byte, []byte): Two arrays of bytes. The first one represents the scanned direction.
 //     The second one represents the remaining part of the input not scanned.
-func AcceptDirection(input []byte) ([]byte, []byte) {
+func AcceptDirectionCode(input []byte) ([]byte, []byte) {
 	for _, dir := range [][]byte{
 		{'N'}, {'N', 'E'}, {'S', 'E'}, {'S'}, {'S', 'W'}, {'N', 'W'},
 	} {
@@ -94,7 +111,7 @@ func AcceptDirectionToEndOfStep(input []byte) ([]byte, []byte) {
 	length := 0
 
 	// expect DIRECTION DASH TERRAIN_CODE
-	token, rest := AcceptDirection(input)
+	token, rest := AcceptDirectionCode(input)
 	if token == nil {
 		return nil, input
 	}
@@ -186,6 +203,47 @@ func AcceptSpaces(input []byte) ([]byte, []byte) {
 	return input[:pos], input[pos:]
 }
 
+// AcceptStepText returns the text token and the remainder of the input.
+// The text token runs to the terminator or EOF. It never includes the
+// terminating backslash.
+func AcceptStepText(input []byte) ([]byte, []byte) {
+	for length, rest := 0, input; len(rest) != 0; rest, length = rest[1:], length+1 {
+		if rest[0] != '\\' {
+			continue
+		}
+
+		bs := rest[1:]
+
+		// terminated by backslash EOF
+		if len(bs) == 0 {
+			return input[:length], input[length:]
+		}
+
+		// terminated by a direction
+		if bytes.HasPrefix(bs, []byte{'N', '-'}) {
+			return input[:length], input[length:]
+		} else if bytes.HasPrefix(bs, []byte{'N', 'E', '-'}) {
+			return input[:length], input[length:]
+		} else if bytes.HasPrefix(bs, []byte{'S', 'E', '-'}) {
+			return input[:length], input[length:]
+		} else if bytes.HasPrefix(bs, []byte{'S', '-'}) {
+			return input[:length], input[length:]
+		} else if bytes.HasPrefix(bs, []byte{'S', 'W', '-'}) {
+			return input[:length], input[length:]
+		} else if bytes.HasPrefix(bs, []byte{'N', 'W', '-'}) {
+			return input[:length], input[length:]
+		}
+
+		// terminated by a failed move
+		if bytes.HasPrefix(bs, []byte{'C', 'a', 'n', '\'', 't', ' ', 'M', 'o', 'v', 'e'}) {
+			return input[:length], input[length:]
+		}
+	}
+
+	// text runs to EOF
+	return input, nil
+}
+
 func AcceptTerrainCode(input []byte) ([]byte, []byte) {
 	for _, code := range [][]byte{
 		// three character terrain codes
@@ -193,7 +251,7 @@ func AcceptTerrainCode(input []byte) ([]byte, []byte) {
 		// two character terrain codes
 		{'C', 'H'}, {'P', 'R'},
 		// one character terrain codes
-		{'O'}, {'R'},
+		{'D'}, {'O'}, {'R'},
 	} {
 		if bytes.HasPrefix(input, code) {
 			// must be followed by a space, comma, backslash, or EOF
