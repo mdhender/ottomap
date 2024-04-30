@@ -4,7 +4,9 @@ package movements
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
+	"github.com/mdhender/ottomap/domain"
 	"log"
 	"regexp"
 )
@@ -21,8 +23,15 @@ type ParsedMovement struct {
 	Results string
 }
 type ParsedMove struct {
-	Step    string
-	Results []string
+	Direction domain.Direction
+	Terrain   domain.Terrain
+	Blocked   bool // set only when step is blocked
+	Results   []string
+}
+
+// Blocked is created when a step is blocked by terrain in the destination hex.
+type Blocked struct {
+	By domain.Terrain
 }
 
 // ParseMovements parses the unit's movements or follows lines.
@@ -76,26 +85,35 @@ func ParseMovements(id string, input []byte) (*ParsedMovement, error) {
 	}
 
 	// aggressively ignore leading and trailing spaces
-	input = bytes.TrimSpace(input)
+	line := bytes.TrimSpace(input)
 
 	// do nothing if the unit has no movement to process
-	if len(input) == 0 {
+	if len(line) == 0 {
 		return nil, nil
 	}
 
 	// if this is a follows line, return the unit we're following
-	if bytes.HasPrefix(input, []byte("Tribe Follows ")) {
+	if bytes.HasPrefix(line, []byte("Tribe Follows ")) {
 		// expect "Tribe Follows UNIT"
-		if fields := bytes.Split(input, []byte{' '}); len(fields) == 3 {
+		if fields := bytes.Split(line, []byte{' '}); len(fields) == 3 {
 			return &ParsedMovement{Follows: string(fields[2])}, nil
 		}
+		log.Printf("parsers: turn_reports: %q: movements: error parsing Tribe Follows\n", id)
+		log.Printf("The input was: %s\n", string(input))
 		return nil, fmt.Errorf("invalid follows input")
 	}
 
 	// if this is not a movements line, return an error
 	if !bytes.HasPrefix(input, []byte("Tribe Movement: ")) {
-		return nil, fmt.Errorf("invalid movement input")
+		log.Printf("parsers: turn_reports: %q: movements: internal error parsing Tribe Movement\n", id)
+		log.Printf("The input was: %s\n", string(input))
+		log.Printf("Please report this issue on the Discord server.\n")
+		return nil, fmt.Errorf("internal error: unexpected input")
 	}
+
+	log.Printf("// ---------------------------------------------\n")
+	log.Printf("// ---------------------------------------------\n")
+	log.Printf("// ---------------------------------------------\n")
 
 	// start a new section in the debug log
 	debugf(fmt.Sprintf("%-16s --------------------------------------------\n", id))
@@ -103,11 +121,72 @@ func ParseMovements(id string, input []byte) (*ParsedMovement, error) {
 
 	// trim the prefix and split on backslashes
 	input = bytes.TrimPrefix(input, []byte("Tribe Movement: "))
+
+	// split the movement into steps. the report uses backslashes to separate them.
 	inputMoves := bytes.Split(input, []byte{'\\'})
 	for n, inputMove := range inputMoves {
 		debugf(fmt.Sprintf(" moves %2d 《%s》\n", n+1, string(inputMove)))
 	}
-	var pm *ParsedMovement
+
+	// if there are no steps, return an empty ParsedMovement
+	if len(inputMoves) == 0 {
+		return &ParsedMovement{}, nil
+	}
+
+	// otherwise, parse each step, returning immediately on error
+	pm := &ParsedMovement{}
+	for n, inputStep := range inputMoves {
+		step := bytes.TrimSpace(inputStep)
+		if n == 0 {
+			if !bytes.HasPrefix(step, []byte{'M', 'o', 'v', 'e', ' '}) {
+				log.Printf("parsers: turn_reports: %q: movements: error parsing Tribe Movement\n", id)
+				log.Printf("The move  is: %s\n", string(input))
+				log.Printf("The step  is: %s\n", string(inputStep))
+				log.Printf("The error is: expected step to start with \"Move \".\n")
+				return nil, fmt.Errorf("missing move prefix")
+			}
+			step = step[5:]
+		}
+		if len(step) == 0 {
+			// this is an error on the first step only
+			if n == 0 {
+				log.Printf("parsers: turn_reports: %q: movements: error parsing Tribe Movement\n", id)
+				log.Printf("The move  is: %s\n", string(input))
+				log.Printf("The index is: %d\n", n+1)
+				log.Printf("The step  is: %s\n", string(inputStep))
+				log.Printf("The error is: expected move results after \"Move\" was found\n")
+				return nil, fmt.Errorf("missing move results")
+			}
+			// ignore empty steps after the first
+			continue
+		}
+		v, err := Parse(id, step)
+		if err != nil {
+			log.Printf("parsers: turn_reports: %q: movements: error parsing Tribe Movement\n", id)
+			log.Printf("The move  is: %s\n", string(input))
+			log.Printf("The index is: %d\n", n+1)
+			log.Printf("The step  is: %s\n", string(inputStep))
+			log.Printf("The error is: %v\n", err)
+			log.Printf("movements: error parsing step %d: %v\n", n+1, err)
+			return nil, errors.Join(fmt.Errorf("tribe movement"), err)
+		}
+		if ss, ok := v.(*stepSucceeded); ok {
+			log.Printf("ms %v\n", *ss)
+			pm.Moves = append(pm.Moves, &ParsedMove{
+				Direction: ss.Direction,
+				Terrain:   ss.Terrain,
+			})
+		} else if sb, ok := v.(*stepBlocked); ok {
+			log.Printf("ms %v\n", *sb)
+			pm.Moves = append(pm.Moves, &ParsedMove{
+				Direction: sb.Direction,
+				Terrain:   sb.BlockedBy,
+				Blocked:   true,
+			})
+		} else {
+			panic(fmt.Sprintf("assert(type != %T)", v))
+		}
+	}
 
 	//// the report uses backslashes to separate each step in the set of steps,
 	//// so we'll use that character to split them up.

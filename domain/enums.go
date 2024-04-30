@@ -13,6 +13,67 @@ import (
 	"fmt"
 )
 
+// Direction is an enum for the direction
+type Direction int
+
+const (
+	DUnknown Direction = iota
+	DNorth
+	DNorthEast
+	DSouthEast
+	DSouth
+	DSouthWest
+	DNorthWest
+)
+
+// MarshalJSON implements the json.Marshaler interface.
+func (d Direction) MarshalJSON() ([]byte, error) {
+	return json.Marshal(directionEnumToString[d])
+}
+
+// UnmarshalJSON implements the json.Unmarshaler interface.
+func (d *Direction) UnmarshalJSON(data []byte) error {
+	var s string
+	var ok bool
+	if err := json.Unmarshal(data, &s); err != nil {
+		return err
+	} else if *d, ok = directionStringToEnum[s]; !ok {
+		return fmt.Errorf("invalid Direction %q", s)
+	}
+	return nil
+}
+
+// String implements the fmt.Stringer interface.
+func (d Direction) String() string {
+	if str, ok := directionEnumToString[d]; ok {
+		return str
+	}
+	return fmt.Sprintf("Direction(%d)", int(d))
+}
+
+var (
+	// helper map for marshalling the enum
+	directionEnumToString = map[Direction]string{
+		DUnknown:   "?",
+		DNorth:     "N",
+		DNorthEast: "NE",
+		DSouthEast: "SE",
+		DSouth:     "S",
+		DSouthWest: "SW",
+		DNorthWest: "NW",
+	}
+	// helper map for unmarshalling the enum
+	directionStringToEnum = map[string]Direction{
+		"?":  DUnknown,
+		"N":  DNorth,
+		"NE": DNorthEast,
+		"SE": DSouthEast,
+		"S":  DSouth,
+		"SW": DSouthWest,
+		"NW": DNorthWest,
+	}
+)
+
 // ReportSectionType is an enum for the type of report section.
 type ReportSectionType int
 
@@ -62,6 +123,67 @@ var (
 		"Unit":        RSUnit,
 		"Settlements": RSSettlements,
 		"Transfers":   RSTransfers,
+	}
+)
+
+// Terrain is an enum for the terrain
+type Terrain int
+
+const (
+	TUnknown Terrain = iota
+	TConiferHills
+	TGrassyHills
+	TOcean
+	TPrairie
+	TRollingHills
+	TSwamp
+)
+
+// MarshalJSON implements the json.Marshaler interface.
+func (d Terrain) MarshalJSON() ([]byte, error) {
+	return json.Marshal(terrainEnumToString[d])
+}
+
+// UnmarshalJSON implements the json.Unmarshaler interface.
+func (d *Terrain) UnmarshalJSON(data []byte) error {
+	var s string
+	var ok bool
+	if err := json.Unmarshal(data, &s); err != nil {
+		return err
+	} else if *d, ok = terrainStringToEnum[s]; !ok {
+		return fmt.Errorf("invalid Terrain %q", s)
+	}
+	return nil
+}
+
+// String implements the fmt.Stringer interface.
+func (d Terrain) String() string {
+	if str, ok := terrainEnumToString[d]; ok {
+		return str
+	}
+	return fmt.Sprintf("Terrain(%d)", int(d))
+}
+
+var (
+	// helper map for marshalling the enum
+	terrainEnumToString = map[Terrain]string{
+		TUnknown:      "?",
+		TConiferHills: "CH",
+		TGrassyHills:  "GH",
+		TOcean:        "O",
+		TPrairie:      "PR",
+		TRollingHills: "RH",
+		TSwamp:        "SW",
+	}
+	// helper map for unmarshalling the enum
+	terrainStringToEnum = map[string]Terrain{
+		"?":  TUnknown,
+		"CH": TConiferHills,
+		"GH": TGrassyHills,
+		"O":  TOcean,
+		"PR": TPrairie,
+		"RH": TRollingHills,
+		"SW": TSwamp,
 	}
 )
 

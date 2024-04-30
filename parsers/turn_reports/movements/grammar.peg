@@ -29,9 +29,31 @@ package movements
 // SETTLEMENT  is COMMA SPACE SPACE     SETTLEMENT_NAME
 
 import (
+    "fmt"
+    "github.com/mdhender/ottomap/domain"
     "log"
     "strings"
 )
+
+type stepSucceeded struct {
+	Direction  domain.Direction
+	Terrain    domain.Terrain
+	FordEdges  []domain.Direction
+	OceanEdges []domain.Direction
+	RiverEdges []domain.Direction
+	Found struct {
+	    Settlement string
+    }
+}
+
+type stepBlocked struct {
+	Direction domain.Direction
+    BlockedBy domain.Terrain
+}
+
+type fordEdges  []domain.Direction
+type oceanEdges []domain.Direction
+type riverEdges []domain.Direction
 
 func toAnySlice(v any) []any {
     if v == nil {
@@ -40,220 +62,129 @@ func toAnySlice(v any) []any {
     return v.([]any)
 }
 
-type Follows struct {
-    Id string
 }
 
-}
+Step <- d:DIRECTION_CODE "-" t:TERRAIN_CODE _ edges:Edges* _ si:Settlement? _ ("," _)* EOF {
+    var step stepSucceeded
+    step.Direction = d.(domain.Direction)
+    step.Terrain   = t.(domain.Terrain)
 
-TribeMovement <- "Tribe" _ li:(Follows / Moves) EOF {
-    log.Printf("pigeon: TribeMovement: %T %q\n", li, string(c.text))
-    switch v := li.(type) {
-    case *Follows:
-        return v, nil
-    default:
-        return string(c.text), nil
-    }
-}
-
-Follows <- "Follows" _ id:(DIGIT DIGIT DIGIT DIGIT ([cefg] DIGIT)?) {
-    log.Printf("pigeon: Follows: %T %q\n", string(c.text), string(c.text))
-    return &Follows{Id: string(c.text)}, nil
-}
-
-Moves <- "Movement:" _ sti:Steps {
-    log.Printf("pigeon: Moves: %T %q\n", string(c.text), string(c.text))
-    return string(c.text), nil
-}
-
-Steps <- st:Step stli:(_ "\\" Step)* {
-    log.Printf("pigeon: Steps: %T %q\n", string(c.text), string(c.text))
-    return string(c.text), nil
-}
-
-Step <- [^\\]* {
-    log.Printf("pigeon: Step: %T %q\n", string(c.text), string(c.text))
-    return string(c.text), nil
-}
-
-Results <- .* {
-    return string(c.text), nil
-}
-
-StepS <- d:DIRECTION "-" t:TERRAIN _ oei:OceanEdges? _ rei:RiverEdges? _ fei:FordEdges? _ si:Settlement? EOF {
-    var step Step
-    step.Direction = d.(string)
-    step.Terrain = t.(string)
-
-    if oei != nil {
-        switch v := oei.(type) {
-        case [6]string:
-            for i, x := range v {
-                if x != "" {
-                    step.Edges[i] = "Ocean"
+    for _, edge := range toAnySlice(edges) {
+        if edge != nil {
+            switch val := edge.(type) {
+            case fordEdges:
+                for _, v := range val {
+                    step.FordEdges = append(step.FordEdges, v)
                 }
-            }
-        default:
-            panic(fmt.Errorf("step: ocean edges: unknown type %T", v))
-        }
-    }
-
-    if rei != nil {
-        switch v := rei.(type) {
-        case [6]string:
-            for i, x := range v {
-                if x != "" {
-                    step.Edges[i] = "River"
+            case oceanEdges:
+                for _, v := range val {
+                    step.OceanEdges = append(step.OceanEdges, v)
                 }
-            }
-        default:
-            panic(fmt.Errorf("step: river edges: unknown type %T", v))
-        }
-    }
-
-    if fei != nil {
-        switch v := fei.(type) {
-        case [6]string:
-            for i, x := range v {
-                if x != "" {
-                    step.Edges[i] = "Ford"
+            case riverEdges:
+                for _, v := range val {
+                    step.RiverEdges = append(step.RiverEdges, v)
                 }
+            default:
+                panic(fmt.Errorf("step: ocean edges: unknown type %T", val))
             }
-        default:
-            panic(fmt.Errorf("step: ford edges: unknown type %T", v))
         }
     }
 
     if si != nil {
-        step.Settlement = si.(string)
+        step.Found.Settlement = si.(string)
     }
 
     return &step, nil
+} / "Can't Move on Ocean to " _ d:DIRECTION_CODE _ "of HEX" _ EOF {
+    var step stepBlocked
+    step.Direction = d.(domain.Direction)
+    step.BlockedBy = domain.TOcean
+    return &step, nil
 }
 
-DIRECTION <- ("NE" / "SE" / "SW" / "NW" / "N" / "S") {
-    return string(c.text), nil
+DIRECTION_CODE <- ("NE" / "SE" / "SW" / "NW" / "N" / "S") {
+    switch string(c.text) {
+    case "N" : return domain.DNorth, nil
+    case "NE": return domain.DNorthEast, nil
+    case "SE": return domain.DSouthEast, nil
+    case "S" : return domain.DSouth, nil
+    case "SW": return domain.DSouthWest, nil
+    case "NW": return domain.DNorthWest, nil
+    }
+    panic(fmt.Sprintf("assert(code != %q)", string(c.text)))
 }
 
-TERRAIN <-    (
-    "CONIFER HILLS" /
-    "GRASSY HILLS"  /
-    "OCEAN"         /
-    "PRAIRIE"       /
-    "ROCKY HILLS"   /
-    "SWAMP"         /
-    "CH" / "GH" / "PR" / "RH" / "SW"
+TERRAIN_CODE <- (
+    "CH" / "GH" / "PR" / "RH" / "SW" /
     "O"
 ) {
-    s := string(c.text)
-    switch s {
-    case "CH", "CONIFER HILLS":
-        return "CH", nil
-    case "GH", "GRASSY HILLS":
-        return "GH", nil
-    case "O", "OCEAN":
-        return "O", nil
-    case "PR", "PRAIRIE":
-        return "PR", nil
-    case "RH", "ROCKY HILLS":
-        return "RH", nil
-    case "SW", "SWAMP":
-        return "SW", nil
-    default:
-        return string(c.text), fmt.Errorf("unknown terrain")
+    switch string(c.text) {
+    case "CH":
+        return domain.TConiferHills, nil
+    case "GH":
+        return domain.TGrassyHills, nil
+    case "O":
+        return domain.TOcean, nil
+    case "PR":
+        return domain.TPrairie, nil
+    case "RH":
+        return domain.TRollingHills, nil
+    case "SW":
+        return domain.TSwamp, nil
     }
+    panic(fmt.Sprintf("assert(code != %q)", string(c.text)))
 }
 
-OceanEdges <- "," _ "O" _ d:DIRECTION dli:optCommaDirection* {
-    directions := []string{d.(string)}
-    if dli != nil {
-        for _, dir := range toAnySlice(dli) {
-            if dir != nil {
-                switch v := dir.(type) {
-                case string:
-                    directions = append(directions, v)
-                default:
-                    panic(fmt.Errorf("ocean edges: unknown type %T", v))
-                }
+Edges <- "," _ "Ford" _ d:DIRECTION_CODE dli:optSpaceDirection* {
+    var edges fordEdges
+    edges = append(edges, d.(domain.Direction))
+    for _, dir := range toAnySlice(dli) {
+        if dir != nil {
+            switch v := dir.(type) {
+            case domain.Direction:
+                edges = append(edges, v)
+            default:
+                panic(fmt.Sprintf("assert(type != %T)", v))
             }
         }
     }
-    var edges [6]string
-    for _, dir := range directions {
-        switch dir {
-        case "N": edges[0] = "*"
-        case "NE": edges[1] = "*"
-        case "SE": edges[2] = "*"
-        case "S": edges[3] = "*"
-        case "SW": edges[4] = "*"
-        case "NW": edges[5] = "*"
+    return edges, nil
+} / "," _ "O" _ d:DIRECTION_CODE dli:optCommaDirection* {
+    var edges oceanEdges
+    edges = append(edges, d.(domain.Direction))
+    for _, dir := range toAnySlice(dli) {
+        if dir != nil {
+            switch v := dir.(type) {
+            case domain.Direction:
+                edges = append(edges, v)
+            default:
+                panic(fmt.Sprintf("assert(type != %T)", v))
+            }
+        }
+    }
+    return edges, nil
+} / "," _ "River" _ d:DIRECTION_CODE dli:optSpaceDirection* {
+    var edges riverEdges
+    edges = append(edges, d.(domain.Direction))
+    for _, dir := range toAnySlice(dli) {
+        if dir != nil {
+            switch v := dir.(type) {
+            case domain.Direction:
+                edges = append(edges, v)
+            default:
+                panic(fmt.Sprintf("assert(type != %T)", v))
+            }
         }
     }
     return edges, nil
 }
 
-optCommaDirection <- _ "," _ d:DIRECTION {
-    return d.(string), nil
+optCommaDirection <- _ "," _ d:DIRECTION_CODE {
+    return d.(domain.Direction), nil
 }
 
-RiverEdges <- "," _ "River" _ d:DIRECTION dli:optSpaceDirection* {
-    directions := []string{d.(string)}
-    if dli != nil {
-        for _, dir := range toAnySlice(dli) {
-            if dir != nil {
-                switch v := dir.(type) {
-                case string:
-                    directions = append(directions, v)
-                default:
-                    panic(fmt.Errorf("river edges: unknown type %T", v))
-                }
-            }
-        }
-    }
-    var edges [6]string
-    for _, dir := range directions {
-        switch dir {
-        case "N": edges[0] = "*"
-        case "NE": edges[1] = "*"
-        case "SE": edges[2] = "*"
-        case "S": edges[3] = "*"
-        case "SW": edges[4] = "*"
-        case "NW": edges[5] = "*"
-        }
-    }
-    return edges, nil
-}
-
-optSpaceDirection <- _ d:DIRECTION {
-    return d.(string), nil
-}
-
-FordEdges <- "," _ "Ford" _ d:DIRECTION dli:optSpaceDirection* {
-    directions := []string{d.(string)}
-    if dli != nil {
-        for _, dir := range toAnySlice(dli) {
-            if dir != nil {
-                switch v := dir.(type) {
-                case string:
-                    directions = append(directions, v)
-                default:
-                    panic(fmt.Errorf("ford edges: unknown type %T", v))
-                }
-            }
-        }
-    }
-    var edges [6]string
-    for _, dir := range directions {
-        switch dir {
-        case "N": edges[0] = "*"
-        case "NE": edges[1] = "*"
-        case "SE": edges[2] = "*"
-        case "S": edges[3] = "*"
-        case "SW": edges[4] = "*"
-        case "NW": edges[5] = "*"
-        }
-    }
-    return edges, nil
+optSpaceDirection <- _ d:DIRECTION_CODE {
+    return d.(domain.Direction), nil
 }
 
 Settlement <- "," _ n:SettlementName {
@@ -263,6 +194,35 @@ Settlement <- "," _ n:SettlementName {
 SettlementName <- [A-Z][A-Za-z]+ {
     return string(c.text), nil
 }
+
+// TERRAIN <-    (
+//     "CONIFER HILLS" /
+//     "GRASSY HILLS"  /
+//     "OCEAN"         /
+//     "PRAIRIE"       /
+//     "ROCKY HILLS"   /
+//     "SWAMP"         /
+//     "CH" / "GH" / "PR" / "RH" / "SW" /
+//     "O"
+// ) {
+//     s := string(c.text)
+//     switch s {
+//     case "CH", "CONIFER HILLS":
+//         return "CH", nil
+//     case "GH", "GRASSY HILLS":
+//         return "GH", nil
+//     case "O", "OCEAN":
+//         return "O", nil
+//     case "PR", "PRAIRIE":
+//         return "PR", nil
+//     case "RH", "ROCKY HILLS":
+//         return "RH", nil
+//     case "SW", "SWAMP":
+//         return "SW", nil
+//     default:
+//         return string(c.text), fmt.Errorf("unknown terrain")
+//     }
+// }
 
 EOF <- !.
 DIGIT = [0-9]

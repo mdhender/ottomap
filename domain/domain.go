@@ -194,6 +194,7 @@ type Movement struct {
 }
 
 type StepResults struct {
-	Step    string   `json:"step"`
-	Results []string `json:"results,omitempty"`
+	Direction Direction `json:"direction"`
+	Blocked   bool      `json:"blocked,omitempty"`
+	Results   []string  `json:"results,omitempty"`
 }
