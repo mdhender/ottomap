@@ -90,11 +90,7 @@ type Blocked struct {
 // better than returning invalid data. The user is expected to fix the
 // input and restart.
 func ParseMovements(id string, input []byte) (*ParsedMovement, error) {
-	log.Printf("parsers: turn_reports: movements: todo: update this to use Movement structs\n")
-	log.Printf("parsers: turn_reports: movements: todo: update this to use Step     structs\n")
-	log.Printf("parsers: turn_reports: movements: todo: update this to use Found    structs\n")
-	// AndExpr = "A" &"B" // matches "A" if followed by a "B" (does not consume "B")
-	// NotExpr = "A" !"B" // matches "A" if not followed by a "B" (does not consume "B")
+	// todo: update this to use Domain structs
 
 	// initialize the regex machines. should probably be moved to an init function.
 	if rxRiverEdge == nil || rxTerrainCost == nil || rxWaterEdge == nil {
@@ -134,14 +130,14 @@ func ParseMovements(id string, input []byte) (*ParsedMovement, error) {
 			return &ParsedMovement{Follows: string(fields[2])}, nil
 		}
 		log.Printf("parsers: turn_reports: %q: movements: error parsing Tribe Follows\n", id)
-		log.Printf("The input was: %s\n", string(input))
+		log.Printf("The input is: %s\n", string(input))
 		return nil, fmt.Errorf("invalid follows input")
 	}
 
 	// if this is not a movements line, return an error
 	if !bytes.HasPrefix(input, []byte("Tribe Movement: ")) {
 		log.Printf("parsers: turn_reports: %q: movements: internal error parsing Tribe Movement\n", id)
-		log.Printf("The input was: %s\n", string(input))
+		log.Printf("The input is: %s\n", string(input))
 		log.Printf("Please report this issue on the Discord server.\n")
 		return nil, fmt.Errorf("internal error: unexpected input")
 	}
@@ -230,58 +226,6 @@ func ParseMovements(id string, input []byte) (*ParsedMovement, error) {
 			panic(fmt.Sprintf("assert(type != %T)", v))
 		}
 	}
-
-	//// the report uses backslashes to separate each step in the set of steps,
-	//// so we'll use that character to split them up.
-	//var steps [][]byte
-	//for n, step := range bytes.Split(inputSteps, []byte{'\\'}) {
-	//	// trim spaces from the start of the step
-	//	// (this seems to only happen when there's a typo in the input)
-	//	step = bytes.TrimSpace(step)
-	//	// trim spaces and commas from the end of the step
-	//	step = bytes.TrimRight(step, ", ")
-	//	debugf("  step %2d 《%s》\n", n+1, string(step))
-	//	steps = append(steps, step)
-	//	// just to see what the parser will see, split up the step
-	//	for nn, ss := range bytes.Split(step, []byte{','}) {
-	//		debugf("       %2d %2d 《%s》\n", n+1, nn+1, string(ss))
-	//	}
-	//}
-	//log.Printf("movements: call the parser to parse every step\n")
-	//log.Printf("movements: todo: split by commas\n")
-	//
-	//// suss out the nightmare of DIRECTION COMMA ONE-OR-MORE-SPACES DIRECTION
-	//pm := &ParsedMovement{Results: string(inputResults)}
-	//for n, step := range steps {
-	//	debugf("  step %2d `%s`\n", n+1, string(step))
-	//	for x, ch := range step {
-	//		if ch == ',' && validDirFollows(step[x:]) {
-	//			step[x] = ' '
-	//		}
-	//	}
-	//	//// spaces are important (maybe?) so don't trim them
-	//	//for nn, boo := range bytes.Split(step, []byte{','}) {
-	//	//	debugf("       %2d %2d `%s`\n", n+1, nn+1, string(boo))
-	//	//}
-	//	// just to see what it does to the parser, trim those spaces
-	//	var move *ParsedMove
-	//	for nn, boo := range bytes.Split(step, []byte{','}) {
-	//		debugf("       %2d %2d `%s`\n", n+1, nn+1, string(boo))
-	//		if nn == 0 {
-	//			move = &ParsedMove{Step: string(boo)}
-	//			pm.Moves = append(pm.Moves, move)
-	//			continue
-	//		}
-	//		result := string(bytes.TrimSpace(boo))
-	//		if result != "" {
-	//			move.Results = append(move.Results, result)
-	//		}
-	//	}
-	//}
-	//
-	//// these are the results for the entire movement.
-	//// that's not the same as the results for a single step.
-	//debugf(" rslts 《%s》\n", string(inputResults))
 
 	return pm, nil
 }

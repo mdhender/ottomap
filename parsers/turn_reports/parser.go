@@ -62,7 +62,7 @@ func Parse(rpf *domain.ReportFile, debugSlugs, captureRawText bool) ([]*domain.R
 			continue
 		}
 
-		log.Printf("turn_reports: parse: parsing %s\n", string(lines[0]))
+		////log.Printf("turn_reports: parse: parsing %s\n", string(lines[0]))
 		//for n, line := range lines {
 		//	log.Printf("section: line %3d: %s\n", n+1, string(line))
 		//}
@@ -95,26 +95,27 @@ func Parse(rpf *domain.ReportFile, debugSlugs, captureRawText bool) ([]*domain.R
 		}
 		//log.Printf("turn_reports: %s: location %q: ==> %q %q\n", rpf.Id, string(location), unit.PrevHex, unit.CurrHex)
 
-		log.Printf("turn_reports: %s: %s: movements\n", rpf.Id, unit.Id)
-		log.Printf("turn_reports: %s: %s: movements\n", rpf.Id, unit.Id)
-		log.Printf("turn_reports: %s: %s: movements\n", rpf.Id, unit.Id)
+		//log.Printf("turn_reports: %s: %s: movements\n", rpf.Id, unit.Id)
 		movement := sections.ParseMovementLine(rs.Id, lines)
 		if unit.Raw != nil {
 			unit.Raw.Movement = string(movement)
 		}
-		log.Printf("turn_reports: %s: %s: movements: input <== %q\n", rpf.Id, unit.Id, string(movement))
-		log.Printf("turn_reports: %s: %s: movements: start %q end %q\n", rpf.Id, unit.Id, unit.PrevHex, unit.CurrHex)
+		//log.Printf("turn_reports: %s: %s: movements: input <== %q\n", rpf.Id, unit.Id, string(movement))
+		//log.Printf("turn_reports: %s: %s: movements: start %q end %q\n", rpf.Id, unit.Id, unit.PrevHex, unit.CurrHex)
 		m, err := movements.ParseMovements(fmt.Sprintf("%-6s %s", rpf.Id, unit.Id), movement)
 		if err != nil {
 			log.Fatalf("turn_reports: %s: %s: movements: parse: error %v\n", rpf.Id, unit.Id, err)
 		}
 		if m == nil {
-			log.Printf("turn_reports: %s: %s: movements: parse: no movements\n", rpf.Id, unit.Id)
+			// no movement so nothing to do
+			// log.Printf("turn_reports: %s: %s: movements: parse: no movements\n", rpf.Id, unit.Id)
 		} else if m.Follows != "" {
+			// capture the unit this unit is following
 			unit.Follows = m.Follows
-			log.Printf("turn_reports: %s: %s: movements: parse: follows %q\n", rpf.Id, unit.Id, m.Follows)
+			//log.Printf("turn_reports: %s: %s: movements: parse: follows %q\n", rpf.Id, unit.Id, m.Follows)
 		} else if m.Moves != nil {
-			log.Printf("turn_reports: %s: %s: movements: parse: steps %d\n", rpf.Id, unit.Id, len(m.Moves))
+			// capture the movement, including all of its steps
+			//log.Printf("turn_reports: %s: %s: movements: parse: steps %d\n", rpf.Id, unit.Id, len(m.Moves))
 			unit.Movement = &domain.Movement{}
 			for _, pm := range m.Moves {
 				sr := &domain.StepResults{}
@@ -126,7 +127,6 @@ func Parse(rpf *domain.ReportFile, debugSlugs, captureRawText bool) ([]*domain.R
 				}
 			}
 		}
-		log.Printf("turn_reports: %s: %s: movements: todo: split by commas\n", rpf.Id, unit.Id)
 
 		for _, line := range sections.ParseScoutLines(rs.Id, lines) {
 			unit.ScoutLines = append(unit.ScoutLines, string(line))

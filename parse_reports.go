@@ -107,7 +107,7 @@ var cmdParseReports = &cobra.Command{
 				if err != nil {
 					log.Fatalf("parse: reports: %s: %s: %v\n", rpf.Id, rs.Id, err)
 				}
-				log.Printf("parse: reports: %s: %-8s ==> %s\n", rpf.Id, rs.Id, path)
+				log.Printf("parse: reports: %s: unit %-8s: input %s\n", rpf.Id, rs.Id, path)
 			}
 		}
 
@@ -119,9 +119,6 @@ var cmdParseReports = &cobra.Command{
 		if errCount != 0 {
 			log.Fatalf("parse: reports: halting due to %d errors above\n", errCount)
 		}
-
-		log.Printf("parse: reports: todo: find that one scouting step that i had to modify back in the day\n")
-		log.Printf("parse: reports: todo: ignore the temptation to push section data into a database\n")
 
 		return nil
 	},
