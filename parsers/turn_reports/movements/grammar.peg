@@ -51,6 +51,11 @@ type stepBlocked struct {
     BlockedBy domain.Terrain
 }
 
+type stepExhaustedMP struct {
+    Direction domain.Direction
+    Terrain   domain.Terrain
+}
+
 type fordEdges  []domain.Direction
 type oceanEdges []domain.Direction
 type riverEdges []domain.Direction
@@ -100,6 +105,11 @@ Step <- d:DIRECTION_CODE "-" t:TERRAIN_CODE _ edges:Edges* _ si:Settlement? _ ("
     step.Direction = d.(domain.Direction)
     step.BlockedBy = domain.TOcean
     return &step, nil
+} / "Not enough M.P's to move to " _ d:DIRECTION_CODE _ "into" _ t:TERRAIN_LONG _ EOF {
+    var step stepExhaustedMP
+    step.Direction = d.(domain.Direction)
+    step.Terrain = domain.TOcean
+    return &step, nil
 }
 
 DIRECTION_CODE <- ("NE" / "SE" / "SW" / "NW" / "N" / "S") {
@@ -128,7 +138,7 @@ TERRAIN_CODE <- (
     case "PR":
         return domain.TPrairie, nil
     case "RH":
-        return domain.TRollingHills, nil
+        return domain.TRockyHills, nil
     case "SW":
         return domain.TSwamp, nil
     }
@@ -195,34 +205,28 @@ SettlementName <- [A-Z][A-Za-z]+ {
     return string(c.text), nil
 }
 
-// TERRAIN <-    (
-//     "CONIFER HILLS" /
-//     "GRASSY HILLS"  /
-//     "OCEAN"         /
-//     "PRAIRIE"       /
-//     "ROCKY HILLS"   /
-//     "SWAMP"         /
-//     "CH" / "GH" / "PR" / "RH" / "SW" /
-//     "O"
-// ) {
-//     s := string(c.text)
-//     switch s {
-//     case "CH", "CONIFER HILLS":
-//         return "CH", nil
-//     case "GH", "GRASSY HILLS":
-//         return "GH", nil
-//     case "O", "OCEAN":
-//         return "O", nil
-//     case "PR", "PRAIRIE":
-//         return "PR", nil
-//     case "RH", "ROCKY HILLS":
-//         return "RH", nil
-//     case "SW", "SWAMP":
-//         return "SW", nil
-//     default:
-//         return string(c.text), fmt.Errorf("unknown terrain")
-//     }
-// }
+TERRAIN_LONG <-    (
+    "CONIFER HILLS" /    "GRASSY HILLS"  /    "OCEAN"         /
+    "PRAIRIE"       /    "ROCKY HILLS"   /    "SWAMP"
+) {
+    s := string(c.text)
+    switch s {
+    case "CONIFER HILLS":
+        return domain.TConiferHills, nil
+    case "GRASSY HILLS":
+        return domain.TGrassyHills, nil
+    case "OCEAN":
+        return domain.TOcean, nil
+    case "PRAIRIE":
+        return domain.TPrairie, nil
+    case "ROCKY HILLS":
+        return domain.TRockyHills, nil
+    case "SWAMP":
+        return domain.TSwamp, nil
+    default:
+        return string(c.text), fmt.Errorf("unknown terrain")
+    }
+}
 
 EOF <- !.
 DIGIT = [0-9]

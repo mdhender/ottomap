@@ -74,6 +74,58 @@ var (
 	}
 )
 
+// Edge is an enum for the edge of a terrain.
+type Edge int
+
+const (
+	ENone Edge = iota
+	EFord
+	EPass
+	ERiver
+)
+
+// MarshalJSON implements the json.Marshaler interface.
+func (e Edge) MarshalJSON() ([]byte, error) {
+	return json.Marshal(edgeEnumToString[e])
+}
+
+// UnmarshalJSON implements the json.Unmarshaler interface.
+func (e *Edge) UnmarshalJSON(data []byte) error {
+	var s string
+	var ok bool
+	if err := json.Unmarshal(data, &s); err != nil {
+		return err
+	} else if *e, ok = edgeStringToEnum[s]; !ok {
+		return fmt.Errorf("invalid Edge %q", s)
+	}
+	return nil
+}
+
+// String implements the fmt.Stringer interface.
+func (e Edge) String() string {
+	if str, ok := edgeEnumToString[e]; ok {
+		return str
+	}
+	return fmt.Sprintf("Edge(%d)", int(e))
+}
+
+var (
+	// helper map for marshalling the enum
+	edgeEnumToString = map[Edge]string{
+		ENone:  "",
+		EFord:  "Ford",
+		EPass:  "Pass",
+		ERiver: "River",
+	}
+	// helper map for unmarshalling the enum
+	edgeStringToEnum = map[string]Edge{
+		"":      ENone,
+		"Ford":  EFord,
+		"Pass":  EPass,
+		"River": ERiver,
+	}
+)
+
 // ReportSectionType is an enum for the type of report section.
 type ReportSectionType int
 
@@ -135,7 +187,7 @@ const (
 	TGrassyHills
 	TOcean
 	TPrairie
-	TRollingHills
+	TRockyHills
 	TSwamp
 )
 
@@ -172,7 +224,7 @@ var (
 		TGrassyHills:  "GH",
 		TOcean:        "O",
 		TPrairie:      "PR",
-		TRollingHills: "RH",
+		TRockyHills:   "RH",
 		TSwamp:        "SW",
 	}
 	// helper map for unmarshalling the enum
@@ -182,7 +234,7 @@ var (
 		"GH": TGrassyHills,
 		"O":  TOcean,
 		"PR": TPrairie,
-		"RH": TRollingHills,
+		"RH": TRockyHills,
 		"SW": TSwamp,
 	}
 )

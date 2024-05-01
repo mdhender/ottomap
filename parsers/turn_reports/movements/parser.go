@@ -17,6 +17,39 @@ var (
 	rxWaterEdge   *regexp.Regexp
 )
 
+// Movement is a single line of a unit's movement or follows report.
+type Movement struct {
+	StartingHex domain.GridHex // the hex the unit is starting from
+	Follows     string         // the unit this unit is following
+	Steps       []*Step        // the steps in the movement
+	EndingHex   domain.GridHex // the hex the unit is ending at
+}
+
+// Step is a single step in a unit's movement or follows report.
+//
+// NB: the ending hex will be the same as the starting hex only
+// if the movement is blocked by terrain or stopped by MP exhaustion.
+type Step struct {
+	StartingHex domain.GridHex   // the hex the unit is starting from
+	Direction   domain.Direction // direction the unit is moving in
+	Blocked     bool             // true if the step is blocked by terrain
+	Exhausted   bool             // true if the step is stopped by MP exhaustion
+	EndingHex   domain.GridHex   // the hex the unit is ending at
+	Found       *Found           // things found in the ending hex
+}
+
+// Found is the set of things found in a hex
+type Found struct {
+	// terrain in the hex
+	Terrain domain.Terrain
+	// edges that allow or prevent movement
+	Edges map[domain.Direction]domain.Edge
+	// neighboring terrain that can be seen. usually water, but sometimes lava.
+	NeighboringTerrain map[domain.Direction]domain.Terrain
+	// settlement in the hex
+	Settlement string
+}
+
 type ParsedMovement struct {
 	Follows string
 	Moves   []*ParsedMove
@@ -57,7 +90,9 @@ type Blocked struct {
 // better than returning invalid data. The user is expected to fix the
 // input and restart.
 func ParseMovements(id string, input []byte) (*ParsedMovement, error) {
-	log.Printf("parsers: turn_reports: movements: todo: parse steps as DIRECTION .* &(\\ DIRECTION)\n")
+	log.Printf("parsers: turn_reports: movements: todo: update this to use Movement structs\n")
+	log.Printf("parsers: turn_reports: movements: todo: update this to use Step     structs\n")
+	log.Printf("parsers: turn_reports: movements: todo: update this to use Found    structs\n")
 	// AndExpr = "A" &"B" // matches "A" if followed by a "B" (does not consume "B")
 	// NotExpr = "A" !"B" // matches "A" if not followed by a "B" (does not consume "B")
 
@@ -111,10 +146,6 @@ func ParseMovements(id string, input []byte) (*ParsedMovement, error) {
 		return nil, fmt.Errorf("internal error: unexpected input")
 	}
 
-	log.Printf("// ---------------------------------------------\n")
-	log.Printf("// ---------------------------------------------\n")
-	log.Printf("// ---------------------------------------------\n")
-
 	// start a new section in the debug log
 	debugf(fmt.Sprintf("%-16s --------------------------------------------\n", id))
 	debugf(fmt.Sprintf("input_ `%s`\n", string(input)))
@@ -138,9 +169,13 @@ func ParseMovements(id string, input []byte) (*ParsedMovement, error) {
 	for n, inputStep := range inputMoves {
 		step := bytes.TrimSpace(inputStep)
 		if n == 0 {
-			if !bytes.HasPrefix(step, []byte{'M', 'o', 'v', 'e', ' '}) {
+			if bytes.Equal(step, []byte{'M', 'o', 'v', 'e'}) {
+				// "Move /" is a special case for the first step of a movement.
+				continue
+			} else if !bytes.HasPrefix(step, []byte{'M', 'o', 'v', 'e', ' '}) {
 				log.Printf("parsers: turn_reports: %q: movements: error parsing Tribe Movement\n", id)
 				log.Printf("The move  is: %s\n", string(input))
+				log.Printf("The index is: %d\n", n+1)
 				log.Printf("The step  is: %s\n", string(inputStep))
 				log.Printf("The error is: expected step to start with \"Move \".\n")
 				return nil, fmt.Errorf("missing move prefix")
@@ -160,6 +195,7 @@ func ParseMovements(id string, input []byte) (*ParsedMovement, error) {
 			// ignore empty steps after the first
 			continue
 		}
+
 		v, err := Parse(id, step)
 		if err != nil {
 			log.Printf("parsers: turn_reports: %q: movements: error parsing Tribe Movement\n", id)
@@ -171,16 +207,23 @@ func ParseMovements(id string, input []byte) (*ParsedMovement, error) {
 			return nil, errors.Join(fmt.Errorf("tribe movement"), err)
 		}
 		if ss, ok := v.(*stepSucceeded); ok {
-			log.Printf("ms %v\n", *ss)
+			//log.Printf("ms ss   %+v\n", *ss)
 			pm.Moves = append(pm.Moves, &ParsedMove{
 				Direction: ss.Direction,
 				Terrain:   ss.Terrain,
 			})
 		} else if sb, ok := v.(*stepBlocked); ok {
-			log.Printf("ms %v\n", *sb)
+			//log.Printf("ms sb   %+v\n", *sb)
 			pm.Moves = append(pm.Moves, &ParsedMove{
 				Direction: sb.Direction,
 				Terrain:   sb.BlockedBy,
+				Blocked:   true,
+			})
+		} else if semp, ok := v.(*stepExhaustedMP); ok {
+			//log.Printf("ms semp %+v\n", *semp)
+			pm.Moves = append(pm.Moves, &ParsedMove{
+				Direction: semp.Direction,
+				Terrain:   semp.Terrain,
 				Blocked:   true,
 			})
 		} else {
