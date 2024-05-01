@@ -13,10 +13,12 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 )
 
 var argsParseReports struct {
-	debug struct {
+	gridOrigin string // grid value to replace ## with
+	debug      struct {
 		captureRawText bool
 		clanShowSlugs  bool
 	}
@@ -26,9 +28,19 @@ var cmdParseReports = &cobra.Command{
 	Use:   "reports",
 	Short: "Parse all reports in the index file",
 	Long:  `Create unit movement files for all TribeNet turn reports listed in the index file.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if argsParseReports.gridOrigin == "" {
+			return fmt.Errorf("missing grid origin")
+		} else if strings.TrimSpace(argsParseReports.gridOrigin) != argsParseReports.gridOrigin {
+			return fmt.Errorf("grid origin can not contain spaces")
+		} else if len(argsParseReports.gridOrigin) != 2 {
+			return fmt.Errorf("grid orgin must be two upper-case letters")
+		} else if strings.Trim(argsParseReports.gridOrigin, "ABCDEFGHIJKLMNOPQRSTUVWYZ") != "" {
+			return fmt.Errorf("grid orgin must be two upper-case letters")
+		}
 		log.Printf("parse: reports: index  %s\n", argsParse.index)
 		log.Printf("parse: reports: output %s\n", argsParse.output)
+		log.Printf("parse: reports: origin %s\n", argsParseReports.gridOrigin)
 		if argsParse.debug.units {
 			log.Printf("parse: reports: debug: units %v\n", argsParse.debug.units)
 		}
@@ -110,5 +122,7 @@ var cmdParseReports = &cobra.Command{
 
 		log.Printf("parse: reports: todo: find that one scouting step that i had to modify back in the day\n")
 		log.Printf("parse: reports: todo: ignore the temptation to push section data into a database\n")
+
+		return nil
 	},
 }
