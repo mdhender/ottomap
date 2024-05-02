@@ -37,11 +37,14 @@ import (
 
 type stepSucceeded struct {
 	Direction  domain.Direction
-	Terrain    domain.Terrain
-	FordEdges  []domain.Direction
-	OceanEdges []domain.Direction
-	RiverEdges []domain.Direction
 	Found struct {
+        Terrain    domain.Terrain
+        Edges struct {
+            Ford  []domain.Direction
+            Lake  []domain.Direction
+            Ocean []domain.Direction
+            River []domain.Direction
+        }
 	    Settlement string
     }
 }
@@ -56,7 +59,8 @@ type stepExhaustedMP struct {
     Terrain   domain.Terrain
 }
 
-type fordEdges  []domain.Direction
+type fordEdges []domain.Direction
+type lakeEdges []domain.Direction
 type oceanEdges []domain.Direction
 type riverEdges []domain.Direction
 
@@ -71,26 +75,26 @@ func toAnySlice(v any) []any {
 
 Step <- d:DIRECTION_CODE "-" t:TERRAIN_CODE _ edges:Edges* _ si:Settlement? _ ("," _)* EOF {
     var step stepSucceeded
-    step.Direction = d.(domain.Direction)
-    step.Terrain   = t.(domain.Terrain)
+    step.Direction     = d.(domain.Direction)
+    step.Found.Terrain = t.(domain.Terrain)
 
     for _, edge := range toAnySlice(edges) {
         if edge != nil {
             switch val := edge.(type) {
             case fordEdges:
                 for _, v := range val {
-                    step.FordEdges = append(step.FordEdges, v)
+                    step.Found.Edges.Ford = append(step.Found.Edges.Ford, v)
                 }
             case oceanEdges:
                 for _, v := range val {
-                    step.OceanEdges = append(step.OceanEdges, v)
+                    step.Found.Edges.Ocean = append(step.Found.Edges.Ocean, v)
                 }
             case riverEdges:
                 for _, v := range val {
-                    step.RiverEdges = append(step.RiverEdges, v)
+                    step.Found.Edges.River = append(step.Found.Edges.River, v)
                 }
             default:
-                panic(fmt.Errorf("step: ocean edges: unknown type %T", val))
+                panic(fmt.Errorf("step: edges: unknown type %T", val))
             }
         }
     }
@@ -126,13 +130,15 @@ DIRECTION_CODE <- ("NE" / "SE" / "SW" / "NW" / "N" / "S") {
 
 TERRAIN_CODE <- (
     "CH" / "GH" / "PR" / "RH" / "SW" /
-    "O"
+    "L" / "O"
 ) {
     switch string(c.text) {
     case "CH":
         return domain.TConiferHills, nil
     case "GH":
         return domain.TGrassyHills, nil
+    case "L":
+        return domain.TLake, nil
     case "O":
         return domain.TOcean, nil
     case "PR":
@@ -206,8 +212,8 @@ SettlementName <- [A-Z][A-Za-z]+ {
 }
 
 TERRAIN_LONG <-    (
-    "CONIFER HILLS" /    "GRASSY HILLS"  /    "OCEAN"         /
-    "PRAIRIE"       /    "ROCKY HILLS"   /    "SWAMP"
+    "CONIFER HILLS" / "GRASSY HILLS" / "LAKE"  / "OCEAN" /
+    "PRAIRIE"       / "ROCKY HILLS"  / "SWAMP"
 ) {
     s := string(c.text)
     switch s {
@@ -215,6 +221,8 @@ TERRAIN_LONG <-    (
         return domain.TConiferHills, nil
     case "GRASSY HILLS":
         return domain.TGrassyHills, nil
+    case "LAKE":
+        return domain.TLake, nil
     case "OCEAN":
         return domain.TOcean, nil
     case "PRAIRIE":

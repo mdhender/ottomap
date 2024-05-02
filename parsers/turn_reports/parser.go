@@ -89,9 +89,11 @@ func Parse(rpf *domain.ReportFile, debugSlugs, captureRawText bool) ([]*domain.R
 			log.Printf("turn_reports: %s: %s: location %q: parse %v\n", rpf.Id, unit.Id, string(location), err)
 		} else if hi == nil {
 			log.Printf("turn_reports: %s: %s: location %q: parse => nil!\n", rpf.Id, unit.Id, string(location))
-		} else if hexes, ok := hi.([2]*domain.GridHex); ok {
-			unit.PrevHex = hexes[0]
-			unit.CurrHex = hexes[1]
+		} else if hexes, ok := hi.([2]*domain.GridHex); !ok {
+			panic(fmt.Sprintf("assert(type != %T)", hi))
+		} else {
+			unit.PrevHex = hexes[0].String()
+			unit.CurrHex = hexes[1].String()
 		}
 		//log.Printf("turn_reports: %s: location %q: ==> %q %q\n", rpf.Id, string(location), unit.PrevHex, unit.CurrHex)
 
@@ -102,31 +104,21 @@ func Parse(rpf *domain.ReportFile, debugSlugs, captureRawText bool) ([]*domain.R
 		}
 		//log.Printf("turn_reports: %s: %s: movements: input <== %q\n", rpf.Id, unit.Id, string(movement))
 		//log.Printf("turn_reports: %s: %s: movements: start %q end %q\n", rpf.Id, unit.Id, unit.PrevHex, unit.CurrHex)
-		m, err := movements.ParseMovements(fmt.Sprintf("%-6s %s", rpf.Id, unit.Id), movement)
+		um, err := movements.ParseMovements(fmt.Sprintf("%-6s %s", rpf.Id, unit.Id), movement)
 		if err != nil {
 			log.Fatalf("turn_reports: %s: %s: movements: parse: error %v\n", rpf.Id, unit.Id, err)
 		}
-		if m == nil {
+		if um == nil {
 			// no movement so nothing to do
 			// log.Printf("turn_reports: %s: %s: movements: parse: no movements\n", rpf.Id, unit.Id)
-		} else if m.Follows != "" {
+		} else if um.Follows != "" {
 			// capture the unit this unit is following
-			unit.Follows = m.Follows
 			//log.Printf("turn_reports: %s: %s: movements: parse: follows %q\n", rpf.Id, unit.Id, m.Follows)
-		} else if m.Moves != nil {
+		} else if um.Steps != nil {
 			// capture the movement, including all of its steps
 			//log.Printf("turn_reports: %s: %s: movements: parse: steps %d\n", rpf.Id, unit.Id, len(m.Moves))
-			unit.Movement = &domain.Movement{}
-			for _, pm := range m.Moves {
-				sr := &domain.StepResults{}
-				sr.Direction = pm.Direction
-				sr.Blocked = pm.Blocked
-				unit.Movement.Steps = append(unit.Movement.Steps, sr)
-				for _, ms := range pm.Results {
-					sr.Results = append(sr.Results, ms)
-				}
-			}
 		}
+		unit.Movement = um
 
 		for _, line := range sections.ParseScoutLines(rs.Id, lines) {
 			unit.ScoutLines = append(unit.ScoutLines, string(line))

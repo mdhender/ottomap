@@ -47,8 +47,8 @@ type ReportSection struct {
 type ReportUnit struct {
 	Id         string         `json:"id"`   // unit Id, should be unique within the turn
 	Type       UnitType       `json:"type"` // unit type, not implemented
-	PrevHex    *GridHex       `json:"prevHex,omitempty"`
-	CurrHex    *GridHex       `json:"currHex,omitempty"`
+	PrevHex    string         `json:"prevHex,omitempty"`
+	CurrHex    string         `json:"currHex,omitempty"`
 	Movement   *Movement      `json:"movement,omitempty"`   // movement line from the section
 	Follows    string         `json:"follows,omitempty"`    // set when unit follows another unit
 	ScoutLines []string       `json:"scoutLines,omitempty"` // scout lines from the section
@@ -168,33 +168,29 @@ type Hex struct {
 	Settlement *Settlement `json:"settlement,omitempty"`
 }
 
+type Movement struct {
+	Follows string  `json:"follows,omitempty"` // set only if the unit is following another
+	Steps   []*Step `json:"steps,omitempty"`
+	Results string  `json:"results,omitempty"`
+}
+
 // Step captures data from a unit's attempt to move from one hex to another.
 //
 // Results include terrain and edge features, units encountered,
 // settlements, and other things of interest. Note that even a move
 // that fails because of M.P.'s can reveal what terrain is in that
 // destination hex.
-//
-// NB: The From and To hexes are helpful when plotting moves. We have to
-// take some care to avoid duplicates. Imagine a unit moves N S N S N.
-// The naive implementation creates a chain of 5 hexes. There should be
-// only two.
 type Step struct {
-	From      *GridHex `json:"from,omitempty"`
-	To        *GridHex `json:"to,omitempty"`
-	Direction string   `json:"direction,omitempty"`
-	Results   string   `json:"results,omitempty"`
-	RawText   string   `json:"rawText,omitempty"`
+	Direction Direction  `json:"direction,omitempty"`
+	Status    MoveStatus `json:"status,omitempty"`
+	Found     Found      `json:"found,omitempty"`
+	RawText   string     `json:"rawText,omitempty"`
 }
 
-type Movement struct {
-	Follows string         `json:"follows,omitempty"` // set only if the unit is following another
-	Steps   []*StepResults `json:"steps,omitempty"`
-	Results string         `json:"results,omitempty"`
-}
-
-type StepResults struct {
-	Direction Direction `json:"direction"`
-	Blocked   bool      `json:"blocked,omitempty"`
-	Results   []string  `json:"results,omitempty"`
+// Found is the set of things found in a hex
+type Found struct {
+	Terrain    Terrain               `json:"terrain,omitempty"`
+	Edges      map[Direction]Edge    `json:"edges,omitempty"`      // edges in this hex
+	Seen       map[Direction]Terrain `json:"seen,omitempty"`       // terrain that can be seen from this hex
+	Settlement string                `json:"settlement,omitempty"` // settlement in the hex
 }
