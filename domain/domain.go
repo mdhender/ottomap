@@ -4,6 +4,8 @@
 // and (in an unknowable, far away future) generate maps.
 package domain
 
+import "fmt"
+
 // Index is list of turn report files that will be sent to the parser.
 // It limits the number of files, which is helpful for development.
 //
@@ -168,6 +170,10 @@ type Hex struct {
 	Settlement *Settlement `json:"settlement,omitempty"`
 }
 
+func (h Hex) String() string {
+	return fmt.Sprintf("(%d, %d)", h.Column, h.Row)
+}
+
 type Movement struct {
 	Follows string  `json:"follows,omitempty"` // set only if the unit is following another
 	Steps   []*Step `json:"steps,omitempty"`
@@ -205,4 +211,15 @@ type Report struct {
 	Month      int           `json:"month,omitempty"`      // Game month of the report
 	ReportDate string        `json:"reportDate,omitempty"` // Date reported generated (YYYY/MM/DD)
 	Units      []*ReportUnit `json:"units,omitempty"`
+}
+
+func (r Reports) Len() int {
+	return len(r)
+}
+func (r Reports) Less(i int, j int) bool {
+	a, b := r[i], r[j]
+	return a.Id < b.Id
+}
+func (r Reports) Swap(i int, j int) {
+	r[i], r[j] = r[j], r[i]
 }

@@ -42,18 +42,18 @@ func GridCoordsFromString(s string) (GridCoords, bool) {
 	var err error
 	if gc.GridColumn, err = strconv.Atoi(s[3:5]); err != nil {
 		return GridCoords{}, false
-	} else if gc.GridColumn = gc.GridColumn - 1; !(0 <= gc.GridColumn && gc.GridColumn < 30) {
+	} else if !(0 < gc.GridColumn && gc.GridColumn <= 30) {
 		return GridCoords{}, false
 	}
 	if gc.GridRow, err = strconv.Atoi(s[5:]); err != nil {
 		return GridCoords{}, false
-	} else if gc.GridRow = gc.GridRow - 1; !(0 <= gc.GridRow && gc.GridRow < 21) {
+	} else if !(0 < gc.GridRow && gc.GridRow <= 21) {
 		return GridCoords{}, false
 	}
 	return gc, true
 }
 
-func (gc GridCoords) ToMapCoords(s string) (MapCoords, error) {
+func (gc GridCoords) ToMapCoords() (MapCoords, error) {
 	return MapCoords{
 		Row:    gc.Row*31 + gc.GridRow,
 		Column: gc.Column*21 + gc.GridColumn,
