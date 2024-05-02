@@ -23,7 +23,7 @@ func main() {
 }
 
 func Execute() error {
-	cmdRoot.AddCommand(cmdIndex, cmdParse, cmdVersion)
+	cmdRoot.AddCommand(cmdIndex, cmdMap, cmdParse, cmdVersion)
 
 	cmdIndex.AddCommand(cmdIndexReports)
 	cmdIndexReports.Flags().StringVarP(&argsIndexReports.input, "input", "i", ".", "path to read input from")
@@ -33,6 +33,10 @@ func Execute() error {
 	} else if err = cmdIndexReports.MarkFlagRequired("output"); err != nil {
 		log.Fatalf("input: parse: output: mark required: %v\n", err)
 	}
+
+	cmdMap.PersistentFlags().BoolVar(&argsMap.debug.units, "debug-units", false, "enable unit debugging")
+	cmdMap.PersistentFlags().StringVarP(&argsMap.input, "input", "i", ".", "parsed report file")
+	cmdMap.PersistentFlags().StringVarP(&argsMap.output, "output", "o", ".", "path to write map to")
 
 	cmdParse.PersistentFlags().BoolVar(&argsParse.debug.units, "debug-units", false, "enable unit debugging")
 	cmdParse.PersistentFlags().StringVarP(&argsParse.index, "index", "i", ".", "index file to process")
