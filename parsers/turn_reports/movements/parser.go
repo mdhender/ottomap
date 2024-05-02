@@ -17,56 +17,6 @@ var (
 	rxWaterEdge   *regexp.Regexp
 )
 
-// Movement is a single line of a unit's movement or follows report.
-type Movement struct {
-	StartingHex domain.GridHex // the hex the unit is starting from
-	Follows     string         // the unit this unit is following
-	Steps       []*Step        // the steps in the movement
-	EndingHex   domain.GridHex // the hex the unit is ending at
-}
-
-// Step is a single step in a unit's movement or follows report.
-//
-// NB: the ending hex will be the same as the starting hex only
-// if the movement is blocked by terrain or stopped by MP exhaustion.
-type Step struct {
-	StartingHex domain.GridHex   // the hex the unit is starting from
-	Direction   domain.Direction // direction the unit is moving in
-	Blocked     bool             // true if the step is blocked by terrain
-	Exhausted   bool             // true if the step is stopped by MP exhaustion
-	EndingHex   domain.GridHex   // the hex the unit is ending at
-	Found       *Found           // things found in the ending hex
-}
-
-// Found is the set of things found in a hex
-type Found struct {
-	// terrain in the hex
-	Terrain domain.Terrain
-	// edges that allow or prevent movement
-	Edges map[domain.Direction]domain.Edge
-	// neighboring terrain that can be seen. usually water, but sometimes lava.
-	NeighboringTerrain map[domain.Direction]domain.Terrain
-	// settlement in the hex
-	Settlement string
-}
-
-type ParsedMovement struct {
-	Follows string
-	Moves   []*ParsedMove
-	Results string
-}
-type ParsedMove struct {
-	Direction domain.Direction
-	Terrain   domain.Terrain
-	Blocked   bool // set only when step is blocked
-	Results   []string
-}
-
-// Blocked is created when a step is blocked by terrain in the destination hex.
-type Blocked struct {
-	By domain.Terrain
-}
-
 // ParseMovements parses the unit's movements or follows lines.
 // Accepts either "Tribe Follows ..." or  lines.
 //
@@ -89,7 +39,7 @@ type Blocked struct {
 // Updated to loudly fail on unexpected input. It's annoying, but likely
 // better than returning invalid data. The user is expected to fix the
 // input and restart.
-func ParseMovements(id string, input []byte) (*ParsedMovement, error) {
+func ParseMovements(id string, input []byte) (*domain.Movement, error) {
 	// todo: update this to use Domain structs
 
 	// initialize the regex machines. should probably be moved to an init function.
@@ -127,7 +77,7 @@ func ParseMovements(id string, input []byte) (*ParsedMovement, error) {
 	if bytes.HasPrefix(line, []byte("Tribe Follows ")) {
 		// expect "Tribe Follows UNIT"
 		if fields := bytes.Split(line, []byte{' '}); len(fields) == 3 {
-			return &ParsedMovement{Follows: string(fields[2])}, nil
+			return &domain.Movement{Follows: string(fields[2])}, nil
 		}
 		log.Printf("parsers: turn_reports: %q: movements: error parsing Tribe Follows\n", id)
 		log.Printf("The input is: %s\n", string(input))
@@ -157,11 +107,11 @@ func ParseMovements(id string, input []byte) (*ParsedMovement, error) {
 
 	// if there are no steps, return an empty ParsedMovement
 	if len(inputMoves) == 0 {
-		return &ParsedMovement{}, nil
+		return &domain.Movement{}, nil
 	}
 
 	// otherwise, parse each step, returning immediately on error
-	pm := &ParsedMovement{}
+	dm := &domain.Movement{}
 	for n, inputStep := range inputMoves {
 		step := bytes.TrimSpace(inputStep)
 		if n == 0 {
@@ -204,30 +154,58 @@ func ParseMovements(id string, input []byte) (*ParsedMovement, error) {
 		}
 		if ss, ok := v.(*stepSucceeded); ok {
 			//log.Printf("ms ss   %+v\n", *ss)
-			pm.Moves = append(pm.Moves, &ParsedMove{
+			st := &domain.Step{
 				Direction: ss.Direction,
-				Terrain:   ss.Terrain,
-			})
+				Status:    domain.MSSucceeded,
+				Found: domain.Found{
+					Terrain:    ss.Found.Terrain,
+					Settlement: ss.Found.Settlement,
+				},
+			}
+
+			// add river and ford edges
+			if len(ss.Found.Edges.Ford) != 0 || len(ss.Found.Edges.River) != 0 {
+				st.Found.Edges = map[domain.Direction]domain.Edge{}
+			}
+			for _, dir := range ss.Found.Edges.Ford {
+				st.Found.Edges[dir] = domain.EFord
+			}
+			for _, dir := range ss.Found.Edges.River {
+				st.Found.Edges[dir] = domain.ERiver
+			}
+
+			// add lake and ocean neighbors
+			if len(ss.Found.Edges.Lake) != 0 || len(ss.Found.Edges.Ocean) != 0 {
+				st.Found.Seen = map[domain.Direction]domain.Terrain{}
+			}
+			for _, dir := range ss.Found.Edges.Lake {
+				st.Found.Seen[dir] = domain.TLake
+			}
+			for _, dir := range ss.Found.Edges.Ocean {
+				st.Found.Seen[dir] = domain.TOcean
+			}
+
+			dm.Steps = append(dm.Steps, st)
 		} else if sb, ok := v.(*stepBlocked); ok {
 			//log.Printf("ms sb   %+v\n", *sb)
-			pm.Moves = append(pm.Moves, &ParsedMove{
+			dm.Steps = append(dm.Steps, &domain.Step{
 				Direction: sb.Direction,
-				Terrain:   sb.BlockedBy,
-				Blocked:   true,
+				Status:    domain.MSBlocked,
+				Found:     domain.Found{Terrain: sb.BlockedBy},
 			})
 		} else if semp, ok := v.(*stepExhaustedMP); ok {
 			//log.Printf("ms semp %+v\n", *semp)
-			pm.Moves = append(pm.Moves, &ParsedMove{
+			dm.Steps = append(dm.Steps, &domain.Step{
 				Direction: semp.Direction,
-				Terrain:   semp.Terrain,
-				Blocked:   true,
+				Status:    domain.MSExhausted,
+				Found:     domain.Found{Terrain: semp.Terrain},
 			})
 		} else {
 			panic(fmt.Sprintf("assert(type != %T)", v))
 		}
 	}
 
-	return pm, nil
+	return dm, nil
 }
 
 // the input looks something like STUFF BACKSLASH STATUS.

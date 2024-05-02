@@ -31,6 +31,12 @@ func (d Direction) MarshalJSON() ([]byte, error) {
 	return json.Marshal(directionEnumToString[d])
 }
 
+// MarshalText implements the encoding.TextMarshaler interface.
+// This is needed for marshalling map keys.
+func (d Direction) MarshalText() (text []byte, err error) {
+	return []byte(directionEnumToString[d]), nil
+}
+
 // UnmarshalJSON implements the json.Unmarshaler interface.
 func (d *Direction) UnmarshalJSON(data []byte) error {
 	var s string
@@ -126,6 +132,55 @@ var (
 	}
 )
 
+// MoveStatus is an enum for the outcome of a movement step.
+type MoveStatus int
+
+const (
+	MSSucceeded MoveStatus = iota
+	MSBlocked
+	MSExhausted
+)
+
+// MarshalJSON implements the json.Marshaler interface.
+func (e MoveStatus) MarshalJSON() ([]byte, error) {
+	return json.Marshal(moveStatusEnumToString[e])
+}
+
+// UnmarshalJSON implements the json.Unmarshaler interface.
+func (e *MoveStatus) UnmarshalJSON(data []byte) error {
+	var s string
+	var ok bool
+	if err := json.Unmarshal(data, &s); err != nil {
+		return err
+	} else if *e, ok = moveStatusStringToEnum[s]; !ok {
+		return fmt.Errorf("invalid MoveStatus %q", s)
+	}
+	return nil
+}
+
+// String implements the fmt.Stringer interface.
+func (e MoveStatus) String() string {
+	if str, ok := moveStatusEnumToString[e]; ok {
+		return str
+	}
+	return fmt.Sprintf("MoveStatus(%d)", int(e))
+}
+
+var (
+	// helper map for marshalling the enum
+	moveStatusEnumToString = map[MoveStatus]string{
+		MSBlocked:   "Blocked",
+		MSExhausted: "Exhausted",
+		MSSucceeded: "Succeeded",
+	}
+	// helper map for unmarshalling the enum
+	moveStatusStringToEnum = map[string]MoveStatus{
+		"Blocked":   MSBlocked,
+		"Exhausted": MSExhausted,
+		"Succeeded": MSSucceeded,
+	}
+)
+
 // ReportSectionType is an enum for the type of report section.
 type ReportSectionType int
 
@@ -185,6 +240,7 @@ const (
 	TUnknown Terrain = iota
 	TConiferHills
 	TGrassyHills
+	TLake
 	TOcean
 	TPrairie
 	TRockyHills
@@ -222,6 +278,7 @@ var (
 		TUnknown:      "?",
 		TConiferHills: "CH",
 		TGrassyHills:  "GH",
+		TLake:         "L",
 		TOcean:        "O",
 		TPrairie:      "PR",
 		TRockyHills:   "RH",
@@ -232,6 +289,7 @@ var (
 		"?":  TUnknown,
 		"CH": TConiferHills,
 		"GH": TGrassyHills,
+		"L":  TLake,
 		"O":  TOcean,
 		"PR": TPrairie,
 		"RH": TRockyHills,
