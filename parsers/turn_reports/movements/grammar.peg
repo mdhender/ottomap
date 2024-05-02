@@ -112,7 +112,7 @@ Step <- d:DIRECTION_CODE "-" t:TERRAIN_CODE _ edges:Edges* _ si:Settlement? _ ("
 } / "Not enough M.P's to move to " _ d:DIRECTION_CODE _ "into" _ t:TERRAIN_LONG _ EOF {
     var step stepExhaustedMP
     step.Direction = d.(domain.Direction)
-    step.Terrain = domain.TOcean
+    step.Terrain = t.(domain.Terrain)
     return &step, nil
 }
 
