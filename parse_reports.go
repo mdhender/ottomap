@@ -65,6 +65,7 @@ var cmdParseReports = &cobra.Command{
 		movements.EnableDebugBuffer()
 
 		log.Printf("parse: reports: todo: fail on first parsing error\n")
+		var outputs []*domain.Report
 
 		errCount := 0
 		for _, id := range ids {
@@ -97,25 +98,54 @@ var cmdParseReports = &cobra.Command{
 			}
 			//log.Printf("parse: reports: %s: sections %3d\n", rpf.Id, len(rss))
 
+			var units []*domain.ReportUnit
 			for _, rs := range rss {
-				path := filepath.Join(argsParse.output, fmt.Sprintf("%s.%s.json", rpf.Id, rs.Id))
-				data, err := json.MarshalIndent(rs, "", "  ")
-				if err != nil {
-					log.Fatalf("parse: reports: %s: %v\n", rpf.Id, err)
-				}
-				err = os.WriteFile(path, data, 0644)
-				if err != nil {
-					log.Fatalf("parse: reports: %s: %s: %v\n", rpf.Id, rs.Id, err)
-				}
-				log.Printf("parse: reports: %s: unit %-8s: input %s\n", rpf.Id, rs.Id, path)
+				log.Printf("parse: reports: %s: unit %-8s: parsed\n", rpf.Id, rs.Id)
+				units = append(units, rs.Unit)
+				//path := filepath.Join(argsParse.output, fmt.Sprintf("%s.%s.json", rpf.Id, rs.Id))
+				//data, err := json.MarshalIndent(rs, "", "  ")
+				//if err != nil {
+				//	log.Fatalf("parse: reports: %s: %v\n", rpf.Id, err)
+				//}
+				//err = os.WriteFile(path, data, 0644)
+				//if err != nil {
+				//	log.Fatalf("parse: reports: %s: %s: %v\n", rpf.Id, rs.Id, err)
+				//}
+				//log.Printf("parse: reports: %s: unit %-8s: input %s\n", rpf.Id, rs.Id, path)
 			}
+
+			// add the report to our combined output file
+			rpt := &domain.Report{
+				Id:         rpf.Id,
+				Clan:       rpf.Clan,
+				Year:       rpf.Year,
+				Month:      rpf.Month,
+				ReportDate: rpf.ReportDate,
+				Units:      units,
+			}
+			outputs = append(outputs, rpt)
 		}
+
+		sort.Slice(outputs, func(i, j int) bool {
+			return outputs[i].Id < outputs[j].Id
+		})
 
 		// write out our debug logs
 		if err := os.WriteFile(filepath.Join(argsParse.output, "debug_turn_report_movements.txt"), movements.GetDebugBuffer(), 0644); err != nil {
 			log.Fatal(err)
 		}
 
+		// write out our combined index file
+		combinedOutput := filepath.Join(argsParse.output, "outputs.json")
+		if data, err := json.MarshalIndent(outputs, "", "  "); err != nil {
+			log.Fatal(err)
+		} else if err = os.WriteFile(combinedOutput, data, 0644); err != nil {
+			log.Fatal(err)
+		} else {
+			log.Printf("parse: reports: created %s\n", combinedOutput)
+		}
+
+		// if we had any errors, then halt
 		if errCount != 0 {
 			log.Fatalf("parse: reports: halting due to %d errors above\n", errCount)
 		}

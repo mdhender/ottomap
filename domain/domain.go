@@ -194,3 +194,15 @@ type Found struct {
 	Seen       map[Direction]Terrain `json:"seen,omitempty"`       // terrain that can be seen from this hex
 	Settlement string                `json:"settlement,omitempty"` // settlement in the hex
 }
+
+type Reports []*Report
+
+// Report is a single turn report.
+type Report struct {
+	Id         string        `json:"id"`                   // unique identifier for this file
+	Clan       int           `json:"clan,omitempty"`       // Id of the clan being reported on
+	Year       int           `json:"year,omitempty"`       // Game year of the report
+	Month      int           `json:"month,omitempty"`      // Game month of the report
+	ReportDate string        `json:"reportDate,omitempty"` // Date reported generated (YYYY/MM/DD)
+	Units      []*ReportUnit `json:"units,omitempty"`
+}
