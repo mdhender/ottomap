@@ -32,7 +32,7 @@ func (d Direction) MarshalJSON() ([]byte, error) {
 }
 
 // MarshalText implements the encoding.TextMarshaler interface.
-// This is needed for marshalling map keys.
+// This is needed for marshalling the enum as map keys.
 func (d Direction) MarshalText() (text []byte, err error) {
 	return []byte(directionEnumToString[d]), nil
 }
