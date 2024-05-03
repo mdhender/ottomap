@@ -8,11 +8,10 @@ import (
 	"fmt"
 	"github.com/mdhender/ottomap/cerrs"
 	"github.com/mdhender/ottomap/domain"
-	"github.com/mdhender/ottomap/hexes"
+	"github.com/mdhender/ottomap/maps"
 	"github.com/spf13/cobra"
 	"log"
 	"os"
-	"sort"
 	"strings"
 )
 
@@ -44,29 +43,31 @@ var cmdMap = &cobra.Command{
 			argsMap.output = path
 		}
 
-		log.Printf("map: input  %s\n", argsMap.input)
-		log.Printf("map: input  %d records\n", len(reports))
+		log.Printf("map: input: file %s\n", argsMap.input)
 
-		// force reports to be sorted by date then clan
-		sort.Sort(reports)
-		log.Printf("map: input  sorted %d records\n", len(reports))
-		for _, rpt := range reports {
-			log.Printf("map: input: report %s\n", rpt.Id)
-			for _, u := range rpt.Units {
-				gc, ok := hexes.GridCoordsFromString(u.PrevHex)
-				if !ok && u.PrevHex == "N/A" {
-					gc, ok = hexes.GridCoordsFromString(u.CurrHex)
-				}
-				if !ok {
-					log.Fatalf("map: input: report %s: unit %-8s: prev hex %s: not okay\n", rpt.Id, u.Id, u.PrevHex)
-				}
-				ph, err := gc.ToMapCoords()
-				if err != nil {
-					log.Fatalf("map: input: report %s: unit %-8s: prev hex %s: %v\n", rpt.Id, u.Id, u.PrevHex, err)
-				}
-				log.Printf("map: input: report %s: unit %-8s: prev hex %s: (%4d %4d)\n", rpt.Id, u.Id, u.PrevHex, ph.Row, ph.Column)
-			}
+		m, err := maps.New(reports)
+		if err != nil {
+			log.Fatalf("map: failed to create map: %v", err)
 		}
+		log.Printf("map: input: imported %6d reports\n", len(reports))
+		log.Printf("map: input: imported %6d turns\n", len(m.Turns))
+		log.Printf("map: input: imported %6d units\n", len(m.Units))
+		log.Printf("map: input: imported %6d moves\n", len(m.Sorted.Moves))
+		log.Printf("map: input: imported %6d steps\n", len(m.Sorted.Steps))
+
+		// origin hex stuff
+		clan, ok := m.FetchClan()
+		if !ok {
+			log.Fatalf("map: failed to find clan\n")
+		}
+		originHex := clan.StartingHex
+		if originHex == nil {
+			log.Fatalf("map: clan %q: starting hex is missing\n", clan.Id)
+		}
+		log.Printf("map: clan %q: origin hex (%d, %d)\n", clan.Id, originHex.Column, originHex.Row)
+
+		log.Printf("map: hexes: %6d\n", len(m.Sorted.Hexes))
+		log.Printf("map: hexes: %+v\n", m.Sorted.Hexes[0])
 
 		log.Printf("map: output %s\n", argsMap.output)
 
