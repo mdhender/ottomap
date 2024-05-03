@@ -18,6 +18,9 @@ func New(reports []*domain.Report) (*Map, error) {
 		Units: make(map[string]*Unit),
 	}
 
+	// note: the input must be sorted or the logic for determining the
+	// unit's origin will produce incorrect results.
+
 	// add all the report turns to our map
 	for _, rpt := range reports {
 		_ = m.AddTurn(rpt.Year, rpt.Month)
@@ -61,8 +64,11 @@ func New(reports []*domain.Report) (*Map, error) {
 		unit.Parent = parent
 	}
 
+	// track first known hex (the starting hex) for all units.
+	// key is unit.Id, value is prevHex (or currHex if prevHex is N/A)
+	origins := make(map[string]string)
+
 	// convert the movement data to map data
-	gridOrigin := ""
 	for _, rpt := range reports {
 		turn, ok := m.FetchTurn(rpt.Year, rpt.Month)
 		if !ok {
@@ -78,10 +84,14 @@ func New(reports []*domain.Report) (*Map, error) {
 			if !ok {
 				panic("assert(unit is ok)")
 			}
-			if isclan(u.Id) && gridOrigin == "" {
-				gridOrigin = u.PrevHex
-				if gridOrigin == "N/A" {
-					gridOrigin = u.CurrHex
+			if origins[unit.Id] == "" {
+				if u.PrevHex == "N/A" {
+					if u.CurrHex == "N/A" {
+						panic("assert(!(u.PrevHex == N/A && u.CurrHex == N/A))")
+					}
+					origins[unit.Id] = u.CurrHex
+				} else {
+					origins[unit.Id] = u.PrevHex
 				}
 			}
 			mv := &Move{
@@ -116,28 +126,42 @@ func New(reports []*domain.Report) (*Map, error) {
 	}
 
 	// stuff the origin hex into the clan's first move
-	if gridOrigin == "" {
-		panic("assert(gridOrigin != \"\"")
-	} else if gridOrigin == "N/A" {
-		panic("assert(gridOrigin != \"N/A\"")
-	}
-	clan, ok := m.FetchClan()
+	clans, ok := m.FetchClans()
 	if !ok {
-		panic("assert(clan != nil)")
+		return nil, fmt.Errorf("map: input: no clans found")
 	}
-	log.Printf("map: origin hex: clan %q: origin %s\n", clan.Id, gridOrigin)
-	column, err := strconv.Atoi(gridOrigin[3:5])
-	if err != nil {
-		log.Fatalf("map: input: gridOrigin %q: column %v\n", gridOrigin, err)
+	for _, clan := range clans {
+		gridOrigin := origins[clan.Id]
+		if gridOrigin == "" {
+			panic("assert(gridOrigin != \"\"")
+		} else if gridOrigin == "N/A" {
+			panic("assert(gridOrigin != \"N/A\"")
+		}
+
+		//log.Printf("map: origin hex: clan %q: origin %s\n", clan.Id, gridOrigin)
+		column, err := strconv.Atoi(gridOrigin[3:5])
+		if err != nil {
+			log.Fatalf("map: input: gridOrigin %q: column %v\n", gridOrigin, err)
+		}
+		row, err := strconv.Atoi(gridOrigin[5:])
+		if err != nil {
+			log.Fatalf("map: input: gridOrigin %q: row %v\n", gridOrigin, err)
+		}
+		//log.Printf("map: origin hex: clan %q: origin %2d %2d\n", clan.Id, column, row)
+
+		hex := &Hex{Column: column, Row: row}
+		m.Sorted.Hexes = append(m.Sorted.Hexes, hex)
+		clan.StartingHex = hex
 	}
-	row, err := strconv.Atoi(gridOrigin[5:])
-	if err != nil {
-		log.Fatalf("map: input: gridOrigin %q: row %v\n", gridOrigin, err)
+
+	var sortedOrigins []string
+	for id := range origins {
+		sortedOrigins = append(sortedOrigins, id)
 	}
-	log.Printf("map: origin hex: clan %q: origin %2d %2d\n", clan.Id, column, row)
-	hex := &Hex{Column: column, Row: row}
-	m.Sorted.Hexes = append(m.Sorted.Hexes, hex)
-	clan.StartingHex = hex
+	sort.Strings(sortedOrigins)
+	for _, id := range sortedOrigins {
+		log.Printf("map: origin hex: unit %-8q: origin %q\n", id, origins[id])
+	}
 
 	return m, nil
 }
@@ -169,31 +193,14 @@ func (m *Map) AddUnit(id string) *Unit {
 	return u
 }
 
-// CreateOriginHex creates the origin hex.
-// That is the hex that the Clan unit first appears in.
-// todo: assumes only one clan!
-func (m *Map) CreateOriginHex() error {
-	// find the clan
-	clan, ok := m.FetchClan()
-	if !ok {
-		return fmt.Errorf("unable to locate clan")
-	}
-	// find the clan's first hex
-	originHex := clan.StartingHex
-	if originHex == nil {
-		return fmt.Errorf("clan's starting hex is missing")
-	}
-	log.Printf("map: clan %q: origin hex (%d, %d)\n", clan.Id, originHex.Column, originHex.Row)
-	return nil
-}
-
-func (m *Map) FetchClan() (*Unit, bool) {
+func (m *Map) FetchClans() ([]*Unit, bool) {
+	var clans []*Unit
 	for id, unit := range m.Units {
 		if isclan(id) {
-			return unit, true
+			clans = append(clans, unit)
 		}
 	}
-	return nil, false
+	return clans, clans != nil
 }
 
 func (m *Map) FetchUnit(id string) (*Unit, bool) {

@@ -28,6 +28,8 @@ var cmdMap = &cobra.Command{
 	Short: "Create a map from a report",
 	Long:  `Load a parsed report and create a map.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		log.Printf("maps: todo: detect when a unit is created as an after-move action\n")
+
 		var reports domain.Reports
 		if data, err := os.ReadFile(argsMap.input); err != nil {
 			log.Fatalf("map: failed to read input file: %v", err)
@@ -56,15 +58,17 @@ var cmdMap = &cobra.Command{
 		log.Printf("map: input: imported %6d steps\n", len(m.Sorted.Steps))
 
 		// origin hex stuff
-		clan, ok := m.FetchClan()
+		clans, ok := m.FetchClans()
 		if !ok {
-			log.Fatalf("map: failed to find clan\n")
+			log.Fatalf("map: failed to find clans\n")
 		}
-		originHex := clan.StartingHex
-		if originHex == nil {
-			log.Fatalf("map: clan %q: starting hex is missing\n", clan.Id)
+		for _, clan := range clans {
+			originHex := clan.StartingHex
+			if originHex == nil {
+				log.Fatalf("map: clan %q: starting hex is missing\n", clan.Id)
+			}
+			log.Printf("map: clan %q: origin hex (%d, %d)\n", clan.Id, originHex.Column, originHex.Row)
 		}
-		log.Printf("map: clan %q: origin hex (%d, %d)\n", clan.Id, originHex.Column, originHex.Row)
 
 		log.Printf("map: hexes: %6d\n", len(m.Sorted.Hexes))
 		log.Printf("map: hexes: %+v\n", m.Sorted.Hexes[0])
