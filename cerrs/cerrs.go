@@ -10,8 +10,9 @@ type Error string
 func (e Error) Error() string { return string(e) }
 
 const (
-	ErrInvalidInputPath       = Error("invalid input path")
+	ErrInvalidGridCoordinates = Error("invalid grid coordinates")
 	ErrInvalidIndexFile       = Error("invalid index file")
+	ErrInvalidInputPath       = Error("invalid input path")
 	ErrInvalidOutputPath      = Error("invalid output path")
 	ErrInvalidPath            = Error("invalid path")
 	ErrMissingIndexFile       = Error("missing index file")

@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 	"log"
 	"os"
+	"sort"
 	"strings"
 )
 
@@ -57,17 +58,28 @@ var cmdMap = &cobra.Command{
 		log.Printf("map: input: imported %6d moves\n", len(m.Sorted.Moves))
 		log.Printf("map: input: imported %6d steps\n", len(m.Sorted.Steps))
 
-		// origin hex stuff
-		clans, ok := m.FetchClans()
-		if !ok {
-			log.Fatalf("map: failed to find clans\n")
+		// maybe log origins for debugging
+		var sortedOrigins []string
+		for id := range m.Origins {
+			sortedOrigins = append(sortedOrigins, id)
 		}
-		for _, clan := range clans {
-			originHex := clan.StartingHex
-			if originHex == nil {
-				log.Fatalf("map: clan %q: starting hex is missing\n", clan.Id)
+		sort.Strings(sortedOrigins)
+		for _, id := range sortedOrigins {
+			log.Printf("map: origin hex: unit %-8q: origin %q\n", id, m.Origins[id])
+		}
+
+		// create chain of hexes that track movement for each unit
+		for _, unit := range m.Sorted.Units {
+			//originHex := unit.StartingHex
+			//if originHex == nil {
+			//	log.Fatalf("map: unit %-8q: starting hex is missing\n", unit.Id)
+			//}
+			//log.Printf("map: unit %-8q: origin hex (%d, %d)\n", unit.Id, originHex.Column, originHex.Row)
+
+			err = m.TrackUnit(unit)
+			if err != nil {
+				log.Fatalf("map: unit %-8q: failed to track unit: %v\n", unit.Id, err)
 			}
-			log.Printf("map: clan %q: origin hex (%d, %d)\n", clan.Id, originHex.Column, originHex.Row)
 		}
 
 		log.Printf("map: hexes: %6d\n", len(m.Sorted.Hexes))

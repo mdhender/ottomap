@@ -3,13 +3,16 @@
 package maps
 
 import (
+	"github.com/mdhender/ottomap/coords"
+	"github.com/mdhender/ottomap/directions"
 	"github.com/mdhender/ottomap/domain"
 )
 
 type Map struct {
-	Turns  map[string]*Turn
-	Units  map[string]*Unit
-	Sorted struct {
+	Turns   map[string]*Turn
+	Units   map[string]*Unit
+	Origins map[string]*coords.Grid
+	Sorted  struct {
 		Turns []*Turn // sorted by Turn.Id
 		Units []*Unit // sorted by Unit.Id
 		Moves []*Move // sorted by Move.Turn then Move.Unit
@@ -45,18 +48,21 @@ type Step struct {
 	Move        *Move
 	SeqNo       int
 	StartingHex *Hex
-	Direction   domain.Direction
+	Direction   directions.Direction
 	Status      domain.MoveStatus
 	EndingHex   *Hex
 }
 
 type Hex struct {
-	Column    int
-	Row       int
+	Coords    coords.Map
 	Terrain   domain.Terrain
 	Neighbors [7]*Hex    // indexed by domain.Direction
 	Edges     [7]*Edge   // indexed by domain.Direction
 	Contents  []*Content // doesn't include any history
+}
+
+func (h *Hex) String() string {
+	return h.Coords.String()
 }
 
 type Edge struct {

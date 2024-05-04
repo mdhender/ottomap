@@ -3,7 +3,7 @@
 package locations
 
 import (
-    "github.com/mdhender/ottomap/domain"
+    "github.com/mdhender/ottomap/coords"
     "strconv"
     "strings"
 )
@@ -11,9 +11,10 @@ import (
 }
 
 Location <- UnitID "," _ "," _ "Current Hex =" _ chi:Hex "," _ "(" "Previous Hex =" _ phi:Hex ")" EOF {
-    ch := chi.(*domain.GridHex)
-    ph := phi.(*domain.GridHex)
-    return [2]*domain.GridHex{ph, ch}, nil
+    return [2]coords.Grid{
+        phi.(coords.Grid),
+        chi.(coords.Grid),
+    }, nil
 }
 
 UnitID <- "Courier" SP DIGIT DIGIT DIGIT DIGIT "c" DIGIT {
@@ -28,23 +29,11 @@ UnitID <- "Courier" SP DIGIT DIGIT DIGIT DIGIT "c" DIGIT {
 
 Hex <- "N/A" {
     // return the zero-value grid hex to signal "not available"
-    return &domain.GridHex{}, nil
+    return coords.Grid{}, nil
 } / "##" SP DIGIT DIGIT DIGIT DIGIT {
-    column, _ := strconv.Atoi(string(c.text[3:5]))
-    row, _ := strconv.Atoi(string(c.text[5:]))
-    return &domain.GridHex{
-        Grid:   "##",
-        Column: column,
-        Row:    row,
-    }, nil
+    return coords.StringToGridCoords(string(c.text))
 } / LETTER LETTER SP DIGIT DIGIT DIGIT DIGIT {
-    column, _ := strconv.Atoi(string(c.text[3:5]))
-    row, _ := strconv.Atoi(string(c.text[5:]))
-    return &domain.GridHex{
-        Grid:   string(c.text[0:2]),
-        Column: column,
-        Row:    row,
-    }, nil
+    return coords.StringToGridCoords(string(c.text))
 }
 
 

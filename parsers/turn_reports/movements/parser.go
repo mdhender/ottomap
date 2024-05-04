@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/mdhender/ottomap/directions"
 	"github.com/mdhender/ottomap/domain"
 	"log"
 	"regexp"
@@ -165,7 +166,7 @@ func ParseMovements(id string, input []byte) (*domain.Movement, error) {
 
 			// add river and ford edges
 			if len(ss.Found.Edges.Ford) != 0 || len(ss.Found.Edges.River) != 0 {
-				st.Found.Edges = map[domain.Direction]domain.Edge{}
+				st.Found.Edges = map[directions.Direction]domain.Edge{}
 			}
 			for _, dir := range ss.Found.Edges.Ford {
 				st.Found.Edges[dir] = domain.EFord
@@ -176,7 +177,7 @@ func ParseMovements(id string, input []byte) (*domain.Movement, error) {
 
 			// add lake and ocean neighbors
 			if len(ss.Found.Edges.Lake) != 0 || len(ss.Found.Edges.Ocean) != 0 {
-				st.Found.Seen = map[domain.Direction]domain.Terrain{}
+				st.Found.Seen = map[directions.Direction]domain.Terrain{}
 			}
 			for _, dir := range ss.Found.Edges.Lake {
 				st.Found.Seen[dir] = domain.TLake

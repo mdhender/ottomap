@@ -5,17 +5,19 @@ package maps
 
 import (
 	"fmt"
+	"github.com/mdhender/ottomap/coords"
+	"github.com/mdhender/ottomap/directions"
 	"github.com/mdhender/ottomap/domain"
 	"log"
 	"sort"
-	"strconv"
 	"strings"
 )
 
 func New(reports []*domain.Report) (*Map, error) {
 	m := &Map{
-		Turns: make(map[string]*Turn),
-		Units: make(map[string]*Unit),
+		Turns:   make(map[string]*Turn),
+		Units:   make(map[string]*Unit),
+		Origins: make(map[string]*coords.Grid),
 	}
 
 	// note: the input must be sorted or the logic for determining the
@@ -64,10 +66,6 @@ func New(reports []*domain.Report) (*Map, error) {
 		unit.Parent = parent
 	}
 
-	// track first known hex (the starting hex) for all units.
-	// key is unit.Id, value is prevHex (or currHex if prevHex is N/A)
-	origins := make(map[string]string)
-
 	// convert the movement data to map data
 	for _, rpt := range reports {
 		turn, ok := m.FetchTurn(rpt.Year, rpt.Month)
@@ -84,16 +82,19 @@ func New(reports []*domain.Report) (*Map, error) {
 			if !ok {
 				panic("assert(unit is ok)")
 			}
-			if origins[unit.Id] == "" {
-				if u.PrevHex == "N/A" {
-					if u.CurrHex == "N/A" {
-						panic("assert(!(u.PrevHex == N/A && u.CurrHex == N/A))")
-					}
-					origins[unit.Id] = u.CurrHex
+
+			// track first known hex (the starting hex) for all units.
+			// key is unit.Id, value is prevHex (or currHex if prevHex is N/A)
+			if m.Origins[unit.Id] == nil {
+				if u.PrevHex != nil {
+					m.Origins[unit.Id] = u.PrevHex
+				} else if u.CurrHex != nil {
+					m.Origins[unit.Id] = u.CurrHex
 				} else {
-					origins[unit.Id] = u.PrevHex
+					panic("assert(!(u.PrevHex == nil && u.CurrHex == nil))")
 				}
 			}
+
 			mv := &Move{
 				Turn: turn,
 				Unit: unit,
@@ -130,37 +131,22 @@ func New(reports []*domain.Report) (*Map, error) {
 	if !ok {
 		return nil, fmt.Errorf("map: input: no clans found")
 	}
+	if len(clans) != 1 {
+		log.Printf("map: warning: grid origins broken for multiple clans\n")
+	}
 	for _, clan := range clans {
-		gridOrigin := origins[clan.Id]
-		if gridOrigin == "" {
-			panic("assert(gridOrigin != \"\"")
-		} else if gridOrigin == "N/A" {
-			panic("assert(gridOrigin != \"N/A\"")
+		gridOrigin := m.Origins[clan.Id]
+		if gridOrigin == nil {
+			panic("assert(gridOrigin != nil")
+		}
+		mc, err := gridOrigin.ToMapCoords()
+		if err != nil {
+			log.Fatalf("map: input: gridOrigin %q: mc %v\n", gridOrigin, err)
 		}
 
-		//log.Printf("map: origin hex: clan %q: origin %s\n", clan.Id, gridOrigin)
-		column, err := strconv.Atoi(gridOrigin[3:5])
-		if err != nil {
-			log.Fatalf("map: input: gridOrigin %q: column %v\n", gridOrigin, err)
-		}
-		row, err := strconv.Atoi(gridOrigin[5:])
-		if err != nil {
-			log.Fatalf("map: input: gridOrigin %q: row %v\n", gridOrigin, err)
-		}
-		//log.Printf("map: origin hex: clan %q: origin %2d %2d\n", clan.Id, column, row)
-
-		hex := &Hex{Column: column, Row: row}
+		hex := &Hex{Coords: mc}
 		m.Sorted.Hexes = append(m.Sorted.Hexes, hex)
 		clan.StartingHex = hex
-	}
-
-	var sortedOrigins []string
-	for id := range origins {
-		sortedOrigins = append(sortedOrigins, id)
-	}
-	sort.Strings(sortedOrigins)
-	for _, id := range sortedOrigins {
-		log.Printf("map: origin hex: unit %-8q: origin %q\n", id, origins[id])
 	}
 
 	return m, nil
@@ -208,7 +194,67 @@ func (m *Map) FetchUnit(id string) (*Unit, bool) {
 	return u, ok
 }
 
-func (m *Move) AddStep(d domain.Direction, status domain.MoveStatus) *Step {
+func (m *Map) TrackUnit(unit *Unit) error {
+	// may need to derive the unit's starting hex from the parent's hex
+	// on the turn that the unit was first seen.
+	if unit.StartingHex == nil {
+		if len(unit.Moves) == 0 {
+			panic("assert(len(unit.Moves) > 0)")
+		}
+		parent, turn := unit.Parent, unit.Moves[0].Turn
+		log.Printf("map: unit %-8q: track: parent %-8q: turn %s\n", unit.Id, parent.Id, turn.Id)
+		for _, pmv := range parent.Moves {
+			if pmv.Turn.Id == turn.Id {
+				unit.StartingHex = pmv.StartingHex
+				break
+			}
+		}
+		if unit.StartingHex == nil {
+			return fmt.Errorf("unable to find starting hex")
+		}
+	}
+	log.Printf("map: unit %-8q: track: origin %s\n", unit.Id, unit.StartingHex.Coords.GridString())
+
+	prev, curr := unit.StartingHex, unit.StartingHex
+	for n, mv := range unit.Moves {
+		log.Printf("map: unit %-8q: track: %s %2d\n", unit.Id, mv.Turn.Id, n+1)
+		for _, step := range mv.Steps {
+			log.Printf("map: unit %-8q: track: %s %2d %2d %-2s\n", unit.Id, mv.Turn.Id, n+1, step.SeqNo+1, step.Direction)
+			step.StartingHex = curr
+			neighbor := curr.Neighbors[step.Direction]
+			if neighbor == nil {
+				// need to create a new hex for the neighbor
+				neighbor = &Hex{Coords: curr.Coords.Add(step.Direction)}
+				// and link it to the current hex
+				switch step.Direction {
+				case directions.DNorth:
+					neighbor.Neighbors[directions.DSouth] = curr
+				case directions.DNorthEast:
+					neighbor.Neighbors[directions.DSouthWest] = curr
+				case directions.DSouthEast:
+					neighbor.Neighbors[directions.DNorthWest] = curr
+				case directions.DSouth:
+					neighbor.Neighbors[directions.DNorth] = curr
+				case directions.DSouthWest:
+					neighbor.Neighbors[directions.DNorthEast] = curr
+				case directions.DNorthWest:
+					neighbor.Neighbors[directions.DSouthEast] = curr
+				}
+				curr.Neighbors[step.Direction] = neighbor
+			}
+			log.Printf("map: unit %-8q: track: %s %2d %2d %-2s from %v to %v\n", unit.Id, mv.Turn.Id, n+1, step.SeqNo+1, step.Direction, curr.Coords.GridString(), neighbor.Coords.GridString())
+			prev, curr = curr, neighbor
+			step.EndingHex = curr
+		}
+	}
+	log.Printf("map: unit %-8q: track: prev %v: curr %v\n", unit.Id, prev, curr)
+
+	log.Printf("map: todo: must carry origin to children\n")
+
+	return nil
+}
+
+func (m *Move) AddStep(d directions.Direction, status domain.MoveStatus) *Step {
 	step := &Step{
 		Move:      m,
 		SeqNo:     len(m.Steps),

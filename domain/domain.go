@@ -4,7 +4,10 @@
 // and (in an unknowable, far away future) generate maps.
 package domain
 
-import "fmt"
+import (
+	"github.com/mdhender/ottomap/coords"
+	"github.com/mdhender/ottomap/directions"
+)
 
 // Index is list of turn report files that will be sent to the parser.
 // It limits the number of files, which is helpful for development.
@@ -49,8 +52,8 @@ type ReportSection struct {
 type ReportUnit struct {
 	Id         string         `json:"id"`   // unit Id, should be unique within the turn
 	Type       UnitType       `json:"type"` // unit type, not implemented
-	PrevHex    string         `json:"prevHex,omitempty"`
-	CurrHex    string         `json:"currHex,omitempty"`
+	PrevHex    *coords.Grid   `json:"prevHex,omitempty"`
+	CurrHex    *coords.Grid   `json:"currHex,omitempty"`
 	Movement   *Movement      `json:"movement,omitempty"`   // movement line from the section
 	Follows    string         `json:"follows,omitempty"`    // set when unit follows another unit
 	ScoutLines []string       `json:"scoutLines,omitempty"` // scout lines from the section
@@ -95,17 +98,15 @@ type Clan struct {
 // NB: All units that belong to a tribe share a common prefix which is
 // just the 4-digit Id for the tribe.
 type Unit struct {
-	Id       string   `json:"id"` // 4 or 6 char string (e.g. 0138 or 1138c3)
-	Type     UnitType `json:"type"`
-	Location *GridHex `json:"location,omitempty"`
-	Status   string   `json:"status,omitempty"` // will every unit have a status?
+	Id     string   `json:"id"` // 4 or 6 char string (e.g. 0138 or 1138c3)
+	Type   UnitType `json:"type"`
+	Status string   `json:"status,omitempty"` // will every unit have a status?
 }
 
 // Settlement is a settlement.
 type Settlement struct {
-	Id       string   `json:"id"` // maybe name?
-	Name     string   `json:"name"`
-	Location *GridHex `json:"location"`
+	Id   string `json:"id"` // maybe name?
+	Name string `json:"name"`
 }
 
 // GridHex is a hex on a single grid of the map.
@@ -145,12 +146,12 @@ type Settlement struct {
 //
 // NB: See https://tribenet.wiki/mapping/grid for actual details on this system.
 // See https://tribenet.wiki/blank_template_numbered.png for the numbering.
-type GridHex struct {
-	Grid   string `json:"grid,omitempty"` // "##", NN, or "N/A"
-	Column int    `json:"col,omitempty"`  // 01..30
-	Row    int    `json:"row,omitempty"`  // 01..21
-	Hex    *Hex   `json:"hex,omitempty"`  // optional details for the hex
-}
+//type GridHex struct {
+//	Grid   string `json:"grid,omitempty"` // "##", NN, or "N/A"
+//	Column int    `json:"col,omitempty"`  // 01..30
+//	Row    int    `json:"row,omitempty"`  // 01..21
+//	Hex    *Hex   `json:"hex,omitempty"`  // optional details for the hex
+//}
 
 // Hex captures the details needed to map out the hex.
 //
@@ -163,15 +164,15 @@ type GridHex struct {
 // merge the two players into a single map. (If my math is right, map B's
 // origin is (17, 16) on map A.)
 type Hex struct {
-	Column     int         `json:"col,omitempty"` // coordinates on the big map
-	Row        int         `json:"row,omitempty"` // coordinates on the big map
+	GC         coords.Grid // coordinates on the big map
+	Coords     coords.Map  // coordinates on the backing map
 	Terrain    string      `json:"terrain,omitempty"`
 	Edges      [6]string   `json:"edges,omitempty"`
 	Settlement *Settlement `json:"settlement,omitempty"`
 }
 
 func (h Hex) String() string {
-	return fmt.Sprintf("(%d, %d)", h.Column, h.Row)
+	return h.GC.String()
 }
 
 type Movement struct {
@@ -187,18 +188,18 @@ type Movement struct {
 // that fails because of M.P.'s can reveal what terrain is in that
 // destination hex.
 type Step struct {
-	Direction Direction  `json:"direction,omitempty"`
-	Status    MoveStatus `json:"status,omitempty"`
-	Found     Found      `json:"found,omitempty"`
-	RawText   string     `json:"rawText,omitempty"`
+	Direction directions.Direction `json:"direction,omitempty"`
+	Status    MoveStatus           `json:"status,omitempty"`
+	Found     Found                `json:"found,omitempty"`
+	RawText   string               `json:"rawText,omitempty"`
 }
 
 // Found is the set of things found in a hex
 type Found struct {
-	Terrain    Terrain               `json:"terrain,omitempty"`
-	Edges      map[Direction]Edge    `json:"edges,omitempty"`      // edges in this hex
-	Seen       map[Direction]Terrain `json:"seen,omitempty"`       // terrain that can be seen from this hex
-	Settlement string                `json:"settlement,omitempty"` // settlement in the hex
+	Terrain    Terrain                          `json:"terrain,omitempty"`
+	Edges      map[directions.Direction]Edge    `json:"edges,omitempty"`      // edges in this hex
+	Seen       map[directions.Direction]Terrain `json:"seen,omitempty"`       // terrain that can be seen from this hex
+	Settlement string                           `json:"settlement,omitempty"` // settlement in the hex
 }
 
 type Reports []*Report

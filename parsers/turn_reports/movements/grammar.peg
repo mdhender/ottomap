@@ -30,39 +30,39 @@ package movements
 
 import (
     "fmt"
-    "github.com/mdhender/ottomap/domain"
+    "github.com/mdhender/ottomap/directions"
     "log"
     "strings"
 )
 
 type stepSucceeded struct {
-	Direction  domain.Direction
+	Direction  directions.Direction
 	Found struct {
         Terrain    domain.Terrain
         Edges struct {
-            Ford  []domain.Direction
-            Lake  []domain.Direction
-            Ocean []domain.Direction
-            River []domain.Direction
+            Ford  []directions.Direction
+            Lake  []directions.Direction
+            Ocean []directions.Direction
+            River []directions.Direction
         }
 	    Settlement string
     }
 }
 
 type stepBlocked struct {
-	Direction domain.Direction
+	Direction directions.Direction
     BlockedBy domain.Terrain
 }
 
 type stepExhaustedMP struct {
-    Direction domain.Direction
+    Direction directions.Direction
     Terrain   domain.Terrain
 }
 
-type fordEdges []domain.Direction
-type lakeEdges []domain.Direction
-type oceanEdges []domain.Direction
-type riverEdges []domain.Direction
+type fordEdges []directions.Direction
+type lakeEdges []directions.Direction
+type oceanEdges []directions.Direction
+type riverEdges []directions.Direction
 
 func toAnySlice(v any) []any {
     if v == nil {
@@ -75,7 +75,7 @@ func toAnySlice(v any) []any {
 
 Step <- d:DIRECTION_CODE "-" t:TERRAIN_CODE _ edges:Edges* _ si:Settlement? _ ("," _)* EOF {
     var step stepSucceeded
-    step.Direction     = d.(domain.Direction)
+    step.Direction     = d.(directions.Direction)
     step.Found.Terrain = t.(domain.Terrain)
 
     for _, edge := range toAnySlice(edges) {
@@ -106,24 +106,24 @@ Step <- d:DIRECTION_CODE "-" t:TERRAIN_CODE _ edges:Edges* _ si:Settlement? _ ("
     return &step, nil
 } / "Can't Move on Ocean to " _ d:DIRECTION_CODE _ "of HEX" _ EOF {
     var step stepBlocked
-    step.Direction = d.(domain.Direction)
+    step.Direction = d.(directions.Direction)
     step.BlockedBy = domain.TOcean
     return &step, nil
 } / "Not enough M.P's to move to " _ d:DIRECTION_CODE _ "into" _ t:TERRAIN_LONG _ EOF {
     var step stepExhaustedMP
-    step.Direction = d.(domain.Direction)
+    step.Direction = d.(directions.Direction)
     step.Terrain = t.(domain.Terrain)
     return &step, nil
 }
 
 DIRECTION_CODE <- ("NE" / "SE" / "SW" / "NW" / "N" / "S") {
     switch string(c.text) {
-    case "N" : return domain.DNorth, nil
-    case "NE": return domain.DNorthEast, nil
-    case "SE": return domain.DSouthEast, nil
-    case "S" : return domain.DSouth, nil
-    case "SW": return domain.DSouthWest, nil
-    case "NW": return domain.DNorthWest, nil
+    case "N" : return directions.DNorth, nil
+    case "NE": return directions.DNorthEast, nil
+    case "SE": return directions.DSouthEast, nil
+    case "S" : return directions.DSouth, nil
+    case "SW": return directions.DSouthWest, nil
+    case "NW": return directions.DNorthWest, nil
     }
     panic(fmt.Sprintf("assert(code != %q)", string(c.text)))
 }
@@ -153,11 +153,11 @@ TERRAIN_CODE <- (
 
 Edges <- "," _ "Ford" _ d:DIRECTION_CODE dli:optSpaceDirection* {
     var edges fordEdges
-    edges = append(edges, d.(domain.Direction))
+    edges = append(edges, d.(directions.Direction))
     for _, dir := range toAnySlice(dli) {
         if dir != nil {
             switch v := dir.(type) {
-            case domain.Direction:
+            case directions.Direction:
                 edges = append(edges, v)
             default:
                 panic(fmt.Sprintf("assert(type != %T)", v))
@@ -167,11 +167,11 @@ Edges <- "," _ "Ford" _ d:DIRECTION_CODE dli:optSpaceDirection* {
     return edges, nil
 } / "," _ "O" _ d:DIRECTION_CODE dli:optCommaDirection* {
     var edges oceanEdges
-    edges = append(edges, d.(domain.Direction))
+    edges = append(edges, d.(directions.Direction))
     for _, dir := range toAnySlice(dli) {
         if dir != nil {
             switch v := dir.(type) {
-            case domain.Direction:
+            case directions.Direction:
                 edges = append(edges, v)
             default:
                 panic(fmt.Sprintf("assert(type != %T)", v))
@@ -181,11 +181,11 @@ Edges <- "," _ "Ford" _ d:DIRECTION_CODE dli:optSpaceDirection* {
     return edges, nil
 } / "," _ "River" _ d:DIRECTION_CODE dli:optSpaceDirection* {
     var edges riverEdges
-    edges = append(edges, d.(domain.Direction))
+    edges = append(edges, d.(directions.Direction))
     for _, dir := range toAnySlice(dli) {
         if dir != nil {
             switch v := dir.(type) {
-            case domain.Direction:
+            case directions.Direction:
                 edges = append(edges, v)
             default:
                 panic(fmt.Sprintf("assert(type != %T)", v))
@@ -196,11 +196,11 @@ Edges <- "," _ "Ford" _ d:DIRECTION_CODE dli:optSpaceDirection* {
 }
 
 optCommaDirection <- _ "," _ d:DIRECTION_CODE {
-    return d.(domain.Direction), nil
+    return d.(directions.Direction), nil
 }
 
 optSpaceDirection <- _ d:DIRECTION_CODE {
-    return d.(domain.Direction), nil
+    return d.(directions.Direction), nil
 }
 
 Settlement <- "," _ n:SettlementName {

@@ -5,6 +5,7 @@ package turn_reports
 import (
 	"bytes"
 	"fmt"
+	"github.com/mdhender/ottomap/coords"
 	"github.com/mdhender/ottomap/domain"
 	"github.com/mdhender/ottomap/parsers/turn_reports/headers"
 	"github.com/mdhender/ottomap/parsers/turn_reports/locations"
@@ -89,11 +90,10 @@ func Parse(rpf *domain.ReportFile, debugSlugs, captureRawText bool) ([]*domain.R
 			log.Printf("turn_reports: %s: %s: location %q: parse %v\n", rpf.Id, unit.Id, string(location), err)
 		} else if hi == nil {
 			log.Printf("turn_reports: %s: %s: location %q: parse => nil!\n", rpf.Id, unit.Id, string(location))
-		} else if hexes, ok := hi.([2]*domain.GridHex); !ok {
+		} else if hexes, ok := hi.([2]*coords.Grid); !ok {
 			panic(fmt.Sprintf("assert(type != %T)", hi))
 		} else {
-			unit.PrevHex = hexes[0].String()
-			unit.CurrHex = hexes[1].String()
+			unit.PrevHex, unit.CurrHex = hexes[0], hexes[1]
 		}
 		//log.Printf("turn_reports: %s: location %q: ==> %q %q\n", rpf.Id, string(location), unit.PrevHex, unit.CurrHex)
 
