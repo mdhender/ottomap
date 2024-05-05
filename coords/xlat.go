@@ -14,7 +14,9 @@ func StringToGridCoords(s string) (Grid, error) {
 	if !(len(s) == 7 && s[2] == ' ') {
 		return Grid{}, cerrs.ErrInvalidGridCoordinates
 	} else if strings.HasPrefix(s, "##") {
-		gc.BigMapRow, gc.BigMapColumn = 0, 0
+		// todo: find the best way to deal with the "##" case
+		// gc.BigMapRow, gc.BigMapColumn = 0, 0
+		gc.BigMapRow, gc.BigMapColumn = int('O'-'A'), int('O'-'A')
 	} else if gc.BigMapRow = int(s[0] - 'A'); !(0 <= gc.BigMapRow && gc.BigMapRow < 26) {
 		return Grid{}, cerrs.ErrInvalidGridCoordinates
 	} else if gc.BigMapColumn = int(s[1] - 'A'); !(0 <= gc.BigMapColumn && gc.BigMapColumn < 26) {

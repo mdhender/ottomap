@@ -11,9 +11,9 @@ import (
 }
 
 Location <- UnitID "," _ "," _ "Current Hex =" _ chi:Hex "," _ "(" "Previous Hex =" _ phi:Hex ")" EOF {
-    return [2]coords.Grid{
-        phi.(coords.Grid),
-        chi.(coords.Grid),
+    return [2]*coords.Grid{
+        phi.(*coords.Grid),
+        chi.(*coords.Grid),
     }, nil
 }
 
@@ -29,11 +29,19 @@ UnitID <- "Courier" SP DIGIT DIGIT DIGIT DIGIT "c" DIGIT {
 
 Hex <- "N/A" {
     // return the zero-value grid hex to signal "not available"
-    return coords.Grid{}, nil
+    return &coords.Grid{}, nil
 } / "##" SP DIGIT DIGIT DIGIT DIGIT {
-    return coords.StringToGridCoords(string(c.text))
+    gc, err := coords.StringToGridCoords(string(c.text))
+    if err != nil {
+        return nil, err
+    }
+    return &gc, nil
 } / LETTER LETTER SP DIGIT DIGIT DIGIT DIGIT {
-    return coords.StringToGridCoords(string(c.text))
+    gc, err := coords.StringToGridCoords(string(c.text))
+    if err != nil {
+        return nil, err
+    }
+    return &gc, nil
 }
 
 

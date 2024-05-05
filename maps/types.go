@@ -36,6 +36,10 @@ type Unit struct {
 	Steps       []*Step
 }
 
+func (u *Unit) IsGarrison() bool {
+	return len(u.Id) == 6 && u.Id[4] == 'g'
+}
+
 type Move struct {
 	Turn        *Turn
 	Unit        *Unit

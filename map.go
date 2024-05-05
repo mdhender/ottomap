@@ -78,7 +78,10 @@ var cmdMap = &cobra.Command{
 
 			err = m.TrackUnit(unit)
 			if err != nil {
-				log.Fatalf("map: unit %-8q: failed to track unit: %v\n", unit.Id, err)
+				if !errors.Is(err, cerrs.ErrTrackingGarrison) {
+					log.Fatalf("map: unit %-8q: failed to track unit: %v\n", unit.Id, err)
+				}
+				log.Printf("map: unit %-8q: failed to track unit: %v\n", unit.Id, err)
 			}
 		}
 

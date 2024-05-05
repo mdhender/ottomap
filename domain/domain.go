@@ -176,6 +176,7 @@ func (h Hex) String() string {
 }
 
 type Movement struct {
+	Turn    string  `json:"turn,omitempty"`
 	Follows string  `json:"follows,omitempty"` // set only if the unit is following another
 	Steps   []*Step `json:"steps,omitempty"`
 	Results string  `json:"results,omitempty"`

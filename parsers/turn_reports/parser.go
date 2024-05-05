@@ -111,6 +111,7 @@ func Parse(rpf *domain.ReportFile, debugSlugs, captureRawText bool) ([]*domain.R
 		if um == nil {
 			// no movement so nothing to do
 			// log.Printf("turn_reports: %s: %s: movements: parse: no movements\n", rpf.Id, unit.Id)
+			um = &domain.Movement{}
 		} else if um.Follows != "" {
 			// capture the unit this unit is following
 			//log.Printf("turn_reports: %s: %s: movements: parse: follows %q\n", rpf.Id, unit.Id, m.Follows)
@@ -119,6 +120,7 @@ func Parse(rpf *domain.ReportFile, debugSlugs, captureRawText bool) ([]*domain.R
 			//log.Printf("turn_reports: %s: %s: movements: parse: steps %d\n", rpf.Id, unit.Id, len(m.Moves))
 		}
 		unit.Movement = um
+		unit.Movement.Turn = fmt.Sprintf("%03d-%02d", rpf.Year, rpf.Month)
 
 		for _, line := range sections.ParseScoutLines(rs.Id, lines) {
 			unit.ScoutLines = append(unit.ScoutLines, string(line))

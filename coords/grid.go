@@ -18,7 +18,14 @@ type Grid struct {
 }
 
 func (g Grid) String() string {
+	if g.IsZero() {
+		return "N/A"
+	}
 	return fmt.Sprintf("%c%c %02d%02d", 'A'+g.BigMapRow, 'A'+g.BigMapColumn, g.GridColumn, g.GridRow)
+}
+
+func (g Grid) IsZero() bool {
+	return g.BigMapRow == 0 && g.BigMapColumn == 0 && g.GridColumn == 0 && g.GridRow == 0
 }
 
 func (g Grid) ToMapCoords() (Map, error) {

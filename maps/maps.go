@@ -5,6 +5,7 @@ package maps
 
 import (
 	"fmt"
+	"github.com/mdhender/ottomap/cerrs"
 	"github.com/mdhender/ottomap/coords"
 	"github.com/mdhender/ottomap/directions"
 	"github.com/mdhender/ottomap/domain"
@@ -199,7 +200,13 @@ func (m *Map) TrackUnit(unit *Unit) error {
 	// on the turn that the unit was first seen.
 	if unit.StartingHex == nil {
 		if len(unit.Moves) == 0 {
-			panic("assert(len(unit.Moves) > 0)")
+			log.Printf("map: unit %-8q: track: moves %d\n", unit.Id, len(unit.Moves))
+			log.Printf("map: unit %-8q: todo: tracking logic is broken for units with no moves\n", unit.Id)
+			log.Printf("map: unit %-8q: %+v\n", unit.Id, *unit)
+			if unit.IsGarrison() {
+				return cerrs.ErrTrackingGarrison
+			}
+			return cerrs.ErrUnableToFindStartingHex
 		}
 		parent, turn := unit.Parent, unit.Moves[0].Turn
 		log.Printf("map: unit %-8q: track: parent %-8q: turn %s\n", unit.Id, parent.Id, turn.Id)
@@ -210,7 +217,7 @@ func (m *Map) TrackUnit(unit *Unit) error {
 			}
 		}
 		if unit.StartingHex == nil {
-			return fmt.Errorf("unable to find starting hex")
+			return cerrs.ErrUnableToFindStartingHex
 		}
 	}
 	log.Printf("map: unit %-8q: track: origin %s\n", unit.Id, unit.StartingHex.Coords.GridString())
@@ -218,6 +225,12 @@ func (m *Map) TrackUnit(unit *Unit) error {
 	prev, curr := unit.StartingHex, unit.StartingHex
 	for n, mv := range unit.Moves {
 		log.Printf("map: unit %-8q: track: %s %2d\n", unit.Id, mv.Turn.Id, n+1)
+		log.Printf("map: unit %-8q: track: %s %2d %+v\n", unit.Id, mv.Turn.Id, n+1, *mv)
+		if mv.StartingHex == nil {
+			log.Printf("map: unit %-8q: track: %s %2d starting now %+v\n", unit.Id, mv.Turn.Id, n+1, *curr)
+			mv.StartingHex = curr
+			log.Printf("map: unit %-8q: track: %s %2d %+v\n", unit.Id, mv.Turn.Id, n+1, *mv)
+		}
 		for _, step := range mv.Steps {
 			log.Printf("map: unit %-8q: track: %s %2d %2d %-2s\n", unit.Id, mv.Turn.Id, n+1, step.SeqNo+1, step.Direction)
 			step.StartingHex = curr
@@ -243,6 +256,7 @@ func (m *Map) TrackUnit(unit *Unit) error {
 				curr.Neighbors[step.Direction] = neighbor
 			}
 			log.Printf("map: unit %-8q: track: %s %2d %2d %-2s from %v to %v\n", unit.Id, mv.Turn.Id, n+1, step.SeqNo+1, step.Direction, curr.Coords.GridString(), neighbor.Coords.GridString())
+			log.Printf("map: unit %-8q: track: %s %2d %2d %-2s from %v to %v step %v\n", unit.Id, mv.Turn.Id, n+1, step.SeqNo+1, step.Direction, curr.Coords.GridString(), neighbor.Coords.GridString(), *step)
 			prev, curr = curr, neighbor
 			step.EndingHex = curr
 		}
