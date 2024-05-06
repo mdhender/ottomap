@@ -6,7 +6,7 @@ import (
 	"bytes"
 )
 
-// splitSections splits the input. It returns the sections along
+// Split splits the input into sections. It returns the sections along
 // with the section separator. We trim leading and trailing new-lines
 // from each section and then force the section to end with a new-line.
 //
@@ -19,7 +19,7 @@ import (
 // one section, so we wouldn't find a section separator. The
 // instructions should tell the user to manually add one. Or the
 // caller should have logic to handle.
-func splitSections(input []byte) ([][]byte, []byte) {
+func Split(input []byte) ([][]byte, []byte) {
 	// scan the input to find the section separator
 	var separator []byte
 	for _, pattern := range [][]byte{

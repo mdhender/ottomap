@@ -7,7 +7,27 @@ package domain
 import (
 	"github.com/mdhender/ottomap/coords"
 	"github.com/mdhender/ottomap/directions"
+	"time"
 )
+
+// Config is the application configuration.
+type Config struct {
+	Self       string          // path to the application configuration file
+	OutputPath string          // path to create output files in
+	Reports    []*ConfigReport // list of report files we have loaded
+}
+
+type ConfigReport struct {
+	Id          string    // unique identifier for the report file
+	Input       string    // path to the report file
+	Parsed      string    // path to the parsed report data
+	Year        int       // year of the report
+	Month       int       // month of the report
+	Clan        string    // identity of clan from the report
+	Loaded      time.Time // time the report was loaded
+	Fingerprint string    // hash of the report file to detect changes
+	Sections    [][]byte  `json:"-"` // sections of the report file (for internal use)
+}
 
 // Index is list of turn report files that will be sent to the parser.
 // It limits the number of files, which is helpful for development.

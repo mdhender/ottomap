@@ -205,6 +205,13 @@ func (d Terrain) String() string {
 	return fmt.Sprintf("Terrain(%d)", int(d))
 }
 
+func StringToTerrain(s string) (Terrain, bool) {
+	if d, ok := terrainStringToEnum[s]; ok {
+		return d, ok
+	}
+	return TUnknown, false
+}
+
 var (
 	// helper map for marshalling the enum
 	terrainEnumToString = map[Terrain]string{

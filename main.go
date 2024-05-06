@@ -23,7 +23,7 @@ func main() {
 }
 
 func Execute() error {
-	cmdRoot.AddCommand(cmdIndex, cmdMap, cmdParse, cmdVersion)
+	cmdRoot.AddCommand(cmdIndex, cmdMap, cmdParse, cmdSetup, cmdVersion)
 
 	cmdIndex.AddCommand(cmdIndexReports)
 	cmdIndexReports.Flags().StringVarP(&argsIndexReports.input, "input", "i", ".", "path to read input from")
@@ -44,6 +44,20 @@ func Execute() error {
 	cmdParseReports.Flags().BoolVar(&argsParseReports.debug.captureRawText, "capture-raw-text", false, "capture raw text")
 	cmdParseReports.Flags().StringVarP(&argsParseReports.gridOrigin, "grid-origin", "g", "OO", "initial grid value for '##'")
 	cmdParse.AddCommand(cmdParseReports, cmdParseUnits)
+
+	cmdSetup.Flags().BoolVar(&argsSetup.debug.showSlugs, "debug-slugs", false, "show slugs")
+	cmdSetup.Flags().StringVar(&argsSetup.originTerrain, "origin-terrain", "PR", "origin terrain")
+	if err := cmdSetup.MarkFlagRequired("origin-terrain"); err != nil {
+		log.Fatalf("setup: origin-terrain: mark required: %v\n", err)
+	}
+	cmdSetup.Flags().StringVarP(&argsSetup.output, "output", "o", ".", "path to write map to")
+	if err := cmdSetup.MarkFlagRequired("output"); err != nil {
+		log.Fatalf("setup: output: mark required: %v\n", err)
+	}
+	cmdSetup.Flags().StringVarP(&argsSetup.report, "report", "r", "", "report file to process")
+	if err := cmdSetup.MarkFlagRequired("report"); err != nil {
+		log.Fatalf("setup: report: mark required: %v\n", err)
+	}
 
 	return cmdRoot.Execute()
 }

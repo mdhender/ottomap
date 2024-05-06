@@ -9,18 +9,17 @@ import (
 )
 
 // ParseHeader returns
-func ParseHeader(id string, input []byte) (*Header, error) {
+func ParseHeader(id string, lines [][]byte) (*Header, error) {
 	// the header is the first two lines of the report and must start with "Tribe: "
-	input = theFirstTwoLines(input)
-	if !bytes.HasPrefix(input, []byte("Tribe ")) {
+	if len(lines) < 2 {
 		return nil, cerrs.ErrNotATurnReport
 	}
-	if input[len(input)-1] != '\n' {
-		panic("hey, bad function")
+	if !bytes.HasPrefix(lines[0], []byte("Tribe ")) {
+		return nil, cerrs.ErrNotATurnReport
 	}
 
 	// parse the header
-	hi, err := Parse(id, input)
+	hi, err := Parse(id, append(bytes.Join(lines, []byte{'\n'}), '\n'))
 	if err != nil {
 		log.Printf("clans: header: %v\n", err)
 		return nil, cerrs.ErrNotATurnReport
@@ -30,18 +29,4 @@ func ParseHeader(id string, input []byte) (*Header, error) {
 		log.Fatalf("clans: %s: internal error: want *Header, got %T\n", id, hi)
 	}
 	return header, nil
-}
-
-// theFirstTwoLines returns the first two lines of the input as a single slice.
-// returns nil if there are not at least two lines in the input.
-func theFirstTwoLines(input []byte) []byte {
-	for pos, nlCount := 0, 0; nlCount < 2 && pos < len(input); pos++ {
-		if input[pos] == '\n' {
-			nlCount++
-			if nlCount == 2 {
-				return input[:pos+1]
-			}
-		}
-	}
-	return nil
 }
