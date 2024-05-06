@@ -17,6 +17,8 @@ var (
 )
 
 func main() {
+	log.Printf("todo: detect when a unit is created as an after-move action\n")
+
 	if err := Execute(); err != nil {
 		log.Fatal(err)
 	}
@@ -34,9 +36,23 @@ func Execute() error {
 		log.Fatalf("input: parse: output: mark required: %v\n", err)
 	}
 
-	cmdMap.PersistentFlags().BoolVar(&argsMap.debug.units, "debug-units", false, "enable unit debugging")
-	cmdMap.PersistentFlags().StringVarP(&argsMap.input, "input", "i", ".", "parsed report file")
-	cmdMap.PersistentFlags().StringVarP(&argsMap.output, "output", "o", ".", "path to write map to")
+	cmdMap.Flags().BoolVar(&argsMap.debug.units, "debug-units", false, "enable unit debugging")
+	cmdMap.Flags().StringVar(&argsMap.clanId, "clan", "", "clan id to process")
+	if err := cmdMap.MarkFlagRequired("clan"); err != nil {
+		log.Fatalf("map: clan: mark required: %v\n", err)
+	}
+	cmdMap.Flags().StringVar(&argsMap.config, "config", "config.json", "configuration file to use")
+	if err := cmdMap.MarkFlagRequired("config"); err != nil {
+		log.Fatalf("map: config: mark required: %v\n", err)
+	}
+	cmdMap.Flags().StringVarP(&argsMap.output, "output", "o", ".", "path to write map to")
+	if err := cmdMap.MarkFlagRequired("output"); err != nil {
+		log.Fatalf("map: output: mark required: %v\n", err)
+	}
+	cmdMap.Flags().StringVar(&argsMap.turnId, "turn", "", "turn to process (yyyy-mm format)")
+	if err := cmdMap.MarkFlagRequired("turn"); err != nil {
+		log.Fatalf("map: turn: mark required: %v\n", err)
+	}
 
 	cmdParse.PersistentFlags().BoolVar(&argsParse.debug.units, "debug-units", false, "enable unit debugging")
 	cmdParse.PersistentFlags().StringVarP(&argsParse.index, "index", "i", ".", "index file to process")

@@ -24,6 +24,7 @@ type Unit struct {
 	Moves   []*Move `json:"moves,omitempty"`
 	End     string  `json:"end,omitempty"`
 	Status  *Found  `json:"status,omitempty"`
+	sortKey string
 }
 
 func (u *Unit) IsClan() bool {
@@ -43,6 +44,13 @@ func (u *Unit) IsGarrison() bool {
 }
 func (u *Unit) IsTribe() bool {
 	return len(u.Id) == 4
+}
+
+func (u *Unit) SortKey() string {
+	if u.sortKey == "" {
+		u.sortKey = fmt.Sprintf("%04d.%02d.%s", u.Turn.Year, u.Turn.Month, u.Id)
+	}
+	return u.sortKey
 }
 
 type Move struct {
