@@ -9,8 +9,8 @@ import (
 
 type Header struct {
     ClanId  string
-    CurrHex GridHex
-    PrevHex GridHex
+    CurrHex string
+    PrevHex string
     Game    Date
     Report  Date
 }
@@ -25,6 +25,7 @@ type GridHex struct {
     Grid   string
     Column string
     Row    string
+    Raw    string
 }
 
 type turnLine struct {
@@ -45,8 +46,8 @@ TurnReportHeader <- cl:ClanLine EOL tl:TurnLine EOL {
     turn := tl.(turnLine)
     return &Header{
         ClanId:  clan.id,
-        CurrHex: clan.currHex,
-        PrevHex: clan.prevHex,
+        CurrHex: clan.currHex.Raw,
+        PrevHex: clan.prevHex.Raw,
         Game:    turn.gameDate,
         Report:  turn.reportDate,
     }, nil
@@ -69,7 +70,10 @@ GridHexNo <- gid:Grid SP col:Column row:Row {
         Grid:   gid.(string),
         Column: col.(string),
         Row:    row.(string),
+        Raw:    gid.(string) + " " + col.(string) + row.(string),
     }, nil
+} / "N/A" {
+    return GridHex{}, nil
 }
 
 Grid <- "##" {

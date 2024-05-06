@@ -5,6 +5,7 @@ package turn_reports
 import (
 	"bytes"
 	"fmt"
+	"github.com/mdhender/ottomap/cerrs"
 	"github.com/mdhender/ottomap/coords"
 	"github.com/mdhender/ottomap/domain"
 	"github.com/mdhender/ottomap/parsers/turn_reports/headers"
@@ -13,6 +14,7 @@ import (
 	"github.com/mdhender/ottomap/parsers/turn_reports/sections"
 	"log"
 	"os"
+	"strconv"
 )
 
 // Parse splits the input into individual sections.
@@ -25,7 +27,7 @@ func Parse(rpf *domain.ReportFile, debugSlugs, captureRawText bool) ([]*domain.R
 	}
 
 	// extract the header from the input so that we can verify the settings
-	header, err := headers.ParseHeader(rpf.Id, input)
+	header, err := headers.ParseHeader(rpf.Id, bytes.Split(input, []byte{'\n'}))
 	if err != nil {
 		return nil, err
 	} else if header.ClanId != fmt.Sprintf("%04d", rpf.Clan) {
@@ -36,7 +38,7 @@ func Parse(rpf *domain.ReportFile, debugSlugs, captureRawText bool) ([]*domain.R
 		log.Fatalf("clans: %s: mismatched clan: month %q, want %q\n", rpf.Id, header.Game.Month, fmt.Sprintf("%02d", rpf.Month))
 	}
 
-	ss, separator := splitSections(input)
+	ss, separator := Split(input)
 	//log.Printf("clans: %s: sections %d\n", rpf.Id, len(ss))
 	if separator == nil {
 		log.Printf("clans: %s: missing separator\n", rpf.Id)
@@ -135,4 +137,168 @@ func Parse(rpf *domain.ReportFile, debugSlugs, captureRawText bool) ([]*domain.R
 	}
 
 	return rss, nil
+}
+
+// ParseHeaders extracts the header from the input so that we can verify the settings
+func ParseHeaders(id string, lines [][]byte) (kind domain.ReportSectionType, unitId string, year, month int, currHex string, err error) {
+	header, err := headers.ParseHeader(id, lines)
+	if err != nil {
+		return kind, unitId, year, month, currHex, err
+	} else if year, err = strconv.Atoi(header.Game.Year); err != nil {
+		return kind, unitId, year, month, currHex, err
+	} else if month, err = strconv.Atoi(header.Game.Month); err != nil {
+		return kind, unitId, year, month, currHex, err
+	}
+	currHex = header.CurrHex
+
+	unitId, kind = sections.ParseSectionType(lines)
+
+	return kind, unitId, year, month, currHex, err
+}
+
+type PSection struct {
+	Self  string                   `json:"self"`
+	Kind  domain.ReportSectionType `json:"-"`
+	Units []*PUnit                 `json:"units,omitempty"`
+}
+
+type PUnit struct {
+	Id      string   `json:"id"`
+	Start   string   `json:"start,omitempty"`
+	Follows string   `json:"follows,omitempty"`
+	Moves   []*PMove `json:"moves,omitempty"`
+	End     string   `json:"end,omitempty"`
+}
+
+type PMove struct {
+	Seq       int     `json:"seq"`
+	Direction string  `json:"direction"`
+	Blocked   bool    `json:"blocked,omitempty"`
+	Exhausted bool    `json:"exhausted,omitempty"`
+	Found     *PFound `json:"found,omitempty"`
+}
+
+type PFound struct {
+	Terrain    string   `json:"terrain"`
+	Edges      []*PEdge `json:"edges,omitempty"`
+	Units      []string `json:"units,omitempty"`
+	Settlement string   `json:"settlement,omitempty"`
+}
+
+type PEdge struct {
+	Direction string `json:"direction"`
+	Edge      string `json:"edge,omitempty"`
+	Terrain   string `json:"terrain,omitempty"`
+}
+
+func ParseSection(sectionId string, section []byte, showSlugs, captureRawText bool) (*PSection, error) {
+	lines := bytes.Split(section, []byte{'\n'})
+	log.Printf("parse: section %s: lines %8d\n", sectionId, len(lines))
+
+	if showSlugs {
+		var slug []byte
+		if len(section) > 40 {
+			slug = section[:40]
+		} else {
+			slug = section
+		}
+		log.Printf("parse: section %s: lines %8d: %q\n", sectionId, len(lines), string(slug))
+	}
+
+	// funk up some header values
+	followsLine := []byte("Tribe Follows ")
+	movesLine := []byte("Tribe Movement: ")
+	var scoutLines [8][]byte
+	for sid := 0; sid < 8; sid++ {
+		scoutLines[sid] = []byte(fmt.Sprintf("Scout %d:Scout  ", sid+1))
+	}
+
+	// chunk up the input into the various chunks
+	var chunks struct {
+		Header  [][]byte
+		Follows []byte
+		Moves   []byte
+		Scout   [][]byte
+		Status  []byte
+	}
+	for n, line := range lines {
+		if n == 0 || n == 1 {
+			chunks.Header = append(chunks.Header, line)
+		} else if bytes.HasPrefix(line, followsLine) {
+			if chunks.Follows != nil {
+				return nil, cerrs.ErrMultipleFollowsLines
+			}
+			chunks.Follows = line
+		} else if bytes.HasPrefix(line, movesLine) {
+			if chunks.Moves != nil {
+				return nil, cerrs.ErrMultipleMovementLines
+			}
+			chunks.Moves = line
+		} else if bytes.HasPrefix(line, []byte{'S', 'c', 'o', 'u', 't'}) {
+			for sid := 0; sid < 8; sid++ {
+				if bytes.HasPrefix(line, scoutLines[sid]) {
+					chunks.Scout = append(chunks.Scout, line)
+					break
+				}
+			}
+		}
+	}
+	if chunks.Follows == nil && chunks.Moves == nil {
+		log.Printf("parse: section %s: warning: missing follows and movement lines\n", sectionId)
+	}
+	if len(chunks.Scout) > 8 {
+		return nil, cerrs.ErrTooManyScoutLines
+	}
+
+	kind, unitId, year, month, hex, err := ParseHeaders(sectionId, chunks.Header)
+	if err != nil {
+		log.Fatalf("parse: sections: error: %v\n", err)
+	}
+	log.Printf("parse: section %s: %q: unit %q: year %04d: month %02d: hex %q\n", sectionId, kind, unitId, year, month, hex)
+	if kind != domain.RSUnit {
+		// not a turn report, so return an error
+		return nil, cerrs.ErrNotATurnReport
+	}
+
+	pu := &PUnit{
+		Id:    unitId,
+		Start: hex,
+	}
+
+	// now that we know the unit id, we can find the status line, too
+	statusLine := []byte(fmt.Sprintf("%s Status: ", unitId))
+	for _, line := range lines {
+		if bytes.HasPrefix(line, statusLine) {
+			if chunks.Status != nil {
+				return nil, cerrs.ErrMultipleStatusLines
+			}
+			chunks.Status = line
+		}
+	}
+	if chunks.Status == nil {
+		return nil, cerrs.ErrMissingStatusLine
+	}
+	log.Printf("parse: section %s: %q: unit %q: status %q\n", sectionId, kind, unitId, string(chunks.Status))
+
+	var um *domain.Movement
+	if chunks.Follows != nil {
+		um, err = movements.ParseMovements(sectionId, chunks.Follows)
+	} else if chunks.Moves != nil {
+		um, err = movements.ParseMovements(sectionId, chunks.Moves)
+	}
+	if err != nil {
+		log.Fatalf("parse: section %s: unit %s: movements: error %v\n", sectionId, unitId, err)
+	} else if um == nil {
+		// unit did not move, must use the status line for the end hex
+		log.Printf("parse: section %s: unit %s: movements nil: replace with status\n", sectionId, unitId)
+	} else {
+		log.Printf("parse: section %s: unit %s: movements %v\n", sectionId, unitId, *um)
+	}
+
+	ps := &PSection{
+		Kind:  kind,
+		Units: []*PUnit{pu},
+	}
+
+	return ps, nil
 }
