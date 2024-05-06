@@ -12,21 +12,21 @@ import (
 
 // Config is the application configuration.
 type Config struct {
-	Self       string          // path to the application configuration file
-	OutputPath string          // path to create output files in
-	Reports    []*ConfigReport // list of report files we have loaded
+	Self       string          `json:"self,omitempty"`       // path to the application configuration file
+	OutputPath string          `json:"outputPath,omitempty"` // path to create output files in
+	Reports    []*ConfigReport `json:"reports,omitempty"`    // list of report files we have loaded
 }
 
 type ConfigReport struct {
-	Id          string    // unique identifier for the report file
-	Input       string    // path to the report file
-	Parsed      string    // path to the parsed report data
-	Year        int       // year of the report
-	Month       int       // month of the report
-	Clan        string    // identity of clan from the report
-	Loaded      time.Time // time the report was loaded
-	Fingerprint string    // hash of the report file to detect changes
-	Sections    [][]byte  `json:"-"` // sections of the report file (for internal use)
+	Id          string    `json:"id,omitempty"`          // unique identifier for the report file
+	Input       string    `json:"input,omitempty"`       // path to the report file
+	Parsed      string    `json:"parsed,omitempty"`      // path to the parsed report data
+	Year        int       `json:"year,omitempty"`        // year of the report
+	Month       int       `json:"month,omitempty"`       // month of the report
+	Clan        string    `json:"clan,omitempty"`        // identity of clan from the report
+	Loaded      time.Time `json:"loaded"`                // time the report was loaded
+	Fingerprint string    `json:"fingerprint,omitempty"` // hash of the report file to detect changes
+	Sections    [][]byte  `json:"-"`                     // sections of the report file (for internal use)
 }
 
 // Index is list of turn report files that will be sent to the parser.
