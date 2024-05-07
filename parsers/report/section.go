@@ -19,12 +19,13 @@ type Unit struct {
 		Year  int `json:"year,omitempty"`
 		Month int `json:"month,omitempty"`
 	} `json:"turn,omitempty"`
-	Start   string  `json:"start,omitempty"`
-	Follows string  `json:"follows,omitempty"`
-	Moves   []*Move `json:"moves,omitempty"`
-	End     string  `json:"end,omitempty"`
-	Status  *Found  `json:"status,omitempty"`
-	sortKey string
+	Start     string  `json:"start,omitempty"`
+	FollowsId string  `json:"followsId,omitempty"`
+	Follows   *Unit   `json:"-"` // points to the unit movement this unit is following
+	Moves     []*Move `json:"moves,omitempty"`
+	End       string  `json:"end,omitempty"`
+	Status    *Found  `json:"status,omitempty"`
+	sortKey   string
 }
 
 func (u *Unit) IsClan() bool {
@@ -224,9 +225,11 @@ func ParseSection(section [][]byte, showSlugs bool) (*Unit, error) {
 	// parse the unit's movement. this will be either a follows or a movement line.
 	// we tested for the presence of both above, so we know we don't have both.
 	if chunks.Follows != nil { // unit followed another unit this turn
+		log.Printf("parse: todo: parse follows  %q\n", string(chunks.Follows))
 		panic("follows is not implemented")
 	} else if chunks.Moves != nil { // unit moved this turn
-		panic("movement is not implemented")
+		log.Printf("parse: todo: parse movement %q\n", string(chunks.Follows))
+		panic("moves is not implemented")
 	} else { // unit didn't move this turn
 		// leave moves empty, and fill in the unit's movement later
 	}
@@ -234,7 +237,9 @@ func ParseSection(section [][]byte, showSlugs bool) (*Unit, error) {
 	return unit, nil
 }
 
+// Walk the consolidate unit moves, creating chain of hexes at each step
 func (u *Unit) Walk() {
+	log.Printf("parse: unit: walk: todo: this should be implemented\n")
 	// if the unit didn't move this turn, use the information from the
 	// status line to fill in the unit's movement.
 	if len(u.Moves) == 0 {
@@ -246,6 +251,12 @@ func (u *Unit) Walk() {
 		u.End = u.Start
 		return
 	}
+
+	start := u.Start
+	if start == "" {
+		log.Fatalf("parse: unit %-8q: starting hex is missing\n", u.Id)
+	}
+	log.Printf("parse: unit %-8q: origin %s\n", u.Id, start)
 
 	// unit moved this turn
 	for n, m := range u.Moves { // TODO: implement

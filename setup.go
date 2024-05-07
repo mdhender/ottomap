@@ -205,15 +205,8 @@ var cmdSetup = &cobra.Command{
 			}
 		}
 
-		// walk through every unit's movements and calculate the position in the grid
+		// inefficient, but clear out the start and end hexes for units before processing the movements
 		for _, unit := range units {
-			// save for debugging
-			if b, err := json.MarshalIndent(unit, "", "  "); err != nil {
-				log.Printf("setup: unit %q: error: %v\n", unit.Id, err)
-			} else {
-				log.Printf("setup: unit %q: results\n%s\n", unit.Id, string(b))
-			}
-
 			if unit.IsClan() {
 				if strings.HasPrefix(unit.Start, "##") {
 					log.Printf("setup: sections: warning: starting hex uses hidden grid %q\n", unit.Start)
@@ -226,6 +219,16 @@ var cmdSetup = &cobra.Command{
 				// we are going to calculate the position of the unit in the grid,
 				// so clear out the ending hex for all moves
 				unit.Start, unit.End = "", ""
+			}
+		}
+
+		// walk through every unit's movements and calculate the position in the grid
+		for _, unit := range units {
+			// save for debugging
+			if b, err := json.MarshalIndent(unit, "", "  "); err != nil {
+				log.Printf("setup: unit %q: error: %v\n", unit.Id, err)
+			} else {
+				log.Printf("setup: unit %q: results\n%s\n", unit.Id, string(b))
 			}
 
 			// starting position always depends on the parent's starting position.
