@@ -219,11 +219,6 @@ func (w *WXX) Create(path string, hexes []Hex, showGridNumbering bool) error {
 		}
 	}
 
-	//w.Printf(`<label  mapLayer="Labels" style="null" fontFace="null" color="0.0,0.0,0.0,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags="">`)
-	//w.Printf(`<location viewLevel="WORLD" x="2401.722971742483" y="2381.1777133015803" scale="12.5" />`)
-	//w.Printf("1108")
-	//w.Printf("</label>\n")
-
 	for col := 0; col < columns; col++ {
 		for row := 0; row < rows; row++ {
 			tile := wmap[col][row]
