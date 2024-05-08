@@ -1,0 +1,95 @@
+// Use DBML to define your database structure
+// Docs: https://dbml.dbdiagram.io/docs
+
+Table turns {
+  id text [primary key]
+  year integer
+  month integer
+  created_at timestamp
+
+  indexes {
+    (year, month) [unique] // composite pk
+  }
+}
+
+Table units {
+  id text [primary key]
+  parent_id text
+}
+
+Ref: units.parent_id > units.id
+
+Table moves {
+  id integer [primary key]
+  turn_id text
+  unit_id text
+}
+
+Ref: moves.unit_id > units.id
+Ref: moves.turn_id > turns.id
+
+Table steps {
+  move_id integer
+  step_no integer [note: 'Sequence number, 1 .. n']
+  starting_hex integer
+  direction text
+  status text [note: 'S(ucceeded), B(locked), E(xhausted)']
+  ending_hex integer
+
+  indexes {
+    (move_id, step_no) [pk] // composit pk
+  }
+}
+
+Ref: steps.move_id > moves.id // many-to-one
+
+Table tiles {
+  id integer [primary key]
+  grid_id string [note: 'AA .. ZZ']
+  column_no integer [note: '1 .. 30']
+  row_no integer [note: '1 .. 21']
+  terrain integer
+
+  indexes {
+    (grid_id, column_no, row_no) [unique] // composite pk
+  }
+}
+
+Ref: steps.starting_hex > tiles.id
+Ref: steps.ending_hex > tiles.id
+
+Table tile_edges {
+  id integer [primary key]
+  tile_id integer
+  direction text
+  feature text
+}
+
+Ref: tile_edges.tile_id > tiles.id
+
+Table tile_contents {
+  tile_id integer
+  turn_id text
+  kind text
+  what text
+
+  indexes {
+    (tile_id, turn_id) [pk]
+  }
+}
+
+Ref: tile_contents.tile_id > tiles.id
+Ref: tile_contents.turn_id > turns.id
+
+Table tile_neighbors {
+  tile_id integer
+  direction integer
+  neighbor_id integer
+
+  indexes {
+    (tile_id, direction) [pk]
+  }
+}
+
+Ref: tile_neighbors.tile_id > tiles.id
+Ref: tile_neighbors.neighbor_id > tiles.id
