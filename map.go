@@ -9,6 +9,7 @@ import (
 	"github.com/mdhender/ottomap/cerrs"
 	"github.com/mdhender/ottomap/domain"
 	"github.com/mdhender/ottomap/parsers/report"
+	"github.com/mdhender/ottomap/wxx"
 	"github.com/spf13/cobra"
 	"log"
 	"os"
@@ -33,6 +34,49 @@ var cmdMap = &cobra.Command{
 	Long:  `Load a parsed report and create a map.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		log.Printf("maps: todo: detect when a unit is created as an after-move action\n")
+
+		//if data, err := os.ReadFile(filepath.Join("input", "899-12.0138.xml")); err != nil {
+		//	log.Fatal(err)
+		//} else if len(data)%2 != 0 { // verify the length
+		//	log.Fatalf("UTF-16 data must contain an even number of bytes")
+		//} else if !bytes.HasPrefix(data, []byte{0xfe, 0xff}) { // verify the BOM
+		//	log.Fatalf("UTF-16 data must start with a BOM")
+		//} else {
+		//	// consume the bom
+		//	data = data[2:]
+		//	// convert the slice of byte to a slice of uint16
+		//	chars := make([]uint16, len(data)/2)
+		//	if err := binary.Read(bytes.NewReader(data), binary.BigEndian, &chars); err != nil {
+		//		log.Fatal(err)
+		//	}
+		//	// create a buffer for the results
+		//	dst := bytes.Buffer{}
+		//	// convert the UTF-16 to runes, then to UTF-8 bytes
+		//	var utfBuffer [utf8.UTFMax]byte
+		//	for _, r := range utf16.Decode(chars) {
+		//		utf8Size := utf8.EncodeRune(utfBuffer[:], r)
+		//		dst.Write(utfBuffer[:utf8Size])
+		//	}
+		//	log.Printf("maps: todo: verify that the map is valid XML %d %d\n", len(data), len(dst.Bytes()))
+		//	out := &bytes.Buffer{}
+		//	for _, line := range bytes.Split(dst.Bytes(), []byte{'\n'}) {
+		//		out.WriteString(fmt.Sprintf("\tw.println(`%s`)\n", string(line)))
+		//	}
+		//	if err := os.WriteFile("working/println.go.txt", out.Bytes(), 0644); err != nil {
+		//		log.Fatal(err)
+		//	}
+		//}
+
+		hexes := []wxx.Hex{
+			{Grid: "OO", Coords: wxx.Offset{Column: 11, Row: 8}, Terrain: domain.TPrairie},
+			{Grid: "OO", Coords: wxx.Offset{Column: 11, Row: 7}, Terrain: domain.TOcean},
+			{Grid: "OO", Coords: wxx.Offset{Column: 11, Row: 6}, Terrain: domain.TSwamp},
+			{Grid: "OO", Coords: wxx.Offset{Column: 10, Row: 7}, Terrain: domain.TRockyHills},
+			{Grid: "OO", Coords: wxx.Offset{Column: 10, Row: 6}, Terrain: domain.TGrassyHills},
+			{Grid: "OO", Coords: wxx.Offset{Column: 9, Row: 6}, Terrain: domain.TGrassyHills},
+			{Grid: "OO", Coords: wxx.Offset{Column: 9, Row: 5}, Terrain: domain.TGrassyHills},
+			{Grid: "OO", Coords: wxx.Offset{Column: 8, Row: 4}, Terrain: domain.TPrairie},
+		}
 
 		log.Printf("map: config: file %s\n", argsMap.config)
 		var config domain.Config
@@ -219,8 +263,11 @@ var cmdMap = &cobra.Command{
 
 		// now we can create the Worldographer map!
 		log.Printf("map: creating WXX map\n")
-
-		log.Printf("map: output %s\n", argsMap.output)
+		w := &wxx.WXX{}
+		if err := w.Create("working/testmap.wxx", hexes, false); err != nil {
+			log.Fatal(err)
+		}
+		log.Printf("map: created %s\n", "working/testmap.wxx")
 
 		return nil
 	},
