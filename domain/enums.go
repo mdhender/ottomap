@@ -235,6 +235,20 @@ var (
 		"RH": TRockyHills,
 		"SW": TSwamp,
 	}
+	// TileTerrainNames is the map for tile terrain name matching. the text values
+	// are extracted from the Worldographer tileset. they must match exactly.
+	// if you're adding to this list, the values are found by hovering over the
+	// terrain in the GUI.
+	TileTerrainNames = map[Terrain]string{
+		TUnknown:      "Blank",
+		TConiferHills: "Hills Forest Evergreen",
+		TGrassyHills:  "Hills Grassland",
+		TLake:         "Water Shoals",
+		TOcean:        "Water Sea",
+		TPrairie:      "Flat Grazing Land",
+		TRockyHills:   "Underdark Broken Lands",
+		TSwamp:        "Flat Swamp",
+	}
 )
 
 // UnitType is an enum for the type of unit.
