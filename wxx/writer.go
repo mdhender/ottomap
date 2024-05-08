@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"github.com/mdhender/ottomap/domain"
 	"log"
-	"math"
 	"os"
 	"unicode/utf16"
 	"unicode/utf8"
@@ -24,7 +23,6 @@ type Hex struct {
 
 // Tile is a hex on the Worldographer map.
 type Tile struct {
-	Coords    Cube
 	Terrain   domain.Terrain
 	Elevation int
 	IsIcy     bool
@@ -49,39 +47,7 @@ type Offset struct {
 	Row    int
 }
 
-// There are four types of layouts for Offset coordinates.
-//
-// 1. EvenQ is a vertical   layout where columns with an even Q value are shoved "down."
-// 2. OddQ  is a vertical   layout where columns with an odd  Q value are shoved "down."
-// 3. EvenR is a horizontal layout where rows    with an even R value are shoved "right."
-// 4. OddR  is a horizontal layout where rows    with an odd  R value are shoved "right."
-//
-// A vertical layout contains flat-top hexes. A horizontal layout contains pointy-top hexes.
-
-type Layout int
-
-const (
-	EvenQ Layout = iota
-	EvenR
-	OddQ
-	OddR
-)
-
-type Label struct {
-	Text string
-}
-
-// Cube are the coordinates of a hex in a cube.
-// They have the constraint Q + R + S = 0.
-type Cube struct {
-	Q int // q is the north-south axis
-	R int // r is the northwest-southeast axis
-	S int // s is the northeast-southwest axis
-}
-
 func (w *WXX) Create(path string, hexes []Hex, showGridNumbering bool) error {
-	const layout = EvenQ // flat-topped hexes, even columns are shoved "down"
-
 	// wmap is the consolidated Worldographer map.
 	// It is indexed by column then row.
 	var wmap [][]Tile
@@ -93,12 +59,6 @@ func (w *WXX) Create(path string, hexes []Hex, showGridNumbering bool) error {
 	wmap = make([][]Tile, columns)
 	for column := 0; column < columns; column++ {
 		wmap[column] = make([]Tile, rows)
-		for row := 0; row < rows; row++ {
-			wmap[column][row] = Tile{
-				Coords:    oddq_to_cube(Offset{Column: column, Row: row}),
-				Elevation: 1,
-			}
-		}
 	}
 
 	// convert the grid hexes to tiles
@@ -106,50 +66,56 @@ func (w *WXX) Create(path string, hexes []Hex, showGridNumbering bool) error {
 		tile := &wmap[hex.Coords.Column-1][hex.Coords.Row-1]
 		tile.Terrain = hex.Terrain
 		switch tile.Terrain {
+		case domain.TLake:
+			tile.Elevation = -1
+		case domain.TOcean:
+			tile.Elevation = -3
 		case domain.TPrairie:
 			tile.Elevation = 1_000
+		default:
+			tile.Elevation = 1
 		}
 		tile.Label = &Label{Text: fmt.Sprintf("%s %02d%02d", hex.Grid, hex.Coords.Column, hex.Coords.Row)}
-		log.Printf("hex %s %2d %2d -> tile %3d %3d %3d\n", hex.Grid, hex.Coords.Column, hex.Coords.Row, tile.Coords.Q, tile.Coords.R, tile.Coords.S)
 	}
 
 	w.buffer = &bytes.Buffer{}
 
-	// The "size" of a hex is the distance from the center of the hex to a vertex.
-	// The "apothem" is the distance from the center of the hex to the midpoint of a side.
-	// The apothem is sqrt(3) times the size divided by 2.
-
-	// hexWidth, hexHeight := 153.88952195924998, 133.29538497986132
-	const hexWidth, hexHeight = 46.18, 40.0 // standard, unzoomed map scale
-
-	fudge := 7.1 // fudge factor to make the map fit in the Worldographer map
-	height := 40.0 * fudge
-	width := height * 2 * math.Sqrt(3) / 3
-	size := width / 2
-
-	log.Printf("map: fudge %g height %g width %g size %g\n", fudge, height, width, size)
-
-	// hexWidth, hexHeight = hexWidth*2, hexHeight*2
-	//apothem := 2 * math.Sqrt(3) / 2
-
-	// the first row must be the Blank terrain.
-	// the remaining rows must match the domain.Terrain enums.
-	terrains := []string{
-		"Blank",
-		"Hills Forest Evergreen", // CH
-		"Hills Grassland",        // GH
-		"Water Shoals",           // L
-		"Water Sea",              // O
-		"Flat Grazing Land",      // PR
-		"Underdark Broken Lands", // RH
-		"Flat Swamp",             // SW
+	// create the slice that maps our terrains to the Worldographer terrain names.
+	// todo: this is a hack and should be extracted into the domain package.
+	var terrains []string
+	var maxTerrain domain.Terrain
+	for k := range domain.TileTerrainNames {
+		if k > maxTerrain {
+			maxTerrain = k
+		}
+	}
+	terrains = make([]string, maxTerrain+1)
+	for k, v := range domain.TileTerrainNames {
+		terrains[k] = v
+	}
+	// the first row must be the Blank terrain
+	if terrains[0] != "Blank" {
+		panic(`assert(terrains[0] == "Blank")`)
+	}
+	// all rows must have a value
+	for k, v := range terrains {
+		if v == "" {
+			log.Fatalf("map: terrain %q has no associated terrain type!\n", domain.Terrain(k).String())
+		}
 	}
 
+	// start writing the XML
+
 	w.Println(`<?xml version='1.0' encoding='utf-16'?>`)
+
+	// hexWidth and hexHeight are used to control the initial "zoom" on the map.
+	const hexWidth, hexHeight = 46.18, 40.0 // standard, unzoomed map scale
+
 	w.Println(`<map type="WORLD" version="1.74" lastViewLevel="WORLD" continentFactor="0" kingdomFactor="0" provinceFactor="0" worldToContinentHOffset="0.0" continentToKingdomHOffset="0.0" kingdomToProvinceHOffset="0.0" worldToContinentVOffset="0.0" continentToKingdomVOffset="0.0" kingdomToProvinceVOffset="0.0" `)
-	//w.Println(`hexWidth="153.88952195924998" hexHeight="133.29538497986132" hexOrientation="COLUMNS" mapProjection="FLAT" showNotes="true" showGMOnly="true" showGMOnlyGlow="false" showFeatureLabels="true" showGrid="true" showGridNumbers="false" showShadows="true"  triangleSize="12">`)
 	w.Println(`hexWidth="%g" hexHeight="%g" hexOrientation="COLUMNS" mapProjection="FLAT" showNotes="true" showGMOnly="true" showGMOnlyGlow="false" showFeatureLabels="true" showGrid="true" showGridNumbers="false" showShadows="true"  triangleSize="12">`, hexWidth, hexHeight)
+
 	w.Println(`<gridandnumbering color0="0x00000040" color1="0x00000040" color2="0x00000040" color3="0x00000040" color4="0x00000040" width0="1.0" width1="2.0" width2="3.0" width3="4.0" width4="1.0" gridOffsetContinentKingdomX="0.0" gridOffsetContinentKingdomY="0.0" gridOffsetWorldContinentX="0.0" gridOffsetWorldContinentY="0.0" gridOffsetWorldKingdomX="0.0" gridOffsetWorldKingdomY="0.0" gridSquare="0" gridSquareHeight="-1.0" gridSquareWidth="-1.0" gridOffsetX="0.0" gridOffsetY="0.0" numberFont="Arial" numberColor="0x000000ff" numberSize="20" numberStyle="PLAIN" numberFirstCol="0" numberFirstRow="0" numberOrder="COL_ROW" numberPosition="BOTTOM" numberPrePad="DOUBLE_ZERO" numberSeparator="." />`)
+
 	w.Printf("<terrainmap>")
 	for n, terrain := range terrains {
 		if n == 0 {
@@ -159,6 +125,7 @@ func (w *WXX) Create(path string, hexes []Hex, showGridNumbering bool) error {
 		}
 	}
 	w.Printf("</terrainmap>\n")
+
 	w.Println(`<maplayer name="Labels" isVisible="true"/>`)
 	w.Println(`<maplayer name="Grid" isVisible="true"/>`)
 	w.Println(`<maplayer name="Features" isVisible="true"/>`)
@@ -205,20 +172,16 @@ func (w *WXX) Create(path string, hexes []Hex, showGridNumbering bool) error {
 	if showGridNumbering {
 		for col := 0; col < columns; col++ {
 			for row := 0; row < rows; row++ {
-				tile := wmap[col][row]
 				w.Printf(`<label  mapLayer="Labels" style="null" fontFace="null" color="0.0,0.0,0.0,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags="">`)
-				p := flat_hex_to_pixel(oddq_to_axial(Offset{Column: col, Row: row}), size)
-				p = crs_to_pixel(col, row, size)
+				p := crs_to_pixel(col, row)
 				w.Printf(`<location viewLevel="WORLD" x="%g" y="%g" scale="6.75" />`, p.X, p.Y)
 				w.Printf("%2d,%2d", col, row)
 				w.Printf("</label>\n")
-				if col == 0 && row == 0 {
-					log.Printf("p %+v pos %+v coords %+v", p, p, tile.Coords)
-				}
 			}
 		}
 	}
 
+	// add labels to tiles when needed.
 	for col := 0; col < columns; col++ {
 		for row := 0; row < rows; row++ {
 			tile := wmap[col][row]
@@ -226,23 +189,14 @@ func (w *WXX) Create(path string, hexes []Hex, showGridNumbering bool) error {
 				continue
 			}
 			w.Printf(`<label  mapLayer="Labels" style="null" fontFace="null" color="0.0,0.0,0.0,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags="">`)
-			p := flat_hex_to_pixel(oddq_to_axial(Offset{Column: col, Row: row}), size)
-			p = crs_to_pixel(col, row, size)
-			p.Y += 125 // put labels near the bottom of the hex.
+			p := crs_to_pixel(col, row)
+			p.X += 25  // nudge labels to the center of the tile.
+			p.Y += 125 // nudge labels down to the bottom of the tile.
 			w.Printf(`<location viewLevel="WORLD" x="%g" y="%g" scale="12.5" />`, p.X, p.Y)
 			w.Printf("%s", tile.Label.Text)
 			w.Printf("</label>\n")
 		}
 	}
-
-	//w.Println(`<label  mapLayer="Labels" style="null" fontFace="null" color="0.0,0.0,0.0,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags=""><location viewLevel="WORLD" x="%d" y="%d" scale="12.5" />+</label>`, 150, 150)
-	//w.Println(`<label  mapLayer="Labels" style="null" fontFace="null" color="0.0,0.0,0.0,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags=""><location viewLevel="WORLD" x="%d" y="%d" scale="12.5" />+</label>`, 600, 150)
-	//w.Println(`<label  mapLayer="Labels" style="null" fontFace="null" color="0.0,0.0,0.0,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags=""><location viewLevel="WORLD" x="%d" y="%d" scale="12.5" />+</label>`, 1050, 150)
-	//w.Println(`<label  mapLayer="Labels" style="null" fontFace="null" color="0.0,0.0,0.0,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags=""><location viewLevel="WORLD" x="%d" y="%d" scale="12.5" />+</label>`, 1500, 150)
-	//w.Println(`<label  mapLayer="Labels" style="null" fontFace="null" color="0.0,0.0,0.0,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags=""><location viewLevel="WORLD" x="%d" y="%d" scale="12.5" />+</label>`, 1950, 150)
-	//w.Println(`<label  mapLayer="Labels" style="null" fontFace="null" color="0.0,0.0,0.0,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags=""><location viewLevel="WORLD" x="%d" y="%d" scale="12.5" />+</label>`, 2400, 150)
-
-	//w.Println(`<label  mapLayer="Labels" style="null" fontFace="null" color="0.0,0.0,0.0,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags=""><location viewLevel="WORLD" x="%d" y="%d" scale="12.5" />+</label>`, 150, 450)
 
 	w.Printf("</labels>\n")
 
@@ -305,6 +259,69 @@ func (w *WXX) Create(path string, hexes []Hex, showGridNumbering bool) error {
 
 	return nil
 }
+
+// ok. the world map doesn't draw perfect hexagons. they're flattened slightly.
+// It's easier to call them "tiles" since they aren't regular hexagons. Anyway, I
+// estimated the size of the tiles by looking at the output for labels in different
+// scenarios.
+//
+// I came up a tile size of about 300 pixels for height and 225 pixels for width.
+// The displayed tiles are also offset by 130 pixels for the left margin and 165
+// pixels for the top margin.
+//
+// We will need to revisit the sizing when creating larger maps because the center
+// point of the tiles drifts.
+
+// crs_to_pixel converts a column, row to the pixel at the center of the corresponding tile.
+func crs_to_pixel(column, row int) Point {
+	const height, width = 300, 225
+	const leftMargin, topMargin = 130, 165
+
+	x, y := float64(column)*width, float64(row)*height
+	if column%2 == 1 { // shove odd rows down half the height of a tile
+		y += height / 2
+	}
+
+	// offset final point by the margins
+	return Point{X: x + leftMargin, Y: y + topMargin}
+}
+
+// NB: most of the code below is derived from https://www.redblobgames.com/grids/hexagons/.
+// It turns out that it isn't used because Worldographer doesn't output regular hexagons.
+
+// There are four types of layouts for Offset coordinates.
+//
+// 1. EvenQ is a vertical   layout where columns with an even Q value are shoved "down."
+// 2. OddQ  is a vertical   layout where columns with an odd  Q value are shoved "down."
+// 3. EvenR is a horizontal layout where rows    with an even R value are shoved "right."
+// 4. OddR  is a horizontal layout where rows    with an odd  R value are shoved "right."
+//
+// A vertical layout contains flat-top hexes. A horizontal layout contains pointy-top hexes.
+
+type Layout int
+
+const (
+	EvenQ Layout = iota
+	EvenR
+	OddQ
+	OddR
+)
+
+type Label struct {
+	Text string
+}
+
+// Cube are the coordinates of a hex in a cube.
+// They have the constraint Q + R + S = 0.
+type Cube struct {
+	Q int // q is the north-south axis
+	R int // r is the northwest-southeast axis
+	S int // s is the northeast-southwest axis
+}
+
+// The "size" of a hex is the distance from the center of the hex to a vertex.
+// The "apothem" is the distance from the center of the hex to the midpoint of a side.
+// The apothem is sqrt(3) times the size divided by 2.
 
 func cube_to_evenq(c Cube) Offset {
 	return Offset{
@@ -387,22 +404,4 @@ func pointy_hex_to_pixel(a Axial) Point {
 		X: sqrt3*a.Q + sqrt3*a.R/2,
 		Y: 3 * a.R / 2,
 	}
-}
-
-// ok. the world map doesn't draw perfect hexagons. they're flattened.
-// they use something like 300 pixels for height and 225 pixels for width.
-// then they offset by 130 pixels for the left margin and 165 pixels for the top margin.
-// these numbers are based on putting "+" in the center of a few hexes and measuring.
-func crs_to_pixel(column, row int, size float64) Point {
-	const height, width, apothem = 300, 225, 150
-
-	x, y := float64(column)*width, float64(row)*height
-	if column%2 == 1 { // shove odd rows down half a hex
-		y += apothem
-	}
-
-	// offset final point by the margins
-	x, y = x+130, y+165
-
-	return Point{X: x, Y: y}
 }
