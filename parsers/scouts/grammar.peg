@@ -1,0 +1,14 @@
+{
+package scouts
+
+}
+
+Line <- "Scout" SP DIGIT ":" "Scout" .*  EOF {
+    return string(c.text), nil
+}
+
+EOF    = !.
+DIGIT  = [0-9]
+LETTER = [A-Z]
+SP     = [ \t]
+_      = [ \t]*

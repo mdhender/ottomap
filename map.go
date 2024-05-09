@@ -4,11 +4,11 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
-	"github.com/mdhender/ottomap/cerrs"
+	"github.com/mdhender/ottomap/config"
 	"github.com/mdhender/ottomap/domain"
 	"github.com/mdhender/ottomap/parsers/report"
+	"github.com/mdhender/ottomap/reports"
 	"github.com/mdhender/ottomap/wxx"
 	"github.com/spf13/cobra"
 	"log"
@@ -22,7 +22,6 @@ var argsMap struct {
 	config string // path to configuration file
 	clanId string // clan id to use
 	turnId string // turn id to use
-	output string // path to create map in
 	debug  struct {
 		units bool
 	}
@@ -35,99 +34,144 @@ var cmdMap = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		log.Printf("maps: todo: detect when a unit is created as an after-move action\n")
 
-		//if data, err := os.ReadFile(filepath.Join("input", "899-12.0138.xml")); err != nil {
-		//	log.Fatal(err)
-		//} else if len(data)%2 != 0 { // verify the length
-		//	log.Fatalf("UTF-16 data must contain an even number of bytes")
-		//} else if !bytes.HasPrefix(data, []byte{0xfe, 0xff}) { // verify the BOM
-		//	log.Fatalf("UTF-16 data must start with a BOM")
-		//} else {
-		//	// consume the bom
-		//	data = data[2:]
-		//	// convert the slice of byte to a slice of uint16
-		//	chars := make([]uint16, len(data)/2)
-		//	if err := binary.Read(bytes.NewReader(data), binary.BigEndian, &chars); err != nil {
-		//		log.Fatal(err)
-		//	}
-		//	// create a buffer for the results
-		//	dst := bytes.Buffer{}
-		//	// convert the UTF-16 to runes, then to UTF-8 bytes
-		//	var utfBuffer [utf8.UTFMax]byte
-		//	for _, r := range utf16.Decode(chars) {
-		//		utf8Size := utf8.EncodeRune(utfBuffer[:], r)
-		//		dst.Write(utfBuffer[:utf8Size])
-		//	}
-		//	log.Printf("maps: todo: verify that the map is valid XML %d %d\n", len(data), len(dst.Bytes()))
-		//	out := &bytes.Buffer{}
-		//	for _, line := range bytes.Split(dst.Bytes(), []byte{'\n'}) {
-		//		out.WriteString(fmt.Sprintf("\tw.println(`%s`)\n", string(line)))
-		//	}
-		//	if err := os.WriteFile("working/println.go.txt", out.Bytes(), 0644); err != nil {
-		//		log.Fatal(err)
-		//	}
-		//}
-
 		hexes := []wxx.Hex{
 			{Grid: "OO", Coords: wxx.Offset{Column: 11, Row: 8}, Terrain: domain.TPrairie},
 			{Grid: "OO", Coords: wxx.Offset{Column: 11, Row: 7}, Terrain: domain.TOcean},
 			{Grid: "OO", Coords: wxx.Offset{Column: 11, Row: 6}, Terrain: domain.TSwamp},
 			{Grid: "OO", Coords: wxx.Offset{Column: 10, Row: 7}, Terrain: domain.TRockyHills},
 			{Grid: "OO", Coords: wxx.Offset{Column: 10, Row: 6}, Terrain: domain.TGrassyHills},
+			{Grid: "OO", Coords: wxx.Offset{Column: 9, Row: 7}, Terrain: domain.TSwamp},
 			{Grid: "OO", Coords: wxx.Offset{Column: 9, Row: 6}, Terrain: domain.TGrassyHills},
 			{Grid: "OO", Coords: wxx.Offset{Column: 9, Row: 5}, Terrain: domain.TGrassyHills},
 			{Grid: "OO", Coords: wxx.Offset{Column: 8, Row: 4}, Terrain: domain.TPrairie},
+
+			{Grid: "OO", Coords: wxx.Offset{Column: 9, Row: 8}, Terrain: domain.TRockyHills},
+			{Grid: "OO", Coords: wxx.Offset{Column: 8, Row: 7}, Terrain: domain.TGrassyHills},
+			{Grid: "OO", Coords: wxx.Offset{Column: 8, Row: 8}, Terrain: domain.TRockyHills},
+			{Grid: "OO", Coords: wxx.Offset{Column: 7, Row: 9}, Terrain: domain.TGrassyHills},
+			{Grid: "OO", Coords: wxx.Offset{Column: 7, Row: 8}, Terrain: domain.TGrassyHills},
+			{Grid: "OO", Coords: wxx.Offset{Column: 7, Row: 7}, Terrain: domain.TLowAridMountains},
+
+			{Grid: "OO", Coords: wxx.Offset{Column: 8, Row: 6}, Terrain: domain.TSwamp},
+
+			{Grid: "OO", Coords: wxx.Offset{Column: 8, Row: 9}, Terrain: domain.TGrassyHills},
+			{Grid: "OO", Coords: wxx.Offset{Column: 8, Row: 10}, Terrain: domain.TRockyHills},
+			{Grid: "OO", Coords: wxx.Offset{Column: 9, Row: 11}, Terrain: domain.TRockyHills},
+			{Grid: "OO", Coords: wxx.Offset{Column: 10, Row: 11}, Terrain: domain.TRockyHills},
+
+			{Grid: "OO", Coords: wxx.Offset{Column: 10, Row: 8}, Terrain: domain.TPrairie},
+			{Grid: "OO", Coords: wxx.Offset{Column: 11, Row: 9}, Terrain: domain.TBrushHills},
+			{Grid: "OO", Coords: wxx.Offset{Column: 12, Row: 9}, Terrain: domain.TPrairie},
+			{Grid: "OO", Coords: wxx.Offset{Column: 13, Row: 9}, Terrain: domain.TPrairie},
+			{Grid: "OO", Coords: wxx.Offset{Column: 14, Row: 9}, Terrain: domain.TRockyHills},
+			{Grid: "OO", Coords: wxx.Offset{Column: 14, Row: 8}, Terrain: domain.TPrairie},
+			{Grid: "OO", Coords: wxx.Offset{Column: 13, Row: 8}, Terrain: domain.TRockyHills},
 		}
 
 		log.Printf("map: config: file %s\n", argsMap.config)
-		var config domain.Config
-		if data, err := os.ReadFile(argsMap.config); err != nil {
-			log.Fatalf("map: failed to read config file: %v", err)
-		} else if err = json.Unmarshal(data, &config); err != nil {
-			log.Fatalf("map: failed to unmarshal config file: %v", err)
+		cfg, err := config.Load(argsMap.config)
+		if err != nil {
+			log.Fatalf("map: config: %v\n", err)
+		}
+		if len(cfg.Reports) == 0 {
+			log.Fatalf("map: config: no reports\n")
 		}
 
-		log.Printf("map: config: clan %q\n", argsMap.clanId)
-		// convert yyyy-mm to year, month
-		var year, month int
-		var err error
-		if yyyy, mm, ok := strings.Cut(argsMap.turnId, "-"); !ok {
-			log.Fatalf("map: invalid turn %q\n", argsMap.turnId)
-		} else if yyyy = strings.TrimSpace(yyyy); yyyy == "" {
-			log.Fatalf("map: invalid turn %q\n", argsMap.turnId)
-		} else if year, err = strconv.Atoi(yyyy); err != nil {
-			log.Fatalf("map: invalid turn %q: year %v\n", argsMap.turnId, err)
-		} else if mm = strings.TrimSpace(mm); mm == "" {
-			log.Fatalf("map: invalid turn %q\n", argsMap.turnId)
-		} else if month, err = strconv.Atoi(mm); err != nil {
-			log.Fatalf("map: invalid turn %q: month %v\n", argsMap.turnId, err)
-		}
-		log.Printf("map: config: turn %q: year %4d month %2d\n", argsMap.turnId, year, month)
+		log.Printf("map: config: path   %s\n", cfg.Path)
+		log.Printf("map: config: output %s\n", cfg.OutputPath)
 
-		if strings.TrimSpace(argsMap.output) != argsMap.output {
-			return errors.Join(cerrs.ErrInvalidPath, cerrs.ErrInvalidOutputPath, fmt.Errorf("leading or trailing spaces"))
-		} else if path, err := abspath(argsMap.output); err != nil {
-			return errors.Join(cerrs.ErrInvalidPath, cerrs.ErrInvalidOutputPath, err)
+		cfg.Inputs.ClanId = argsMap.clanId
+		log.Printf("map: config: clan %q\n", cfg.Inputs.ClanId)
+
+		// if turn id is not on the command line, use the current turn from the configuration.
+		if argsMap.turnId == "" {
+			// assumes that the configuration's reports are sorted by turn id.
+			rptCurr := cfg.Reports[len(cfg.Reports)-1]
+			cfg.Inputs.TurnId = rptCurr.TurnId
+			cfg.Inputs.Year = rptCurr.Year
+			cfg.Inputs.Month = rptCurr.Month
 		} else {
-			argsMap.output = path
+			// convert command line's yyyy-mm to year, month
+			if yyyy, mm, ok := strings.Cut(argsMap.turnId, "-"); !ok {
+				log.Fatalf("map: invalid turn %q\n", argsMap.turnId)
+			} else if yyyy = strings.TrimSpace(yyyy); yyyy == "" {
+				log.Fatalf("map: invalid turn %q\n", argsMap.turnId)
+			} else if cfg.Inputs.Year, err = strconv.Atoi(yyyy); err != nil {
+				log.Fatalf("map: invalid turn %q: year %v\n", argsMap.turnId, err)
+			} else if mm = strings.TrimSpace(mm); mm == "" {
+				log.Fatalf("map: invalid turn %q\n", argsMap.turnId)
+			} else if cfg.Inputs.Month, err = strconv.Atoi(mm); err != nil {
+				log.Fatalf("map: invalid turn %q: month %v\n", argsMap.turnId, err)
+			} else {
+				cfg.Inputs.TurnId = fmt.Sprintf("%04d-%02d", cfg.Inputs.Year, cfg.Inputs.Month)
+			}
 		}
+		log.Printf("map: config: turn year  %4d\n", cfg.Inputs.Year)
+		log.Printf("map: config: turn month %4d\n", cfg.Inputs.Month)
 
-		// filter turns from the configuration
-		var unitMoveFiles []string
-		for _, rpt := range config.Reports {
+		// update the ignore flag based on the turn from the configuration
+		for _, rpt := range cfg.Reports {
 			if rpt.Clan == argsMap.clanId {
-				if rpt.Year < year {
-					unitMoveFiles = append(unitMoveFiles, rpt.Parsed)
-				} else if rpt.Year == year && rpt.Month <= month {
-					unitMoveFiles = append(unitMoveFiles, rpt.Parsed)
+				rptTurnId := fmt.Sprintf("%04d-%02d", rpt.Year, rpt.Month)
+				if rptTurnId > cfg.Inputs.TurnId {
+					rpt.Ignore = true
 				}
 			}
 		}
-		log.Printf("map: files %v\n", unitMoveFiles)
-		if len(unitMoveFiles) == 0 {
+
+		// collect the reports that we're going to process
+		var allReports []*reports.Report
+		for _, rpt := range cfg.Reports {
+			if rpt.Ignore {
+				continue
+			}
+			allReports = append(allReports, rpt)
+		}
+		if len(allReports) == 0 {
 			log.Fatalf("map: files: no files matched constraints\n")
+		}
+		log.Printf("map: reports %d\n", len(allReports))
+
+		// pars the report files into a single map
+		for _, rpt := range cfg.Reports {
+			if rpt.Ignore {
+				if cfg.Inputs.ShowIgnoredReports {
+					log.Printf("map: report %s: ignored report\n", rpt.Id)
+				}
+				continue
+			}
+
+			// load the report file
+			data, err := os.ReadFile(rpt.Path)
+			if err != nil {
+				log.Fatalf("map: report %s: %v", rpt.Path, err)
+			}
+			log.Printf("map: report %s: loaded %8d bytes\n", rpt.Id, len(data))
+
+			// split the report into sections before parsing it
+			rpt.Sections, err = reports.Sections(data, cfg.Inputs.ShowSkippedSections)
+			log.Printf("map: report %s: loaded %8d sections\n", rpt.Id, len(rpt.Sections))
+			if err != nil {
+				for _, section := range rpt.Sections {
+					if section.Error != nil {
+						log.Printf("map: report %s: section %s: %v\n", rpt.Id, section.Id, section.Error)
+					}
+				}
+				log.Fatalf("map: report %s: please fix errors listed above, then restart\n", rpt.Id)
+			}
+
+			// parse the report, stopping if there's an error
+			if err = rpt.Parse(); err != nil {
+				log.Fatalf("map: report %s: %v\n", rpt.Id, err)
+			}
+		}
+
+		if cfg != nil {
+			return nil
 		}
 
 		// load all the unit movement files
+		var unitMoveFiles []string
 		var unitMoves []*report.Unit
 		for _, path := range unitMoveFiles {
 			var u []*report.Unit

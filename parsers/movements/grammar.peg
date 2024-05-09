@@ -1,0 +1,14 @@
+{
+package movements
+
+}
+
+Line <- "Tribe Movement" _ .*  EOF {
+    return string(c.text), nil
+}
+
+EOF    = !.
+DIGIT  = [0-9]
+LETTER = [A-Z]
+SP     = [ \t]
+_      = [ \t]*

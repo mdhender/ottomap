@@ -33,4 +33,5 @@ const (
 	ErrTooManyScoutLines       = Error("too many scout lines")
 	ErrTrackingGarrison        = Error("tracking garrison")
 	ErrUnableToFindStartingHex = Error("unable to find starting hex")
+	ErrUnitMovesAndFollows     = Error("unit moves and follows")
 )

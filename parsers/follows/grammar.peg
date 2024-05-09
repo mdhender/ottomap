@@ -1,0 +1,18 @@
+{
+package follows
+
+}
+
+Line <- "Tribe Follows " _ u:UNIT_ID _ EOF {
+    return u.(string), nil
+}
+
+UNIT_ID <- DIGIT DIGIT DIGIT DIGIT ([cefg] DIGIT)? {
+    return string(c.text), nil
+}
+
+EOF    = !.
+DIGIT  = [0-9]
+LETTER = [A-Z]
+SP     = [ \t]
+_      = [ \t]*

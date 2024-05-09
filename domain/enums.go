@@ -171,9 +171,11 @@ type Terrain int
 
 const (
 	TUnknown Terrain = iota
+	TBrushHills
 	TConiferHills
 	TGrassyHills
 	TLake
+	TLowAridMountains
 	TOcean
 	TPrairie
 	TRockyHills
@@ -215,39 +217,45 @@ func StringToTerrain(s string) (Terrain, bool) {
 var (
 	// helper map for marshalling the enum
 	terrainEnumToString = map[Terrain]string{
-		TUnknown:      "?",
-		TConiferHills: "CH",
-		TGrassyHills:  "GH",
-		TLake:         "L",
-		TOcean:        "O",
-		TPrairie:      "PR",
-		TRockyHills:   "RH",
-		TSwamp:        "SW",
+		TUnknown:          "?",
+		TBrushHills:       "BH",
+		TConiferHills:     "CH",
+		TGrassyHills:      "GH",
+		TLake:             "L",
+		TLowAridMountains: "LAM",
+		TOcean:            "O",
+		TPrairie:          "PR",
+		TRockyHills:       "RH",
+		TSwamp:            "SW",
 	}
 	// helper map for unmarshalling the enum
 	terrainStringToEnum = map[string]Terrain{
-		"?":  TUnknown,
-		"CH": TConiferHills,
-		"GH": TGrassyHills,
-		"L":  TLake,
-		"O":  TOcean,
-		"PR": TPrairie,
-		"RH": TRockyHills,
-		"SW": TSwamp,
+		"?":   TUnknown,
+		"BH":  TBrushHills,
+		"CH":  TConiferHills,
+		"GH":  TGrassyHills,
+		"L":   TLake,
+		"LAM": TLowAridMountains,
+		"O":   TOcean,
+		"PR":  TPrairie,
+		"RH":  TRockyHills,
+		"SW":  TSwamp,
 	}
 	// TileTerrainNames is the map for tile terrain name matching. the text values
 	// are extracted from the Worldographer tileset. they must match exactly.
 	// if you're adding to this list, the values are found by hovering over the
 	// terrain in the GUI.
 	TileTerrainNames = map[Terrain]string{
-		TUnknown:      "Blank",
-		TConiferHills: "Hills Forest Evergreen",
-		TGrassyHills:  "Hills Grassland",
-		TLake:         "Water Shoals",
-		TOcean:        "Water Sea",
-		TPrairie:      "Flat Grazing Land",
-		TRockyHills:   "Underdark Broken Lands",
-		TSwamp:        "Flat Swamp",
+		TUnknown:          "Blank",
+		TBrushHills:       "Hills Shrubland",
+		TConiferHills:     "Hills Forest Evergreen",
+		TGrassyHills:      "Hills Grassland",
+		TLake:             "Water Shoals",
+		TLowAridMountains: "Mountains Dead Forest",
+		TOcean:            "Water Sea",
+		TPrairie:          "Flat Grazing Land",
+		TRockyHills:       "Underdark Broken Lands",
+		TSwamp:            "Flat Swamp",
 	}
 )
 

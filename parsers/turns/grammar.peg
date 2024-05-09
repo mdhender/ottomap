@@ -1,0 +1,82 @@
+{
+package turns
+
+import (
+	"strconv"
+)
+
+type Date struct {
+    Year  int
+    Month int
+    Day   int
+}
+
+type TurnInfo struct {
+    TurnDate   Date
+    ReportDate Date
+}
+
+}
+
+Line <- "Current Turn" _ turnDate:YearMonth _ GameMonth "," _ Season "," _ Weather _ nti:NextTurn? _ EOF {
+    var optReportDate Date
+    if rd, ok := nti.(Date); ok {
+        optReportDate = rd
+    }
+    return &TurnInfo{
+        TurnDate:   turnDate.(Date),
+        ReportDate: optReportDate,
+    }, nil
+}
+
+NextTurn <- _ "Next Turn" _ YearMonth _ GameMonth "," _ reportDate:DayMonthYear {
+    return reportDate, nil
+}
+
+GameMonth <- "(" _ "#" DIGIT DIGIT? ")" {
+    return string(c.text), nil
+}
+
+Season <- ("Spring" / "Winter") {
+    return string(c.text), nil
+}
+
+Weather <- "FINE" {
+    return string(c.text), nil
+}
+
+DayMonthYear <- d:DAY "/" m:MONTH "/" y:YEAR {
+    return Date {
+        Year:  y.(int),
+        Month: m.(int),
+        Day:   d.(int),
+    }, nil
+}
+
+YearMonth <- y:YEAR "-" m:MONTH {
+    return Date {
+        Year:  y.(int),
+        Month: m.(int),
+    }, nil
+}
+
+DAY <- DIGIT DIGIT {
+    day, _ := strconv.Atoi(string(c.text))
+    return int(day), nil
+}
+
+MONTH <- DIGIT DIGIT {
+    month, _ := strconv.Atoi(string(c.text))
+    return int(month), nil
+}
+
+YEAR <- DIGIT DIGIT DIGIT DIGIT? {
+    year, _ := strconv.Atoi(string(c.text))
+    return int(year), nil
+}
+
+EOF    = !.
+DIGIT  = [0-9]
+LETTER = [A-Z]
+SP     = [ \t]
+_      = [ \t]*
