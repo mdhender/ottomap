@@ -37,7 +37,7 @@ GameMonth <- "(" _ "#" DIGIT DIGIT? ")" {
     return string(c.text), nil
 }
 
-Season <- ("Spring" / "Winter") {
+Season <- ("Spring" / "Summer" / "Winter") {
     return string(c.text), nil
 }
 

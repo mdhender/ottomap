@@ -19,12 +19,17 @@ type Edge struct {
 type Found struct {
     Edge       *Edge
     UnitId     string
-    Settlement string
 }
 
 type Hex struct {
-    Terrain domain.Terrain
-    Found   []*Found
+    Terrain     domain.Terrain
+    Resource    domain.Resource
+    Settlements []*Settlement
+    Found       []*Found
+}
+
+type Settlement struct {
+    Name string
 }
 
 func toAnySlice(v any) []any {
@@ -48,6 +53,10 @@ Line <- UNIT_ID _ "Status:" _ t:TERRAIN eli:optEntry* _ EOF {
             }
         case *Found:
             h.Found = append(h.Found, v)
+        case *Settlement:
+            h.Settlements = append(h.Settlements, v)
+        case domain.Resource:
+            h.Resource = v
         default:
             panic(fmt.Errorf("unexpected type %T", v))
         }
@@ -69,6 +78,10 @@ Entry <- uid:UNIT_ID {
     return pe, nil
 } / re:RiverEdges {
     return re, nil
+} / r:Resource {
+    return r, nil
+} / s:Settlement {
+    return s, nil
 }
 
 FordEdges <- "Ford" SP+ d:DIRECTION edi:SpaceDirection* {
@@ -134,6 +147,16 @@ SpaceDirection <- SP+ d:DIRECTION {
     return d, nil
 }
 
+Resource <- "Coal" {
+    return domain.RCoal, nil
+} / "Iron Ore" {
+    return domain.RIronOre, nil
+}
+
+Settlement <- [A-Z] [A-Za-z' ]+ {
+    return &Settlement{Name: strings.TrimSpace(string(c.text))}, nil
+}
+
 DIRECTION <- "NE" {
     return directions.DNorthEast, nil
 } / "SE" {
@@ -186,5 +209,6 @@ UNIT_ID <- DIGIT DIGIT DIGIT DIGIT ([cefg] DIGIT)? {
 EOF    = !.
 DIGIT  = [0-9]
 LETTER = [A-Z]
+ALPHA  = [A-Za-z]
 SP     = [ \t]
 _      = [ \t]*

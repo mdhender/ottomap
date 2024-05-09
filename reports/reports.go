@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/mdhender/ottomap/cerrs"
+	"github.com/mdhender/ottomap/domain"
 	"log"
 	"time"
 
@@ -139,6 +140,19 @@ func (r *Report) parseSection(section *Section) error {
 		panic(fmt.Sprintf("expected *status.Hex, got %T", v))
 	}
 	log.Printf("parse: section: status: terrain %s\n", sh.Terrain)
+	if sh.Resource != domain.RNone {
+		log.Printf("parse: section: status: resource %s\n", sh.Resource)
+	}
+	if len(sh.Settlements) == 1 {
+		log.Printf("parse: section: status: settlement %q\n", sh.Settlements[0].Name)
+	} else if len(sh.Settlements) > 1 {
+		log.Printf("parse: report %s: unit %s: parsing error\n", r.Id, ul.UnitId)
+		log.Printf("parse: input: %q\n", string(section.Status))
+		for _, s := range sh.Settlements {
+			log.Printf("parse: input: settlement %q\n", s.Name)
+		}
+		log.Fatalf("parse: error: %v\n", fmt.Errorf("multiple settlements"))
+	}
 	for _, f := range sh.Found {
 		if f.Edge != nil {
 			log.Printf("parse: section: status: edge %+v\n", *f.Edge)

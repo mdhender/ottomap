@@ -166,6 +166,55 @@ var (
 	}
 )
 
+// Resource is an enum for resources
+type Resource int
+
+const (
+	RNone Resource = iota
+	RCoal
+	RIronOre
+)
+
+var (
+	// helper map for marshalling the enum
+	resourceEnumToString = map[Resource]string{
+		RNone:    "",
+		RCoal:    "Coal",
+		RIronOre: "Iron Ore",
+	}
+	// helper map for unmarshalling the enum
+	resourceStringToEnum = map[string]Resource{
+		"":         RNone,
+		"Coal":     RCoal,
+		"Iron Ore": RIronOre,
+	}
+)
+
+// MarshalJSON implements the json.Marshaler interface.
+func (r Resource) MarshalJSON() ([]byte, error) {
+	return json.Marshal(resourceEnumToString[r])
+}
+
+// UnmarshalJSON implements the json.Unmarshaler interface.
+func (r *Resource) UnmarshalJSON(data []byte) error {
+	var s string
+	var ok bool
+	if err := json.Unmarshal(data, &s); err != nil {
+		return err
+	} else if *r, ok = resourceStringToEnum[s]; !ok {
+		return fmt.Errorf("invalid Resource %q", s)
+	}
+	return nil
+}
+
+// String implements the fmt.Stringer interface.
+func (r Resource) String() string {
+	if str, ok := resourceEnumToString[r]; ok {
+		return str
+	}
+	return fmt.Sprintf("Resource(%d)", int(r))
+}
+
 // Terrain is an enum for the terrain
 type Terrain int
 
