@@ -132,7 +132,9 @@ var cmdMap = &cobra.Command{
 		}
 		log.Printf("map: reports %d\n", len(allReports))
 
-		// pars the report files into a single map
+		var moves []*reports.Move
+
+		// parse the report files into a single map
 		for _, rpt := range cfg.Reports {
 			if rpt.Ignore {
 				if cfg.Inputs.ShowIgnoredReports {
@@ -161,9 +163,15 @@ var cmdMap = &cobra.Command{
 			}
 
 			// parse the report, stopping if there's an error
-			if err = rpt.Parse(); err != nil {
+			ums, err := rpt.Parse()
+			if err != nil {
 				log.Fatalf("map: report %s: %v\n", rpt.Id, err)
 			}
+			moves = append(moves, ums...)
+		}
+
+		for _, um := range moves {
+			log.Printf("%s: %s: follows %q\n", um.TurnId, um.UnitId, um.Follows)
 		}
 
 		if cfg != nil {

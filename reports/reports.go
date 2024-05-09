@@ -59,16 +59,19 @@ type Report struct {
 	Sections    []*Section `json:"-"`                     // sections of the report file
 }
 
-func (r *Report) Parse() error {
+func (r *Report) Parse() ([]*Move, error) {
+	var moves []*Move
 	for _, section := range r.Sections {
-		if err := r.parseSection(section); err != nil {
-			return err
+		ums, err := r.parseSection(section)
+		if err != nil {
+			return nil, err
 		}
+		moves = append(moves, ums...)
 	}
-	return nil
+	return moves, nil
 }
 
-func (r *Report) parseSection(section *Section) error {
+func (r *Report) parseSection(section *Section) ([]*Move, error) {
 	// parse the location so that we can get the unit id.
 	// that id is needed to extract the status line.
 	var ul *ploc.Location
@@ -92,19 +95,28 @@ func (r *Report) parseSection(section *Section) error {
 	}
 	log.Printf("parse: report %s: unit %s: turn %04d-%02d\n", r.Id, ul.UnitId, ti.TurnDate.Year, ti.TurnDate.Month)
 
+	var moves []*Move
+
 	// parse the unit's movement
 	if section.Follows == nil && section.Moves == nil { // unit didn't move this turn
 		log.Printf("parse: report %s: unit %s: stayed in place\n", r.Id, ul.UnitId)
 	}
 	if section.Follows != nil { // unit followed another unit this turn
+		var uid pfollows.UnitId
 		log.Printf("parse: todo: parse follows  %q\n", string(section.Follows))
 		if v, err := pfollows.Parse("follows", section.Follows); err != nil {
 			log.Printf("parse: report %s: unit %s: parsing error\n", r.Id, ul.UnitId)
 			log.Printf("parse: input: %q\n", string(section.Follows))
 			log.Fatalf("parse: error: %v\n", err)
-		} else {
-			log.Printf("parse: follows: returned %T", v)
+		} else if uid, ok = v.(pfollows.UnitId); !ok {
+			panic(fmt.Sprintf("expected follows.UnitId, got %T", v))
 		}
+		log.Printf("parse: report %s: unit %s: follwed %q\n", r.Id, ul.UnitId, string(uid))
+		moves = append(moves, &Move{
+			TurnId:  r.TurnId,
+			UnitId:  ul.UnitId,
+			Follows: string(uid),
+		})
 	}
 	if section.Moves != nil { // unit moved this turn
 		log.Printf("parse: todo: parse movement %q\n", string(section.Moves))
@@ -175,7 +187,7 @@ func (r *Report) parseSection(section *Section) error {
 	//	}
 	//}
 
-	return nil
+	return moves, nil
 }
 
 // Section makes parsing easier by splitting the report into the lines
@@ -293,6 +305,12 @@ func Sections(input []byte, showSkippedSections bool) ([]*Section, error) {
 	}
 
 	return sections, nil
+}
+
+type Move struct {
+	TurnId  string // turn id this move belongs to
+	UnitId  string // unit id this move belongs to
+	Follows string // unit id this unit follows
 }
 
 func bdup(b []byte) []byte {

@@ -1,14 +1,16 @@
 {
 package follows
 
+type UnitId string
+
 }
 
 Line <- "Tribe Follows " _ u:UNIT_ID _ EOF {
-    return u.(string), nil
+    return u, nil
 }
 
 UNIT_ID <- DIGIT DIGIT DIGIT DIGIT ([cefg] DIGIT)? {
-    return string(c.text), nil
+    return UnitId(string(c.text)), nil
 }
 
 EOF    = !.
