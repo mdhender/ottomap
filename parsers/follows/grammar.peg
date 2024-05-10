@@ -1,16 +1,18 @@
 {
 package follows
 
-type UnitId string
+type Move struct {
+    Follows string
+}
 
 }
 
 Line <- "Tribe Follows " _ u:UNIT_ID _ EOF {
-    return u, nil
+    return []*Move{&Move{Follows: u.(string)}}, nil
 }
 
 UNIT_ID <- DIGIT DIGIT DIGIT DIGIT ([cefg] DIGIT)? {
-    return UnitId(string(c.text)), nil
+    return string(c.text), nil
 }
 
 EOF    = !.

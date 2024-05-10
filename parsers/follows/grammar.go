@@ -17,43 +17,45 @@ import (
 	"unicode/utf8"
 )
 
-type UnitId string
+type Move struct {
+	Follows string
+}
 
 var g = &grammar{
 	rules: []*rule{
 		{
 			name: "Line",
-			pos:  position{line: 8, col: 1, offset: 42},
+			pos:  position{line: 10, col: 1, offset: 63},
 			expr: &actionExpr{
-				pos: position{line: 8, col: 9, offset: 50},
+				pos: position{line: 10, col: 9, offset: 71},
 				run: (*parser).callonLine1,
 				expr: &seqExpr{
-					pos: position{line: 8, col: 9, offset: 50},
+					pos: position{line: 10, col: 9, offset: 71},
 					exprs: []any{
 						&litMatcher{
-							pos:        position{line: 8, col: 9, offset: 50},
+							pos:        position{line: 10, col: 9, offset: 71},
 							val:        "Tribe Follows ",
 							ignoreCase: false,
 							want:       "\"Tribe Follows \"",
 						},
 						&ruleRefExpr{
-							pos:  position{line: 8, col: 26, offset: 67},
+							pos:  position{line: 10, col: 26, offset: 88},
 							name: "_",
 						},
 						&labeledExpr{
-							pos:   position{line: 8, col: 28, offset: 69},
+							pos:   position{line: 10, col: 28, offset: 90},
 							label: "u",
 							expr: &ruleRefExpr{
-								pos:  position{line: 8, col: 30, offset: 71},
+								pos:  position{line: 10, col: 30, offset: 92},
 								name: "UNIT_ID",
 							},
 						},
 						&ruleRefExpr{
-							pos:  position{line: 8, col: 38, offset: 79},
+							pos:  position{line: 10, col: 38, offset: 100},
 							name: "_",
 						},
 						&ruleRefExpr{
-							pos:  position{line: 8, col: 40, offset: 81},
+							pos:  position{line: 10, col: 40, offset: 102},
 							name: "EOF",
 						},
 					},
@@ -62,43 +64,43 @@ var g = &grammar{
 		},
 		{
 			name: "UNIT_ID",
-			pos:  position{line: 12, col: 1, offset: 108},
+			pos:  position{line: 14, col: 1, offset: 163},
 			expr: &actionExpr{
-				pos: position{line: 12, col: 12, offset: 119},
+				pos: position{line: 14, col: 12, offset: 174},
 				run: (*parser).callonUNIT_ID1,
 				expr: &seqExpr{
-					pos: position{line: 12, col: 12, offset: 119},
+					pos: position{line: 14, col: 12, offset: 174},
 					exprs: []any{
 						&ruleRefExpr{
-							pos:  position{line: 12, col: 12, offset: 119},
+							pos:  position{line: 14, col: 12, offset: 174},
 							name: "DIGIT",
 						},
 						&ruleRefExpr{
-							pos:  position{line: 12, col: 18, offset: 125},
+							pos:  position{line: 14, col: 18, offset: 180},
 							name: "DIGIT",
 						},
 						&ruleRefExpr{
-							pos:  position{line: 12, col: 24, offset: 131},
+							pos:  position{line: 14, col: 24, offset: 186},
 							name: "DIGIT",
 						},
 						&ruleRefExpr{
-							pos:  position{line: 12, col: 30, offset: 137},
+							pos:  position{line: 14, col: 30, offset: 192},
 							name: "DIGIT",
 						},
 						&zeroOrOneExpr{
-							pos: position{line: 12, col: 36, offset: 143},
+							pos: position{line: 14, col: 36, offset: 198},
 							expr: &seqExpr{
-								pos: position{line: 12, col: 37, offset: 144},
+								pos: position{line: 14, col: 37, offset: 199},
 								exprs: []any{
 									&charClassMatcher{
-										pos:        position{line: 12, col: 37, offset: 144},
+										pos:        position{line: 14, col: 37, offset: 199},
 										val:        "[cefg]",
 										chars:      []rune{'c', 'e', 'f', 'g'},
 										ignoreCase: false,
 										inverted:   false,
 									},
 									&ruleRefExpr{
-										pos:  position{line: 12, col: 44, offset: 151},
+										pos:  position{line: 14, col: 44, offset: 206},
 										name: "DIGIT",
 									},
 								},
@@ -110,19 +112,19 @@ var g = &grammar{
 		},
 		{
 			name: "EOF",
-			pos:  position{line: 16, col: 1, offset: 203},
+			pos:  position{line: 18, col: 1, offset: 250},
 			expr: &notExpr{
-				pos: position{line: 16, col: 10, offset: 212},
+				pos: position{line: 18, col: 10, offset: 259},
 				expr: &anyMatcher{
-					line: 16, col: 11, offset: 213,
+					line: 18, col: 11, offset: 260,
 				},
 			},
 		},
 		{
 			name: "DIGIT",
-			pos:  position{line: 17, col: 1, offset: 215},
+			pos:  position{line: 19, col: 1, offset: 262},
 			expr: &charClassMatcher{
-				pos:        position{line: 17, col: 10, offset: 224},
+				pos:        position{line: 19, col: 10, offset: 271},
 				val:        "[0-9]",
 				ranges:     []rune{'0', '9'},
 				ignoreCase: false,
@@ -131,9 +133,9 @@ var g = &grammar{
 		},
 		{
 			name: "LETTER",
-			pos:  position{line: 18, col: 1, offset: 230},
+			pos:  position{line: 20, col: 1, offset: 277},
 			expr: &charClassMatcher{
-				pos:        position{line: 18, col: 10, offset: 239},
+				pos:        position{line: 20, col: 10, offset: 286},
 				val:        "[A-Z]",
 				ranges:     []rune{'A', 'Z'},
 				ignoreCase: false,
@@ -142,9 +144,9 @@ var g = &grammar{
 		},
 		{
 			name: "SP",
-			pos:  position{line: 19, col: 1, offset: 245},
+			pos:  position{line: 21, col: 1, offset: 292},
 			expr: &charClassMatcher{
-				pos:        position{line: 19, col: 10, offset: 254},
+				pos:        position{line: 21, col: 10, offset: 301},
 				val:        "[ \\t]",
 				chars:      []rune{' ', '\t'},
 				ignoreCase: false,
@@ -153,11 +155,11 @@ var g = &grammar{
 		},
 		{
 			name: "_",
-			pos:  position{line: 20, col: 1, offset: 260},
+			pos:  position{line: 22, col: 1, offset: 307},
 			expr: &zeroOrMoreExpr{
-				pos: position{line: 20, col: 10, offset: 269},
+				pos: position{line: 22, col: 10, offset: 316},
 				expr: &charClassMatcher{
-					pos:        position{line: 20, col: 10, offset: 269},
+					pos:        position{line: 22, col: 10, offset: 316},
 					val:        "[ \\t]",
 					chars:      []rune{' ', '\t'},
 					ignoreCase: false,
@@ -169,7 +171,7 @@ var g = &grammar{
 }
 
 func (c *current) onLine1(u any) (any, error) {
-	return u, nil
+	return []*Move{&Move{Follows: u.(string)}}, nil
 }
 
 func (p *parser) callonLine1() (any, error) {
@@ -179,7 +181,7 @@ func (p *parser) callonLine1() (any, error) {
 }
 
 func (c *current) onUNIT_ID1() (any, error) {
-	return UnitId(string(c.text)), nil
+	return string(c.text), nil
 }
 
 func (p *parser) callonUNIT_ID1() (any, error) {

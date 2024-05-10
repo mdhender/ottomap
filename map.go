@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/mdhender/ottomap/config"
+	"github.com/mdhender/ottomap/directions"
 	"github.com/mdhender/ottomap/domain"
 	"github.com/mdhender/ottomap/parsers/report"
 	"github.com/mdhender/ottomap/reports"
@@ -171,7 +172,13 @@ var cmdMap = &cobra.Command{
 		}
 
 		for _, um := range moves {
-			log.Printf("%s: %s: follows %q\n", um.TurnId, um.UnitId, um.Follows)
+			if um.Follows != "" {
+				log.Printf("%s %-6s ~~ %s\n", um.TurnId, um.UnitId, um.Follows)
+			} else if um.Direction == directions.DUnknown {
+				log.Printf("%s %-6s .. %s\n", um.TurnId, um.UnitId, um.Terrain)
+			} else {
+				log.Printf("%s %-6s %-2s %s **\n", um.TurnId, um.UnitId, um.Direction, um.Terrain)
+			}
 		}
 
 		if cfg != nil {

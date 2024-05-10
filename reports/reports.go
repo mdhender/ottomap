@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/mdhender/ottomap/cerrs"
+	"github.com/mdhender/ottomap/directions"
 	"github.com/mdhender/ottomap/domain"
 	"log"
 	"time"
@@ -102,30 +103,69 @@ func (r *Report) parseSection(section *Section) ([]*Move, error) {
 		log.Printf("parse: report %s: unit %s: stayed in place\n", r.Id, ul.UnitId)
 	}
 	if section.Follows != nil { // unit followed another unit this turn
-		var uid pfollows.UnitId
+		var ums []*pfollows.Move
 		log.Printf("parse: todo: parse follows  %q\n", string(section.Follows))
 		if v, err := pfollows.Parse("follows", section.Follows); err != nil {
 			log.Printf("parse: report %s: unit %s: parsing error\n", r.Id, ul.UnitId)
 			log.Printf("parse: input: %q\n", string(section.Follows))
 			log.Fatalf("parse: error: %v\n", err)
-		} else if uid, ok = v.(pfollows.UnitId); !ok {
-			panic(fmt.Sprintf("expected follows.UnitId, got %T", v))
+		} else if ums, ok = v.([]*pfollows.Move); !ok {
+			panic(fmt.Sprintf("expected []*follows.Move, got %T", v))
+		} else if len(ums) != 1 {
+			log.Printf("parse: report %s: unit %s: parsing error\n", r.Id, ul.UnitId)
+			log.Printf("parse: input: %q\n", string(section.Follows))
+			log.Fatalf("parse: error: %v\n", cerrs.ErrUnexpectedNumberOfMoves)
 		}
-		log.Printf("parse: report %s: unit %s: follwed %q\n", r.Id, ul.UnitId, string(uid))
+		log.Printf("parse: report %s: unit %s: followed %q\n", r.Id, ul.UnitId, ums[0].Follows)
 		moves = append(moves, &Move{
 			TurnId:  r.TurnId,
 			UnitId:  ul.UnitId,
-			Follows: string(uid),
+			Follows: ums[0].Follows,
 		})
 	}
-	if section.Moves != nil { // unit moved this turn
-		log.Printf("parse: todo: parse movement %q\n", string(section.Moves))
-		if v, err := pmoves.Parse("movement", section.Moves); err != nil {
-			log.Printf("parse: report %s: unit %s: parsing error\n", r.Id, ul.UnitId)
-			log.Printf("parse: input: %q\n", string(section.Moves))
-			log.Fatalf("parse: error: %v\n", err)
-		} else {
-			log.Printf("parse: movement: returned %T", v)
+	if len(section.Moves) != 0 { // unit moved this turn
+		for n, mm := range section.Moves {
+			log.Printf("parse: report %s: unit %s: move %d: %q\n", r.Id, ul.UnitId, n+1, string(mm))
+		}
+		for _, mm := range section.Moves {
+			log.Printf("parse: todo: parse movement %q\n", string(mm))
+			v, err := pmoves.Parse("movement", mm)
+			if err != nil {
+				log.Printf("parse: report %s: unit %s: parsing error\n", r.Id, ul.UnitId)
+				log.Printf("parse: input: %q\n", string(mm))
+				log.Fatalf("parse: error: %v\n", err)
+			}
+			switch t := v.(type) {
+			case pmoves.BlockedBy:
+				mv := &Move{
+					TurnId:    r.TurnId,
+					UnitId:    ul.UnitId,
+					Direction: t.Direction,
+					Terrain:   t.Terrain,
+				}
+				moves = append(moves, mv)
+			case pmoves.Exhausted:
+				mv := &Move{
+					TurnId:    r.TurnId,
+					UnitId:    ul.UnitId,
+					Direction: t.Direction,
+					Terrain:   t.Terrain,
+				}
+				moves = append(moves, mv)
+			case pmoves.Step:
+				mv := &Move{
+					TurnId:    r.TurnId,
+					UnitId:    ul.UnitId,
+					Direction: t.Direction,
+					Terrain:   t.Hex.Terrain,
+				}
+				//for _, e := range t.Hex.Edges {
+				//	mv.Edges = append(mv.Edges, e)
+				//}
+				moves = append(moves, mv)
+			default:
+				panic(fmt.Sprintf("unexpected %T", v))
+			}
 		}
 	}
 
@@ -173,6 +213,21 @@ func (r *Report) parseSection(section *Section) ([]*Move, error) {
 			log.Printf("parse: section: status: unit %s\n", f.UnitId)
 		}
 	}
+
+	if len(moves) == 0 {
+		if sh == nil {
+			panic("assert(sh != nil")
+		}
+
+		// the unit didn't move this turn so use the unit's current location
+		moves = append(moves, &Move{
+			TurnId:    r.TurnId,
+			UnitId:    ul.UnitId,
+			Direction: directions.DUnknown,
+			Terrain:   sh.Terrain,
+		})
+	}
+
 	//// extract the found items
 	//if unit.Status == nil {
 	//	unit.Status = &Found{}
@@ -197,7 +252,7 @@ type Section struct {
 	Location []byte
 	TurnInfo []byte
 	Follows  []byte
-	Moves    []byte
+	Moves    [][]byte
 	Scout    [][]byte
 	Status   []byte
 	Error    error
@@ -260,11 +315,12 @@ func Sections(input []byte, showSkippedSections bool) ([]*Section, error) {
 				}
 				section.Follows = line
 			} else if bytes.HasPrefix(line, movesLine) {
-				if section.Moves != nil {
-					section.Error = cerrs.ErrMultipleMovementLines
-					break
+				// remove the prefix and trim the line
+				line = bytes.TrimSpace(bytes.TrimPrefix(line, movesLine))
+				if bytes.HasPrefix(line, []byte{'M', 'o', 'v', 'e'}) {
+					line = bytes.TrimSpace(bytes.TrimPrefix(line, []byte{'M', 'o', 'v', 'e'}))
 				}
-				section.Moves = line
+				section.Moves = scrubMoves(line)
 			} else if bytes.HasPrefix(line, []byte{'S', 'c', 'o', 'u', 't'}) {
 				for sid := 0; sid < 8; sid++ {
 					if bytes.HasPrefix(line, scoutLines[sid]) {
@@ -308,9 +364,12 @@ func Sections(input []byte, showSkippedSections bool) ([]*Section, error) {
 }
 
 type Move struct {
-	TurnId  string // turn id this move belongs to
-	UnitId  string // unit id this move belongs to
-	Follows string // unit id this unit follows
+	TurnId    string               // turn id this move belongs to
+	UnitId    string               // unit id this move belongs to
+	Follows   string               // unit id this unit follows
+	Text      string               // the text of the move
+	Direction directions.Direction // will be Unknown if the unit did not move this turn
+	Terrain   domain.Terrain       // terrain in the hex the unit ended up in
 }
 
 func bdup(b []byte) []byte {
@@ -324,6 +383,19 @@ func isUnitSection(chunk []byte) bool {
 		}
 	}
 	return false
+}
+
+// scrubMoves splits the line into individual moves and then removes
+// leading and trailing spaces and any trailing commas from the move.
+func scrubMoves(line []byte) [][]byte {
+	var moves [][]byte
+	for _, move := range bytes.Split(line, []byte{'\\'}) {
+		move = bytes.TrimSpace(bytes.TrimRight(move, ", \t"))
+		if len(move) != 0 {
+			moves = append(moves, move)
+		}
+	}
+	return moves
 }
 
 func slug(lines []byte) string {
