@@ -1,10 +1,243 @@
 {
-package scouts
+// Package movements implements a Pigeon parser for unit movements.
+package movements
+
+import (
+	"log"
+	"github.com/mdhender/ottomap/directions"
+	"github.com/mdhender/ottomap/domain"
+)
+
+// I'm not happy with the abstraction here, but...
+//
+// Movement captures a series of "wants" and "results."
+// The unit wants to move in a certain direction and here are the results.
+//
+// Step is one piece of that movement. It captures the hex where
+// the unit started (From), the direction, and the result (where
+// the unit ended up (which could be where it started!), reasons
+// why the step failed (it was blocked by an edge feature, it was
+// blocked by the destination's terrain (water or mountains?), or
+// didn't have enough movement points. Maybe even something like
+// wagons can't enter a swamp hex. If the step failed because of a
+// lack of movement points, we'll usually be told what the terrain
+// type of the would-be destination hex it. If the step succeeded,
+// we'll be told the terrain type and (usually) details about the
+// edges, too. I don't think that occupants are mentioned when
+// moving; that's reserved for scouting.
+
+type Step struct {
+    // direction will be Unknown when unit doesn't try to move
+    Direction directions.Direction
+    Result    Result
+    // Hex is the hex where the unit ended up. It could be the same
+    // as where it started if the step failed
+    Hex       Hex
+}
+
+type Result int
+const (
+    StayedInPlace Result = iota
+    Succeeded
+    Blocked
+    ExhaustedMovementPoints
+)
+
+type Hex struct {
+    Terrain     domain.Terrain
+    Resource    domain.Resource
+    Edges       []*Edge
+    Neighbors   []*Neighbor
+    Resources   []domain.Resource
+    Settlements []*Settlement
+    Occupants   []string
+}
+
+type Edge struct {
+    Direction directions.Direction
+    Edge      domain.Edge
+}
+
+type BlockedBy struct {
+    Direction directions.Direction
+    Terrain   domain.Terrain
+}
+
+type Exhausted struct {
+    Direction directions.Direction
+    Terrain   domain.Terrain
+}
+
+type Neighbor struct {
+    Direction directions.Direction
+    Terrain   domain.Terrain
+}
+
+type Settlement struct {
+    Name string
+}
+
+func toAnySlice(v any) []any {
+    if v == nil {
+        return nil
+    }
+    return v.([]any)
+}
 
 }
 
-Line <- "Scout" SP DIGIT ":" "Scout" .*  EOF {
-    return string(c.text), nil
+Step <- d:DIRECTION "-" t:TERRAIN cfi:CommaFound* _ {
+    s := Step{
+        Direction: d.(directions.Direction),
+        Result:    Succeeded,
+        Hex:       Hex{
+            Terrain: t.(domain.Terrain),
+        },
+    }
+    for _, cf := range toAnySlice(cfi) {
+        log.Printf("step: cf %T\n", cf)
+        switch v := cf.(type) {
+        case []*Edge:
+            // merge into the step's hex
+            for _, e := range v {
+                s.Hex.Edges = append(s.Hex.Edges, e)
+            }
+        case Hex:
+            // merge into the step's hex
+            //steps = append(steps, v)
+        default:
+            panic(fmt.Errorf("unexpected type %T", v))
+        }
+    }
+    return s, nil
+} / [Nn] "o Ford on River to" _ d:DIRECTION _ "of HEX" {
+    return Step{
+        Direction: d.(directions.Direction),
+        Result:    Blocked,
+        Hex:       Hex{
+            Edges: []*Edge{{
+                Direction: d.(directions.Direction),
+                Edge:      domain.ERiver,
+            }},
+        },
+    }, nil
+} / [Nn] "ot enough M.P's to move to" _ d:DIRECTION _ "into" _ t:TERRAIN {
+    return Step{
+        Direction: d.(directions.Direction),
+        Result:    ExhaustedMovementPoints,
+        Hex:       Hex{
+            Neighbors: []*Neighbor{{
+                Direction: d.(directions.Direction),
+                Terrain:   t.(domain.Terrain),
+            }},
+        },
+    }, nil
+} / [Cc] "an't Move on" _ t:BlockedType _ "to" _ d:DIRECTION _ "of HEX" {
+    return Step{
+        Direction: d.(directions.Direction),
+        Result:    Blocked,
+        Hex:       Hex{
+            Neighbors: []*Neighbor{{
+                Direction: d.(directions.Direction),
+                Terrain:   t.(domain.Terrain),
+            }},
+        },
+    }, nil
+}
+
+CommaFound <- _ "," _ f:Found {
+    return f, nil
+}
+
+Found <- e:Edges {
+    return e, nil
+} / _ {
+    return Hex{}, nil
+}
+
+Hex <- _ {
+    // sad, but true, we have input like "SE-GH, \\..."
+    return Hex{}, nil
+}
+
+Edges <- et:EdgeType SP+ d:DIRECTION edi:SpaceDirection* {
+    kind := et.(domain.Edge)
+    edges := []*Edge{&Edge{Direction: d.(directions.Direction), Edge: kind}}
+    for _, ed := range toAnySlice(edi) {
+        switch v := ed.(type) {
+        case directions.Direction:
+            edges = append(edges, &Edge{Direction: v, Edge: kind})
+        default:
+            panic(fmt.Errorf("unexpected type %T", v))
+        }
+    }
+    return edges, nil
+}
+
+EdgeType <- "Ford" {
+    return domain.EFord, nil
+} / "Pass" {
+    return domain.EPass, nil
+} / "River" {
+    return domain.ERiver, nil
+}
+
+SpaceDirection <- SP+ d:DIRECTION {
+    return d, nil
+}
+
+SlashStep <- _ "\\" _ s:Step {
+    return s, nil
+}
+
+BlockedType <- "Lake" {
+    return domain.TLake, nil
+} / "Ocean" {
+    return domain.TOcean, nil
+}
+
+DIRECTION <- "NE" {
+    return directions.DNorthEast, nil
+} / "SE" {
+    return directions.DSouthEast, nil
+} / "SW" {
+    return directions.DSouthWest, nil
+} / "NW" {
+    return directions.DNorthWest, nil
+} / "N" {
+    return directions.DNorth, nil
+} / "S" {
+    return directions.DSouth, nil
+}
+
+TERRAIN <- "CONIFER HILLS" {
+    return domain.TConiferHills, nil
+} / "GRASSY HILLS" {
+    return domain.TGrassyHills, nil
+} / "PRAIRIE" {
+    return domain.TPrairie, nil
+} / "ROCKY HILLS" {
+    return domain.TRockyHills, nil
+} / "SWAMP" {
+    return domain.TSwamp, nil
+} / "LAKE" {
+    return domain.TLake, nil
+} / "OCEAN" {
+    return domain.TOcean, nil
+} / "CH" {
+    return domain.TConiferHills, nil
+} / "GH" {
+    return domain.TGrassyHills, nil
+} / "PR" {
+    return domain.TPrairie, nil
+} / "RH" {
+    return domain.TRockyHills, nil
+} / "SW" {
+    return domain.TSwamp, nil
+} / "L" {
+    return domain.TLake, nil
+} / "O" {
+    return domain.TOcean, nil
 }
 
 EOF    = !.

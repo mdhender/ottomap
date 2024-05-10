@@ -37,6 +37,77 @@ just restart the application.
 I'm trying to get all the error messages to be consistent.
 If you notice one that's wonky, please report it.
 
+## Backslashes
+The report uses backslashes ("\") as movement step separators.
+When we report an error, you'll see two backslashes.
+That's because backslashes are special to the `printf` statement, so it doubles them on output.
+
+If you see:
+
+```text
+"Scout 1:Scout SE-RH, River SE S SW\\NE-PR, River S\\ not enough M.P's to move to SE into PRAIRIE, nothing of interest found"
+```
+
+The line in the report is actually:
+
+```text
+Scout 1:Scout SE-RH, River SE S SW\NE-PR, River S\ not enough M.P's to move to SE into PRAIRIE, nothing of interest found
+```
+
+## Scout lines
+
+Sometimes a backslash should actually be a comma.
+If you have an error like this:
+
+```text
+parse: section: scout 1: "Scout 1:Scout SE-RH, River SE S SW\\NE-PR, River S\\SE-PR, River SE S SW\\ 1540\\NE-PR, River S\\ not enough M.P's to move to SE into PRAIRIE, nothing of interest found"
+parse: report 0900-01.0138: unit 0138e1: parsing error
+parse: input: "1540"
+parse: error: scout:1:1 (0): no match found, expected: "Can't Move on", "N", "NE", "NW", "No Ford on River to", "Not enough M.P's to move to", "S", "SE" or "SW"
+```
+
+The fix is to replace the backslash with a comma:
+
+```text
+Scout 1:Scout SE-RH, River SE S SW\NE-PR, River S\SE-PR, River SE S SW, 1540\NE-PR, River S\ not enough M.P's to move to SE into PRAIRIE, nothing of interest found
+```
+
+Sometimes there are extra characters in the input.
+This is due to the GMs making a typo when updating your turn report.
+They do a lot of work to make it presentable and sometimes make an honest mistake.
+
+```text
+parse: section: scout 1: "Scout 1:Scout SW-PR,  \\SW-PR,  \\-,  1138e1\\SW-CH,  \\SW-PR,  O SW,  NW\\ Not enough M.P's to move to S into PRAIRIE,  Nothing of interest found"
+parse: report 0900-03.0138: unit 2138e1: parsing error
+parse: input: "-,  1138e1"
+parse: error: scout:1:1 (0): no match found, expected: "N", "NE", "NW", "S", "SE", "SW", [Cc] or [Nn]
+```
+
+The fix is to remove those characters:
+
+```text
+Scout 1:Scout SW-PR,  \SW-PR,    1138e1\SW-CH,  \SW-PR,  O SW,  NW\ Not enough M.P's to move to S into PRAIRIE,  Nothing of interest found
+```
+
+> You may want to confer with the GM to find out what the line should actually have been.
+
+You may see a line start with `Scout ,` instead of just `Scout `:
+
+```text
+parse: section: scout "Scout 1:Scout , Can't Move on Ocean to N of HEX,  Patrolled and found 2138e1"
+parse: section: scout ", Can't Move on Ocean to N of HEX,  Patrolled and found 2138e1"
+parse: section: scout 1: "Scout 1:Scout , Can't Move on Ocean to N of HEX,  Patrolled and found 2138e1"
+parse: report 0900-04.0138: unit 1138e1: parsing error
+parse: input: ", Can't Move on Ocean to N of HEX,  Patrolled and found 2138e1"
+parse: error: scout:1:1 (0): no match found, expected: "N", "NE", "NW", "S", "SE", "SW", [Cc] or [Nn]
+```
+
+In that case, just remove the comma:
+
+```text
+Scout 1:Scout Can't Move on Ocean to N of HEX,  Patrolled and found 2138e1
+```
+
 ## Status lines
 
 Sometimes there are extra commas in the status line.

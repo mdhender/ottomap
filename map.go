@@ -197,17 +197,31 @@ var cmdMap = &cobra.Command{
 					}
 				}
 			}
+			var settlements string
+			for _, st := range um.Step.Hex.Settlements {
+				if settlements != "" {
+					settlements += ", "
+				}
+				settlements += st.Name
+			}
+			if settlements != "" {
+				settlements = "s(" + settlements + ")"
+			}
+			var terrain domain.Terrain
+			if len(um.Step.Hex.Neighbors) > 0 {
+				terrain = um.Step.Hex.Neighbors[0].Terrain
+			}
 			switch um.Step.Result {
 			case reports.Blocked:
-				log.Printf("%s %-6s %-2s %s  (blocked) %s %s\n", um.TurnId, um.UnitId, um.Step.Direction, um.Step.Hex.Neighbors[0].Terrain, neighbors, edges)
+				log.Printf("%s %-6s %-2s %s  (blocked) %s %s\n", um.TurnId, um.UnitId, um.Step.Direction, terrain, neighbors, edges)
 			case reports.ExhaustedMovementPoints:
-				log.Printf("%s %-6s %-2s %s  (exhausted) %s %s\n", um.TurnId, um.UnitId, um.Step.Direction, um.Step.Hex.Neighbors[0].Terrain, neighbors, edges)
+				log.Printf("%s %-6s %-2s %s  (exhausted) %s %s\n", um.TurnId, um.UnitId, um.Step.Direction, terrain, neighbors, edges)
 			case reports.Followed:
 				log.Printf("%s %-6s .. followed %s\n", um.TurnId, um.UnitId, um.Follows)
 			case reports.StayedInPlace:
 				log.Printf("%s %-6s .. %s  (stayed in place) %s %s\n", um.TurnId, um.UnitId, um.Step.Hex.Terrain, neighbors, edges)
 			case reports.Succeeded:
-				log.Printf("%s %-6s %-2s %s %s %s\n", um.TurnId, um.UnitId, um.Step.Direction, um.Step.Hex.Terrain, neighbors, edges)
+				log.Printf("%s %-6s %-2s %s %s %s %s\n", um.TurnId, um.UnitId, um.Step.Direction, um.Step.Hex.Terrain, neighbors, edges, settlements)
 			}
 		}
 

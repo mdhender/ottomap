@@ -90,9 +90,9 @@ Step <- d:DIRECTION "-" t:TERRAIN cfi:CommaFound* _ {
     s := Step{
         Direction: d.(directions.Direction),
         Result:    Succeeded,
-        Hex: Hex{
+        Hex:       Hex{
             Terrain: t.(domain.Terrain),
-        }
+        },
     }
     for _, cf := range toAnySlice(cfi) {
         log.Printf("step: cf %T\n", cf)

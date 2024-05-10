@@ -177,16 +177,58 @@ func (r *Report) parseSection(section *Section) ([]*Move, error) {
 	}
 
 	// parse the unit's scouts
-	for _, scoutSteps := range section.Scout {
-		for _, scout := range scoutSteps {
+	for _, scouts := range section.Scout {
+		log.Printf("parse: section: scout %q\n", string(scouts.Move))
+		for _, scout := range scouts.Moves {
 			log.Printf("parse: section: scout %q\n", string(scout))
-			if v, err := pscouts.Parse("scout", scout); err != nil {
+			v, err := pscouts.Parse("scout", scout)
+			if err != nil {
+				log.Printf("parse: section: scout %d: %q\n", scouts.ScoutId, string(scouts.Move))
 				log.Printf("parse: report %s: unit %s: parsing error\n", r.Id, ul.UnitId)
 				log.Printf("parse: input: %q\n", string(scout))
 				log.Fatalf("parse: error: %v\n", err)
-			} else {
-				log.Printf("parse: scout: returned %T", v)
 			}
+			log.Printf("parse: scout: returned %T", v)
+
+			switch t := v.(type) {
+			case pscouts.Step:
+				mv := &Move{
+					TurnId: r.TurnId,
+					UnitId: ul.UnitId,
+					Step: Step{
+						Direction: t.Direction,
+						Hex: Hex{
+							Terrain: t.Hex.Terrain,
+						},
+					},
+				}
+				switch t.Result {
+				case pscouts.StayedInPlace:
+					mv.Step.Result = StayedInPlace
+				case pscouts.Blocked:
+					mv.Step.Result = Blocked
+				case pscouts.ExhaustedMovementPoints:
+					mv.Step.Result = ExhaustedMovementPoints
+				case pscouts.Succeeded:
+					mv.Step.Result = Succeeded
+				}
+				for _, e := range t.Hex.Edges {
+					mv.Step.Hex.Edges = append(mv.Step.Hex.Edges, &Edge{
+						Direction: e.Direction,
+						Edge:      e.Edge,
+					})
+				}
+				for _, n := range t.Hex.Neighbors {
+					mv.Step.Hex.Neighbors = append(mv.Step.Hex.Neighbors, &Neighbor{
+						Direction: n.Direction,
+						Terrain:   n.Terrain,
+					})
+				}
+				moves = append(moves, mv)
+			default:
+				panic(fmt.Sprintf("unexpected %T", v))
+			}
+
 		}
 	}
 
@@ -267,9 +309,15 @@ type Section struct {
 	TurnInfo []byte
 	Follows  []byte
 	Moves    [][]byte
-	Scout    [][][]byte
+	Scout    []*ScoutLine
 	Status   []byte
 	Error    error
+}
+
+type ScoutLine struct {
+	ScoutId int
+	Move    []byte
+	Moves   [][]byte
 }
 
 func Sections(input []byte, showSkippedSections bool) ([]*Section, error) {
@@ -337,16 +385,14 @@ func Sections(input []byte, showSkippedSections bool) ([]*Section, error) {
 				section.Moves = scrubMoves(line)
 			} else if bytes.HasPrefix(line, []byte{'S', 'c', 'o', 'u', 't'}) {
 				for sid := 0; sid < 8; sid++ {
-					var scoutSteps [][]byte
 					if bytes.HasPrefix(line, scoutLines[sid]) {
+						scoutLine := &ScoutLine{ScoutId: sid + 1, Move: bdup(line)}
 						for _, jo := range scrubScouts(line) {
 							if len(jo) != 0 {
-								scoutSteps = append(scoutSteps, jo)
+								scoutLine.Moves = append(scoutLine.Moves, jo)
 							}
 						}
-						if len(scoutSteps) > 0 {
-							section.Scout = append(section.Scout, scoutSteps)
-						}
+						section.Scout = append(section.Scout, scoutLine)
 						break
 					}
 				}
