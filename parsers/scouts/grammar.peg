@@ -143,6 +143,9 @@ Step <- d:DIRECTION "-" t:TERRAIN cfi:CommaFound* _ {
             }},
         },
     }, nil
+} / "Group did not return" {
+    // how to handle missing groups?
+    return string(c.text), nil
 }
 
 CommaFound <- _ "," _ f:Found {
