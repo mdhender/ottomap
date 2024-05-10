@@ -3,10 +3,8 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/mdhender/ottomap/config"
-	"github.com/mdhender/ottomap/directions"
 	"github.com/mdhender/ottomap/domain"
 	"github.com/mdhender/ottomap/parsers/report"
 	"github.com/mdhender/ottomap/reports"
@@ -14,7 +12,6 @@ import (
 	"github.com/spf13/cobra"
 	"log"
 	"os"
-	"sort"
 	"strconv"
 	"strings"
 )
@@ -172,38 +169,28 @@ var cmdMap = &cobra.Command{
 		}
 
 		for _, um := range moves {
-			if um.Follows != "" {
-				log.Printf("%s %-6s ~~ %s\n", um.TurnId, um.UnitId, um.Follows)
-			} else if um.Direction == directions.DUnknown {
-				log.Printf("%s %-6s .. %s\n", um.TurnId, um.UnitId, um.Terrain)
-			} else {
-				log.Printf("%s %-6s %-2s %s **\n", um.TurnId, um.UnitId, um.Direction, um.Terrain)
+			switch um.Step.Result {
+			case reports.Blocked:
+				log.Printf("%s %-6s %-2s %s  (blocked)\n", um.TurnId, um.UnitId, um.Step.Direction, um.Step.Hex.Neighbors[0].Terrain)
+			case reports.ExhaustedMovementPoints:
+				log.Printf("%s %-6s %-2s %s  (exhausted)\n", um.TurnId, um.UnitId, um.Step.Direction, um.Step.Hex.Neighbors[0].Terrain)
+			case reports.Followed:
+				log.Printf("%s %-6s .. followed %s\n", um.TurnId, um.UnitId, um.Follows)
+			case reports.StayedInPlace:
+				log.Printf("%s %-6s .. %s  (stayed in place)\n", um.TurnId, um.UnitId, um.Step.Hex.Terrain)
+			case reports.Succeeded:
+				log.Printf("%s %-6s %-2s %s\n", um.TurnId, um.UnitId, um.Step.Direction, um.Step.Hex.Terrain)
 			}
 		}
 
-		if cfg != nil {
-			return nil
-		}
+		log.Printf("map: todo: the map above is not complete\n")
 
-		// load all the unit movement files
-		var unitMoveFiles []string
-		var unitMoves []*report.Unit
-		for _, path := range unitMoveFiles {
-			var u []*report.Unit
-			if data, err := os.ReadFile(path); err != nil {
-				log.Fatalf("map: unit file %s: %v", path, err)
-			} else if err = json.Unmarshal(data, &u); err != nil {
-				log.Fatalf("map: unit: file %s: %v", path, err)
-			}
-			unitMoves = append(unitMoves, u...)
-			log.Printf("map: unit: loaded %d units\n", len(u))
-		}
-		log.Printf("map: unit: loaded %d unit files\n", len(unitMoves))
+		log.Printf("map: todo: parse scout lines\n")
 
-		// sort unit moves by turn then unit
-		sort.Slice(unitMoves, func(i, j int) bool {
-			return unitMoves[i].SortKey() < unitMoves[j].SortKey()
-		})
+		//// sort unit moves by turn then unit
+		//sort.Slice(unitMoves, func(i, j int) bool {
+		//	return unitMoves[i].SortKey() < unitMoves[j].SortKey()
+		//})
 
 		// unitNode is a unit that will be added to the map.
 		// it will contain all the unit's moves. the parent
@@ -214,31 +201,31 @@ var cmdMap = &cobra.Command{
 			Moves  []*report.Unit
 		}
 
-		// create a map of all units to help with linking moves together.
-		allUnits := map[string]*unitNode{}
-		for _, u := range unitMoves {
-			un, ok := allUnits[u.Id]
-			if !ok {
-				un = &unitNode{Id: u.Id}
-				if !u.IsClan() {
-					un.Parent, ok = allUnits[u.ParentId]
-					if !ok {
-						log.Fatalf("map: unit %q: parent %q not found\n", u.Id, u.ParentId)
-					}
-				}
-				allUnits[u.Id] = un
-			}
-			un.Moves = append(un.Moves, u)
-		}
-
-		// create a sorted list of all units for dealing with parent/child relationships.
-		var sortedNodes []*unitNode
-		for _, un := range allUnits {
-			sortedNodes = append(sortedNodes, un)
-		}
-		sort.Slice(sortedNodes, func(i, j int) bool {
-			return sortedNodes[i].Id < sortedNodes[j].Id
-		})
+		//// create a map of all units to help with linking moves together.
+		//allUnits := map[string]*unitNode{}
+		//for _, u := range unitMoves {
+		//	un, ok := allUnits[u.Id]
+		//	if !ok {
+		//		un = &unitNode{Id: u.Id}
+		//		if !u.IsClan() {
+		//			un.Parent, ok = allUnits[u.ParentId]
+		//			if !ok {
+		//				log.Fatalf("map: unit %q: parent %q not found\n", u.Id, u.ParentId)
+		//			}
+		//		}
+		//		allUnits[u.Id] = un
+		//	}
+		//	un.Moves = append(un.Moves, u)
+		//}
+		//
+		//// create a sorted list of all units for dealing with parent/child relationships.
+		//var sortedNodes []*unitNode
+		//for _, un := range allUnits {
+		//	sortedNodes = append(sortedNodes, un)
+		//}
+		//sort.Slice(sortedNodes, func(i, j int) bool {
+		//	return sortedNodes[i].Id < sortedNodes[j].Id
+		//})
 
 		// This code is responsible for establishing the link between a unit's move and
 		// the move of the unit it is following. By setting the Follows field of the
@@ -255,70 +242,70 @@ var cmdMap = &cobra.Command{
 		// need to worry about circular references.
 		//
 		// Iterate over all units.
-		for _, u := range allUnits {
-			// Iterate over each unit's moves.
-			for _, cm := range u.Moves {
-				// If the current move doesn't follow another unit, skip it
-				if cm.FollowsId == "" {
-					continue
-				}
-
-				// Look up the unit being followed using the FollowsId.
-				// If the unit being followed is not found, log a fatal error
-				fu, ok := allUnits[cm.FollowsId]
-				if !ok {
-					log.Fatalf("map: unit %q: follower %q not found\n", u.Id, cm.FollowsId)
-				}
-
-				// Iterate over the moves of the unit being followed to find the move matching the current turn.
-				for _, fm := range fu.Moves {
-					// Check if the move of the followed unit matches the current turn
-					if fm.Turn.Year == cm.Turn.Year && fm.Turn.Month == cm.Turn.Month {
-						// If a matching move is found, link the current move to the followed unit's move
-						cm.Follows = fm
-						break
-					}
-				}
-
-				// If no matching move is found for the followed unit in the current turn, log a fatal error
-				if cm.Follows == nil {
-					log.Fatalf("map: unit %q: follower %q: turn %04d-%-2d not found\n", u.Id, cm.FollowsId, cm.Turn.Year, cm.Turn.Month)
-				}
-			}
-		}
-
-		// save for debugging
-		for _, u := range unitMoves {
-			if b, err := json.MarshalIndent(u, "", "  "); err != nil {
-				log.Printf("map: unit %q: error: %v\n", u.Id, err)
-			} else {
-				log.Printf("map: unit %q: results\n%s\n", u.Id, string(b))
-			}
-		}
-
-		// walk the consolidate unit moves, creating chain of hexes at each step
-		for _, u := range unitMoves {
-			start := u.Start
-			if start == "" {
-				log.Fatalf("map: unit %-8q: starting hex is missing\n", u.Id)
-			}
-			log.Printf("map: unit %-8q: origin %s\n", u.Id, start)
-		}
-
-		// resolve "follows" links
-		for _, u := range unitMoves {
-			if u.Follows == nil {
-				continue
-			}
-			u.End = u.Follows.End
-		}
-
-		// final sanity check for ending positions
-		for _, u := range unitMoves {
-			if u.End == "" {
-				log.Fatalf("map: unit %-8q: turn %04d-%02d: ending hex is missing\n", u.Id, u.Turn.Year, u.Turn.Month)
-			}
-		}
+		//for _, u := range allUnits {
+		//	// Iterate over each unit's moves.
+		//	for _, cm := range u.Moves {
+		//		// If the current move doesn't follow another unit, skip it
+		//		if cm.FollowsId == "" {
+		//			continue
+		//		}
+		//
+		//		// Look up the unit being followed using the FollowsId.
+		//		// If the unit being followed is not found, log a fatal error
+		//		fu, ok := allUnits[cm.FollowsId]
+		//		if !ok {
+		//			log.Fatalf("map: unit %q: follower %q not found\n", u.Id, cm.FollowsId)
+		//		}
+		//
+		//		// Iterate over the moves of the unit being followed to find the move matching the current turn.
+		//		for _, fm := range fu.Moves {
+		//			// Check if the move of the followed unit matches the current turn
+		//			if fm.Turn.Year == cm.Turn.Year && fm.Turn.Month == cm.Turn.Month {
+		//				// If a matching move is found, link the current move to the followed unit's move
+		//				cm.Follows = fm
+		//				break
+		//			}
+		//		}
+		//
+		//		// If no matching move is found for the followed unit in the current turn, log a fatal error
+		//		if cm.Follows == nil {
+		//			log.Fatalf("map: unit %q: follower %q: turn %04d-%-2d not found\n", u.Id, cm.FollowsId, cm.Turn.Year, cm.Turn.Month)
+		//		}
+		//	}
+		//}
+		//
+		//// save for debugging
+		//for _, u := range unitMoves {
+		//	if b, err := json.MarshalIndent(u, "", "  "); err != nil {
+		//		log.Printf("map: unit %q: error: %v\n", u.Id, err)
+		//	} else {
+		//		log.Printf("map: unit %q: results\n%s\n", u.Id, string(b))
+		//	}
+		//}
+		//
+		//// walk the consolidate unit moves, creating chain of hexes at each step
+		//for _, u := range unitMoves {
+		//	start := u.Start
+		//	if start == "" {
+		//		log.Fatalf("map: unit %-8q: starting hex is missing\n", u.Id)
+		//	}
+		//	log.Printf("map: unit %-8q: origin %s\n", u.Id, start)
+		//}
+		//
+		//// resolve "follows" links
+		//for _, u := range unitMoves {
+		//	if u.Follows == nil {
+		//		continue
+		//	}
+		//	u.End = u.Follows.End
+		//}
+		//
+		//// final sanity check for ending positions
+		//for _, u := range unitMoves {
+		//	if u.End == "" {
+		//		log.Fatalf("map: unit %-8q: turn %04d-%02d: ending hex is missing\n", u.Id, u.Turn.Year, u.Turn.Month)
+		//	}
+		//}
 
 		// now we can create the Worldographer map!
 		log.Printf("map: creating WXX map\n")

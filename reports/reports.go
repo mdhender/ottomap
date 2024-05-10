@@ -136,32 +136,39 @@ func (r *Report) parseSection(section *Section) ([]*Move, error) {
 				log.Fatalf("parse: error: %v\n", err)
 			}
 			switch t := v.(type) {
-			case pmoves.BlockedBy:
-				mv := &Move{
-					TurnId:    r.TurnId,
-					UnitId:    ul.UnitId,
-					Direction: t.Direction,
-					Terrain:   t.Terrain,
-				}
-				moves = append(moves, mv)
-			case pmoves.Exhausted:
-				mv := &Move{
-					TurnId:    r.TurnId,
-					UnitId:    ul.UnitId,
-					Direction: t.Direction,
-					Terrain:   t.Terrain,
-				}
-				moves = append(moves, mv)
 			case pmoves.Step:
 				mv := &Move{
-					TurnId:    r.TurnId,
-					UnitId:    ul.UnitId,
-					Direction: t.Direction,
-					Terrain:   t.Hex.Terrain,
+					TurnId: r.TurnId,
+					UnitId: ul.UnitId,
+					Step: Step{
+						Direction: t.Direction,
+						Hex: Hex{
+							Terrain: t.Hex.Terrain,
+						},
+					},
 				}
-				//for _, e := range t.Hex.Edges {
-				//	mv.Edges = append(mv.Edges, e)
-				//}
+				switch t.Result {
+				case pmoves.StayedInPlace:
+					mv.Step.Result = StayedInPlace
+				case pmoves.Blocked:
+					mv.Step.Result = Blocked
+				case pmoves.ExhaustedMovementPoints:
+					mv.Step.Result = ExhaustedMovementPoints
+				case pmoves.Succeeded:
+					mv.Step.Result = Succeeded
+				}
+				for _, e := range t.Hex.Edges {
+					mv.Step.Hex.Edges = append(mv.Step.Hex.Edges, &Edge{
+						Direction: e.Direction,
+						Edge:      e.Edge,
+					})
+				}
+				for _, n := range t.Hex.Neighbors {
+					mv.Step.Hex.Neighbors = append(mv.Step.Hex.Neighbors, &Neighbor{
+						Direction: n.Direction,
+						Terrain:   n.Terrain,
+					})
+				}
 				moves = append(moves, mv)
 			default:
 				panic(fmt.Sprintf("unexpected %T", v))
@@ -221,10 +228,15 @@ func (r *Report) parseSection(section *Section) ([]*Move, error) {
 
 		// the unit didn't move this turn so use the unit's current location
 		moves = append(moves, &Move{
-			TurnId:    r.TurnId,
-			UnitId:    ul.UnitId,
-			Direction: directions.DUnknown,
-			Terrain:   sh.Terrain,
+			TurnId: r.TurnId,
+			UnitId: ul.UnitId,
+			Step: Step{
+				Direction: directions.DUnknown,
+				Result:    StayedInPlace,
+				Hex: Hex{
+					Terrain: sh.Terrain,
+				},
+			},
 		})
 	}
 
@@ -364,12 +376,63 @@ func Sections(input []byte, showSkippedSections bool) ([]*Section, error) {
 }
 
 type Move struct {
-	TurnId    string               // turn id this move belongs to
-	UnitId    string               // unit id this move belongs to
-	Follows   string               // unit id this unit follows
-	Text      string               // the text of the move
-	Direction directions.Direction // will be Unknown if the unit did not move this turn
-	Terrain   domain.Terrain       // terrain in the hex the unit ended up in
+	TurnId  string // turn id this move belongs to
+	UnitId  string // unit id this move belongs to
+	Follows string // unit id this unit follows
+	Step    Step
+}
+
+type Step struct {
+	// direction will be Unknown when unit doesn't try to move
+	Direction directions.Direction
+	Result    Result
+	// Hex is the hex where the unit ended up. It could be the same
+	// as where it started if the step failed
+	Hex Hex
+}
+
+type Result int
+
+const (
+	StayedInPlace Result = iota
+	Succeeded
+	Blocked
+	ExhaustedMovementPoints
+	Followed
+)
+
+type Hex struct {
+	Terrain     domain.Terrain
+	Resource    domain.Resource
+	Edges       []*Edge
+	Neighbors   []*Neighbor
+	Resources   []domain.Resource
+	Settlements []*Settlement
+	Occupants   []string
+}
+
+type Edge struct {
+	Direction directions.Direction
+	Edge      domain.Edge
+}
+
+type BlockedBy struct {
+	Direction directions.Direction
+	Terrain   domain.Terrain
+}
+
+type Exhausted struct {
+	Direction directions.Direction
+	Terrain   domain.Terrain
+}
+
+type Neighbor struct {
+	Direction directions.Direction
+	Terrain   domain.Terrain
+}
+
+type Settlement struct {
+	Name string
 }
 
 func bdup(b []byte) []byte {

@@ -90,8 +90,10 @@ Step <- d:DIRECTION "-" t:TERRAIN cfi:CommaFound* _ {
     s := Step{
         Direction: d.(directions.Direction),
         Result:    Succeeded,
+        Hex: Hex{
+            Terrain: t.(domain.Terrain),
+        }
     }
-    s.Hex.Terrain = t.(domain.Terrain)
     for _, cf := range toAnySlice(cfi) {
         log.Printf("step: cf %T\n", cf)
         switch v := cf.(type) {
@@ -109,14 +111,26 @@ Step <- d:DIRECTION "-" t:TERRAIN cfi:CommaFound* _ {
     }
     return s, nil
 } / "Not enough M.P's to move to" _ d:DIRECTION _ "into" _ t:TERRAIN {
-    return Exhausted{
+    return Step{
         Direction: d.(directions.Direction),
-        Terrain:   t.(domain.Terrain),
+        Result:    ExhaustedMovementPoints,
+        Hex:       Hex{
+            Neighbors: []*Neighbor{{
+                Direction: d.(directions.Direction),
+                Terrain:   t.(domain.Terrain),
+            }},
+        },
     }, nil
 } / "Can't Move on" _ t:BlockedType _ "to" _ d:DIRECTION _ "of HEX" {
-    return BlockedBy{
+    return Step{
         Direction: d.(directions.Direction),
-        Terrain:   t.(domain.Terrain),
+        Result:    Blocked,
+        Hex:       Hex{
+            Neighbors: []*Neighbor{{
+                Direction: d.(directions.Direction),
+                Terrain:   t.(domain.Terrain),
+            }},
+        },
     }, nil
 }
 
