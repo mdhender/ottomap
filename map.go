@@ -169,17 +169,45 @@ var cmdMap = &cobra.Command{
 		}
 
 		for _, um := range moves {
+			var edges string
+			for _, e := range um.Step.Hex.Edges {
+				if edges != "" {
+					edges += " "
+				}
+				edges += e.Direction.String() + "-" + e.Edge.String()
+			}
+			if edges != "" {
+				edges = "e(" + edges + ")"
+			}
+			var neighbors string
+			if len(um.Step.Hex.Neighbors) > 0 {
+				if um.Step.Result == reports.Blocked && len(um.Step.Hex.Neighbors) == 1 {
+					// nothing to report on
+				} else {
+					for _, n := range um.Step.Hex.Neighbors {
+						if n.Terrain != domain.TUnknown {
+							if neighbors != "" {
+								neighbors += " "
+							}
+							neighbors += n.Direction.String() + "-" + n.Terrain.String()
+						}
+					}
+					if neighbors != "" {
+						neighbors = "n(" + neighbors + ")"
+					}
+				}
+			}
 			switch um.Step.Result {
 			case reports.Blocked:
-				log.Printf("%s %-6s %-2s %s  (blocked)\n", um.TurnId, um.UnitId, um.Step.Direction, um.Step.Hex.Neighbors[0].Terrain)
+				log.Printf("%s %-6s %-2s %s  (blocked) %s %s\n", um.TurnId, um.UnitId, um.Step.Direction, um.Step.Hex.Neighbors[0].Terrain, neighbors, edges)
 			case reports.ExhaustedMovementPoints:
-				log.Printf("%s %-6s %-2s %s  (exhausted)\n", um.TurnId, um.UnitId, um.Step.Direction, um.Step.Hex.Neighbors[0].Terrain)
+				log.Printf("%s %-6s %-2s %s  (exhausted) %s %s\n", um.TurnId, um.UnitId, um.Step.Direction, um.Step.Hex.Neighbors[0].Terrain, neighbors, edges)
 			case reports.Followed:
 				log.Printf("%s %-6s .. followed %s\n", um.TurnId, um.UnitId, um.Follows)
 			case reports.StayedInPlace:
-				log.Printf("%s %-6s .. %s  (stayed in place)\n", um.TurnId, um.UnitId, um.Step.Hex.Terrain)
+				log.Printf("%s %-6s .. %s  (stayed in place) %s %s\n", um.TurnId, um.UnitId, um.Step.Hex.Terrain, neighbors, edges)
 			case reports.Succeeded:
-				log.Printf("%s %-6s %-2s %s\n", um.TurnId, um.UnitId, um.Step.Direction, um.Step.Hex.Terrain)
+				log.Printf("%s %-6s %-2s %s %s %s\n", um.TurnId, um.UnitId, um.Step.Direction, um.Step.Hex.Terrain, neighbors, edges)
 			}
 		}
 

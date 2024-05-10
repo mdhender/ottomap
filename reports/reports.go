@@ -177,14 +177,16 @@ func (r *Report) parseSection(section *Section) ([]*Move, error) {
 	}
 
 	// parse the unit's scouts
-	for _, scout := range section.Scout {
-		log.Printf("parse: section: scout %q\n", string(scout))
-		if v, err := pscouts.Parse("scout", scout); err != nil {
-			log.Printf("parse: report %s: unit %s: parsing error\n", r.Id, ul.UnitId)
-			log.Printf("parse: input: %q\n", string(scout))
-			log.Fatalf("parse: error: %v\n", err)
-		} else {
-			log.Printf("parse: scout: returned %T", v)
+	for _, scoutSteps := range section.Scout {
+		for _, scout := range scoutSteps {
+			log.Printf("parse: section: scout %q\n", string(scout))
+			if v, err := pscouts.Parse("scout", scout); err != nil {
+				log.Printf("parse: report %s: unit %s: parsing error\n", r.Id, ul.UnitId)
+				log.Printf("parse: input: %q\n", string(scout))
+				log.Fatalf("parse: error: %v\n", err)
+			} else {
+				log.Printf("parse: scout: returned %T", v)
+			}
 		}
 	}
 
@@ -265,7 +267,7 @@ type Section struct {
 	TurnInfo []byte
 	Follows  []byte
 	Moves    [][]byte
-	Scout    [][]byte
+	Scout    [][][]byte
 	Status   []byte
 	Error    error
 }
@@ -314,7 +316,7 @@ func Sections(input []byte, showSkippedSections bool) ([]*Section, error) {
 		movesLine := []byte("Tribe Movement: ")
 		var scoutLines [8][]byte
 		for sid := 0; sid < 8; sid++ {
-			scoutLines[sid] = []byte(fmt.Sprintf("Scout %d:Scout  ", sid+1))
+			scoutLines[sid] = []byte(fmt.Sprintf("Scout %d:Scout ", sid+1))
 		}
 		statusLine := []byte(fmt.Sprintf("%s Status: ", ul.UnitId))
 		for n, line := range lines {
@@ -335,8 +337,16 @@ func Sections(input []byte, showSkippedSections bool) ([]*Section, error) {
 				section.Moves = scrubMoves(line)
 			} else if bytes.HasPrefix(line, []byte{'S', 'c', 'o', 'u', 't'}) {
 				for sid := 0; sid < 8; sid++ {
+					var scoutSteps [][]byte
 					if bytes.HasPrefix(line, scoutLines[sid]) {
-						section.Scout = append(section.Scout, bdup(line))
+						for _, jo := range scrubScouts(line) {
+							if len(jo) != 0 {
+								scoutSteps = append(scoutSteps, jo)
+							}
+						}
+						if len(scoutSteps) > 0 {
+							section.Scout = append(section.Scout, scoutSteps)
+						}
 						break
 					}
 				}
@@ -459,6 +469,12 @@ func scrubMoves(line []byte) [][]byte {
 		}
 	}
 	return moves
+}
+
+func scrubScouts(line []byte) [][]byte {
+	// trim the scout number and then split the rest of the line
+	line = line[len("Scout 8:Scout "):]
+	return scrubMoves(line)
 }
 
 func slug(lines []byte) string {
