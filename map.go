@@ -209,13 +209,12 @@ var cmdMap = &cobra.Command{
 			}
 		}
 
+		log.Printf("map: todo: hexes are not assigned for each step in the results\n")
+
 		log.Printf("map: todo: named hexes that are only in the status line are missed\n")
 
 		if cfg.Inputs.ShowSteps {
 			for _, us := range allSteps {
-				if us.Resources != domain.RIronOre {
-					continue
-				}
 				boo, err := json.MarshalIndent(us, "", "\t")
 				if err != nil {
 					log.Fatalf("map: step: %v\n", err)
