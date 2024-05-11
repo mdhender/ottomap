@@ -17,8 +17,22 @@ import (
 // or the unit was exhausted (it didn't have enough MPs),
 // or the unit is not allowed to enter the terrain.
 
+// MovementResults is the set of hex reports from a single movement results line.
+type MovementResults struct {
+	TurnId     string
+	UnitId     string
+	HexReports []*Step
+}
+
+func (m *MovementResults) Id() string {
+	return fmt.Sprintf("%s.%s", m.TurnId, m.UnitId)
+}
+
 // Step is one step of a Land Based Movement.
 type Step struct {
+	TurnId string
+	UnitId string
+
 	// Attempted direction is the direction the unit tried to move.
 	// It will be Unknown if the unit stays in place.
 	// When the unit fails to move, this will be derived from the failed results.
@@ -31,16 +45,17 @@ type Step struct {
 	// properties below are set even if the step failed.
 	// that means they may be for the hex where the unit started.
 
-	Terrain        domain.Terrain  `json:"terrain,omitempty"`
-	BlockedBy      *BlockedByEdge  `json:"blockedBy,omitempty"`
-	Edges          []*Edge         `json:"edges,omitempty"`
-	Exhausted      *Exhausted      `json:"exhausted,omitempty"`
-	Follows        string          `json:"follows,omitempty"` // unit id this unit follows
-	Neighbors      []*Neighbor     `json:"neighbors,omitempty"`
-	ProhibitedFrom *ProhibitedFrom `json:"prohibitedFrom,omitempty"`
-	Resources      domain.Resource `json:"resources,omitempty"`
-	Settlement     *Settlement     `json:"settlement,omitempty"`
-	Units          []string        `json:"units,omitempty"` // unit ids
+	Terrain        domain.Terrain   `json:"terrain,omitempty"`
+	BlockedBy      *BlockedByEdge   `json:"blockedBy,omitempty"`
+	Edges          []*Edge          `json:"edges,omitempty"`
+	Exhausted      *Exhausted       `json:"exhausted,omitempty"`
+	Follows        string           `json:"follows,omitempty"` // unit id this unit follows
+	FollowsLink    *MovementResults `json:"-"`                 // link to follow unit's movement
+	Neighbors      []*Neighbor      `json:"neighbors,omitempty"`
+	ProhibitedFrom *ProhibitedFrom  `json:"prohibitedFrom,omitempty"`
+	Resources      domain.Resource  `json:"resources,omitempty"`
+	Settlement     *Settlement      `json:"settlement,omitempty"`
+	Units          []string         `json:"units,omitempty"` // unit ids
 }
 
 // BlockedByEdge is returned when a step fails because the unit was blocked by an edge feature.

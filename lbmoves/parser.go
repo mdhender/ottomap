@@ -26,7 +26,7 @@ var (
 // Handles Tribe Follows, Tribe Movement, and Scout lines.
 //
 // Returns the steps and the first error encountered.
-func ParseMoveResults(line []byte, showDebug bool) ([]*Step, error) {
+func ParseMoveResults(turnId, unitId string, line []byte, showDebug bool) ([]*Step, error) {
 	if rxScoutLine == nil {
 		rxScoutLine = regexp.MustCompile(`^Scout [12345678]:Scout `)
 		rxStatusLine = regexp.MustCompile(`^[0-9][[0-9][0-9][0-9]([cefg][0-9])? Status: `)
@@ -34,35 +34,37 @@ func ParseMoveResults(line []byte, showDebug bool) ([]*Step, error) {
 	//line = []byte(`Scout 5:Scout NE-RH, ,River N NE\,No Ford on River to NE of HEX , Find 3 French Hens,  2 Turtle Doves,  1 Partridge,`)
 	//line = []byte(`Scout 1:Scout SW-PR,  O SE, SW, NW, S, Chel世界sk-70,Find Salt, 2540g3, 3540g6\N-PR,  O SW, NW, N\ Not enough M.P's to move to NE into GRASSY HILLS, Nothing of interest found`)
 	if bytes.HasPrefix(line, []byte("Tribe Follows")) {
-		return parseTribeFollows(line)
+		return parseTribeFollows(turnId, unitId, line)
 	} else if bytes.HasPrefix(line, []byte("Tribe Movement: Move ")) {
-		return parseSteps(line, bytes.TrimPrefix(line, []byte("Tribe Movement: Move ")), showDebug)
+		return parseSteps(turnId, unitId, line, bytes.TrimPrefix(line, []byte("Tribe Movement: Move ")), showDebug)
 	} else if rxScoutLine.Match(line) {
-		return parseSteps(line, line[len("Scout ?:Scout "):], showDebug)
+		return parseSteps(turnId, unitId, line, line[len("Scout ?:Scout "):], showDebug)
 	} else if rxStatusLine.Match(line) {
 		_, b, _ := bytes.Cut(line, []byte{':'})
-		return parseSteps(line, b, showDebug)
+		return parseSteps(turnId, unitId, line, b, showDebug)
 	}
 	return nil, cerrs.ErrNotMovementResults
 }
 
-func parseTribeFollows(line []byte) ([]*Step, error) {
+func parseTribeFollows(turnId, unitId string, line []byte) ([]*Step, error) {
 	fields := bytes.Split(bytes.TrimSpace(line), []byte{' '})
 	if len(fields) != 3 {
 		return nil, cerrs.ErrMissingFollowsUnit
 	}
 	return []*Step{{
+		TurnId:  turnId,
+		UnitId:  unitId,
 		Result:  Follows,
 		Follows: string(fields[2]),
 	}}, nil
 }
 
 // parseSteps parses all the steps from the results of a Land Based Movement.
-func parseSteps(line, steps []byte, showDebug bool) (results []*Step, err error) {
+func parseSteps(turnId, unitId string, line, steps []byte, showDebug bool) (results []*Step, err error) {
 	// split the steps into single steps, which are backslash-separated, and
 	// parse each step individually after trimming spaces and trailing commas.
 	for _, step := range bytes.Split(steps, []byte{'\\'}) {
-		if result, err := parseStep(step, showDebug); err != nil {
+		if result, err := parseStep(turnId, unitId, step, showDebug); err != nil {
 			log.Printf("parser: step: %q\n", step)
 			log.Printf("parser: line: %q\n", line)
 			return nil, err
@@ -74,7 +76,7 @@ func parseSteps(line, steps []byte, showDebug bool) (results []*Step, err error)
 }
 
 // parseStep parses a single step from the results of a Land Based Movement.
-func parseStep(step []byte, showDebug bool) (result *Step, err error) {
+func parseStep(turnId, unitId string, step []byte, showDebug bool) (result *Step, err error) {
 	//log.Printf("parser: step: %q\n", step)
 	step = bytes.TrimSpace(step)
 	//log.Printf("parser: step: %q\n", step)
@@ -108,6 +110,8 @@ func parseStep(step []byte, showDebug bool) (result *Step, err error) {
 				return nil, fmt.Errorf("blocked by must start step")
 			}
 			result = &Step{
+				TurnId:    turnId,
+				UnitId:    unitId,
 				Attempted: v.Direction,
 				Result:    Blocked,
 				BlockedBy: v,
@@ -126,6 +130,8 @@ func parseStep(step []byte, showDebug bool) (result *Step, err error) {
 				return nil, fmt.Errorf("multiple direction-terrain forbidden")
 			}
 			result = &Step{
+				TurnId:    turnId,
+				UnitId:    unitId,
 				Attempted: v.Direction,
 				Result:    Succeeded,
 				Terrain:   v.Terrain,
@@ -144,6 +150,8 @@ func parseStep(step []byte, showDebug bool) (result *Step, err error) {
 				return nil, fmt.Errorf("exhaustion must start step")
 			}
 			result = &Step{
+				TurnId:    turnId,
+				UnitId:    unitId,
 				Attempted: v.Direction,
 				Result:    ExhaustedMovementPoints,
 				Terrain:   v.Terrain,
@@ -172,6 +180,8 @@ func parseStep(step []byte, showDebug bool) (result *Step, err error) {
 				return nil, fmt.Errorf("prohibition must start step")
 			}
 			result = &Step{
+				TurnId:         turnId,
+				UnitId:         unitId,
 				Attempted:      v.Direction,
 				Result:         Prohibited,
 				Terrain:        v.Terrain,
@@ -204,6 +214,8 @@ func parseStep(step []byte, showDebug bool) (result *Step, err error) {
 				return nil, fmt.Errorf("terrain must start status")
 			}
 			result = &Step{
+				TurnId:  turnId,
+				UnitId:  unitId,
 				Result:  Status,
 				Terrain: v,
 			}

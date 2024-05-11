@@ -310,6 +310,7 @@ func (r *Report) parseSection(section *Section) ([]*Move, error) {
 // that make up each section that we want to parse.
 type Section struct {
 	Id           string
+	UnitId       string
 	Location     []byte
 	TurnInfo     []byte
 	Follows      []byte
@@ -367,6 +368,7 @@ func Sections(input []byte, showSkippedSections bool) ([]*Section, error) {
 			log.Printf("reports: sections: location: %q\n", string(section.Location))
 			panic(fmt.Sprintf("expected *locations.Location, got %T", v))
 		}
+		section.UnitId = ul.UnitId
 
 		// now that we know the unit id, we can extract the remaining lines that we are interested in
 		followsLine := []byte("Tribe Follows ")
