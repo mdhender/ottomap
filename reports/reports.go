@@ -319,6 +319,7 @@ type Section struct {
 	FollowsLine  []byte
 	MovementLine []byte
 	ScoutLines   [][]byte
+	StatusLine   []byte
 	Error        error
 }
 
@@ -418,6 +419,7 @@ func Sections(input []byte, showSkippedSections bool) ([]*Section, error) {
 					break
 				}
 				section.Status = bdup(line)
+				section.StatusLine = bdup(line)
 			}
 		}
 		if section.Error != nil {

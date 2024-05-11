@@ -196,10 +196,19 @@ var cmdMap = &cobra.Command{
 						}
 					}
 				}
+				if section.StatusLine != nil {
+					//log.Printf("map: report %s: section %2s: status  %q\n", rpt.Id, section.Id, section.StatusLine)
+					if steps, err := lbmoves.ParseMoveResults(section.StatusLine); err != nil {
+						log.Fatalf("map: report %s: section %2s: %v\n", rpt.Id, section.Id, err)
+					} else {
+						for _, step := range steps {
+							allSteps = append(allSteps, step)
+						}
+					}
+				}
 			}
 		}
 
-		log.Printf("map: todo: maybe status line can be mapped like a step\n")
 		log.Printf("map: todo: named hexes that are only in the status line are missed\n")
 
 		if cfg.Inputs.ShowSteps {

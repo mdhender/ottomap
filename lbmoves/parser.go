@@ -16,7 +16,8 @@ import (
 //go:generate pigeon -o grammar.go grammar.peg
 
 var (
-	rxScoutLine *regexp.Regexp
+	rxScoutLine  *regexp.Regexp
+	rxStatusLine *regexp.Regexp
 )
 
 // ParseMoveResults parses the results of a Land Based Movement.
@@ -28,6 +29,7 @@ var (
 func ParseMoveResults(line []byte) ([]*Step, error) {
 	if rxScoutLine == nil {
 		rxScoutLine = regexp.MustCompile(`^Scout [12345678]:Scout `)
+		rxStatusLine = regexp.MustCompile(`^[0-9][[0-9][0-9][0-9]([cefg][0-9])? Status: `)
 	}
 	if bytes.HasPrefix(line, []byte("Tribe Follows")) {
 		return parseTribeFollows(line)
@@ -35,6 +37,9 @@ func ParseMoveResults(line []byte) ([]*Step, error) {
 		return parseSteps(line, bytes.TrimPrefix(line, []byte("Tribe Movement: Move ")))
 	} else if rxScoutLine.Match(line) {
 		return parseSteps(line, line[len("Scout ?:Scout "):])
+	} else if rxStatusLine.Match(line) {
+		_, b, _ := bytes.Cut(line, []byte{':'})
+		return parseSteps(line, b)
 	}
 	return nil, cerrs.ErrNotMovementResults
 }
@@ -252,13 +257,23 @@ func parseStep(step []byte) (result *Step, err error) {
 			for _, u := range v {
 				result.Units = append(result.Units, string(u))
 			}
+		case domain.Terrain:
+			// valid only at the beginning of the step for status line
+			if result != nil {
+				log.Printf("parser:  sub: %q\n", subStep)
+				return nil, fmt.Errorf("terrain must start status")
+			}
+			result = &Step{
+				Result:  Status,
+				Terrain: v,
+			}
 		default:
 			log.Printf("parser:  sub: %q\n", subStep)
 			panic(fmt.Sprintf("unexpected %T", v))
 		}
 	}
 
-	//if result != nil {
+	//if result != nil && result.Result == Status {
 	//	if boo, err := json.MarshalIndent(result, "", "\t"); err == nil {
 	//		log.Printf("step: %s\n", string(boo))
 	//	}

@@ -97,6 +97,8 @@ Step <- d:DIRECTION "-" t:TERRAIN_CODE EOF {
     return u, nil
 } / d:DIRECTION EOF {
     return d, nil
+} / t:TERRAIN EOF {
+    return t, nil
 }
 
 EdgeType <- "Ford" {

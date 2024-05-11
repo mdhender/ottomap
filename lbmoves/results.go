@@ -15,6 +15,7 @@ const (
 	ExhaustedMovementPoints
 	Follows
 	Prohibited
+	Status
 	Succeeded
 	Vanished
 )
@@ -27,6 +28,7 @@ var (
 		ExhaustedMovementPoints: "Exhausted MPs",
 		Follows:                 "Follows",
 		Prohibited:              "Prohibited",
+		Status:                  "Status",
 		Succeeded:               "Succeeded",
 		Vanished:                "Vanished",
 	}
@@ -37,6 +39,7 @@ var (
 		"Exhausted MPs": ExhaustedMovementPoints,
 		"Follows":       Follows,
 		"Prohibited":    Prohibited,
+		"Status":        Status,
 		"Succeeded":     Succeeded,
 		"Vanished":      Vanished,
 	}
