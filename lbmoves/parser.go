@@ -26,7 +26,7 @@ var (
 // Handles Tribe Follows, Tribe Movement, and Scout lines.
 //
 // Returns the steps and the first error encountered.
-func ParseMoveResults(line []byte) ([]*Step, error) {
+func ParseMoveResults(line []byte, showDebug bool) ([]*Step, error) {
 	if rxScoutLine == nil {
 		rxScoutLine = regexp.MustCompile(`^Scout [12345678]:Scout `)
 		rxStatusLine = regexp.MustCompile(`^[0-9][[0-9][0-9][0-9]([cefg][0-9])? Status: `)
@@ -36,12 +36,12 @@ func ParseMoveResults(line []byte) ([]*Step, error) {
 	if bytes.HasPrefix(line, []byte("Tribe Follows")) {
 		return parseTribeFollows(line)
 	} else if bytes.HasPrefix(line, []byte("Tribe Movement: Move ")) {
-		return parseSteps(line, bytes.TrimPrefix(line, []byte("Tribe Movement: Move ")))
+		return parseSteps(line, bytes.TrimPrefix(line, []byte("Tribe Movement: Move ")), showDebug)
 	} else if rxScoutLine.Match(line) {
-		return parseSteps(line, line[len("Scout ?:Scout "):])
+		return parseSteps(line, line[len("Scout ?:Scout "):], showDebug)
 	} else if rxStatusLine.Match(line) {
 		_, b, _ := bytes.Cut(line, []byte{':'})
-		return parseSteps(line, b)
+		return parseSteps(line, b, showDebug)
 	}
 	return nil, cerrs.ErrNotMovementResults
 }
@@ -58,11 +58,11 @@ func parseTribeFollows(line []byte) ([]*Step, error) {
 }
 
 // parseSteps parses all the steps from the results of a Land Based Movement.
-func parseSteps(line, steps []byte) (results []*Step, err error) {
+func parseSteps(line, steps []byte, showDebug bool) (results []*Step, err error) {
 	// split the steps into single steps, which are backslash-separated, and
 	// parse each step individually after trimming spaces and trailing commas.
 	for _, step := range bytes.Split(steps, []byte{'\\'}) {
-		if result, err := parseStep(step); err != nil {
+		if result, err := parseStep(step, showDebug); err != nil {
 			log.Printf("parser: step: %q\n", step)
 			log.Printf("parser: line: %q\n", line)
 			return nil, err
@@ -74,25 +74,17 @@ func parseSteps(line, steps []byte) (results []*Step, err error) {
 }
 
 // parseStep parses a single step from the results of a Land Based Movement.
-func parseStep(step []byte) (result *Step, err error) {
+func parseStep(step []byte, showDebug bool) (result *Step, err error) {
 	//log.Printf("parser: step: %q\n", step)
 	step = bytes.TrimSpace(step)
 	//log.Printf("parser: step: %q\n", step)
 
-	root := hexReportToNodes(step)
-
-	// convert our linked list into a slice for parsing.
-	var steps [][]byte
-	for tmp := root; tmp != nil; tmp = tmp.next {
-		text := bytes.TrimSpace(tmp.text)
-		if len(text) != 0 {
-			steps = append(steps, tmp.text)
-		}
+	root := hexReportToNodes(step, showDebug)
+	steps, err := nodesToSteps(root)
+	if err != nil {
+		log.Printf("parser: step: %q\n", step)
+		return nil, err
 	}
-	root = nil
-	//for n, subStep := range steps {
-	//	log.Printf("parser:  sub: %2d: %q\n", n+1, subStep)
-	//}
 
 	// parse each sub-step separately.
 	for _, subStep := range steps {
@@ -221,9 +213,12 @@ func parseStep(step []byte) (result *Step, err error) {
 		}
 	}
 
-	//if result != nil && result.Result == Status {
-	//	if boo, err := json.MarshalIndent(result, "", "\t"); err == nil {
-	//		log.Printf("step: %s\n", string(boo))
+	//if showDebug {
+	//	if result != nil && (result.Resources != domain.RNone || result.Settlement != nil) {
+	//		log.Printf("parser: root: showDebug: %s\n", printNodes(root))
+	//		if boo, err := json.MarshalIndent(result, "", "\t"); err == nil {
+	//			log.Printf("step: %s\n", string(boo))
+	//		}
 	//	}
 	//}
 

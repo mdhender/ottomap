@@ -104,6 +104,8 @@ Step <- d:DIRECTION "-" t:TERRAIN_CODE EOF {
         }
     }
     return found, nil
+} / r:RESOURCE EOF {
+    return r, nil
 } / d:DIRECTION EOF {
     return d, nil
 } / t:TERRAIN EOF {

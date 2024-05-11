@@ -13,8 +13,10 @@ import (
 // hexReportToNodes converts a hex report into a linked list of nodes
 // where each node contains all the arguments for each component of
 // the hex report.
-func hexReportToNodes(hexReport []byte) (root *node) {
-	log.Printf("parser: root: before split %s\n", string(hexReport))
+func hexReportToNodes(hexReport []byte, showDebug bool) (root *node) {
+	if showDebug {
+		log.Printf("parser: root: before split %s\n", string(hexReport))
+	}
 
 	var tail *node
 	for _, component := range bytes.Split(hexReport, []byte{','}) {
@@ -29,7 +31,9 @@ func hexReportToNodes(hexReport []byte) (root *node) {
 		}
 	}
 
-	log.Printf("parser: root: after split %s\n", printNodes(root))
+	if showDebug {
+		log.Printf("parser: root: after split %s\n", printNodes(root))
+	}
 
 	// splitting like that has broke some things.
 	// there are components that use commas as separators internally.
@@ -79,9 +83,26 @@ func hexReportToNodes(hexReport []byte) (root *node) {
 		tmp = tmp.next
 	}
 
-	log.Printf("parser: root: after consolidating %s\n", printNodes(root))
+	if showDebug {
+		log.Printf("parser: root: after consolidating %s\n", printNodes(root))
+	}
 
 	return root
+}
+
+func nodesToSteps(n *node) ([][]byte, error) {
+	if n == nil {
+		return nil, nil
+	}
+	var steps [][]byte
+	for n != nil {
+		text := bytes.TrimSpace(n.text)
+		if len(text) != 0 {
+			steps = append(steps, text)
+		}
+		n = n.next
+	}
+	return steps, nil
 }
 
 func printNodes(root *node) string {

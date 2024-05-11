@@ -166,7 +166,7 @@ var cmdMap = &cobra.Command{
 			for _, section := range rpt.Sections {
 				if section.FollowsLine != nil {
 					//log.Printf("map: report %s: section %2s: follows %q\n", rpt.Id, section.Id, section.FollowsLine)
-					if steps, err := lbmoves.ParseMoveResults(section.FollowsLine); err != nil {
+					if steps, err := lbmoves.ParseMoveResults(section.FollowsLine, cfg.Inputs.ShowSteps); err != nil {
 						log.Fatalf("map: report %s: section %2s: %v\n", rpt.Id, section.Id, err)
 					} else {
 						for _, step := range steps {
@@ -176,7 +176,7 @@ var cmdMap = &cobra.Command{
 				}
 				if section.MovementLine != nil {
 					//log.Printf("map: report %s: section %2s: moves   %q\n", rpt.Id, section.Id, section.MovementLine)
-					if steps, err := lbmoves.ParseMoveResults(section.MovementLine); err != nil {
+					if steps, err := lbmoves.ParseMoveResults(section.MovementLine, cfg.Inputs.ShowSteps); err != nil {
 						log.Fatalf("map: report %s: section %2s: %v\n", rpt.Id, section.Id, err)
 					} else {
 						for _, step := range steps {
@@ -187,7 +187,7 @@ var cmdMap = &cobra.Command{
 				for _, scoutLine := range section.ScoutLines {
 					if scoutLine != nil {
 						//log.Printf("map: report %s: section %2s: scouts  %q\n", rpt.Id, section.Id, scoutLine)
-						if steps, err := lbmoves.ParseMoveResults(scoutLine); err != nil {
+						if steps, err := lbmoves.ParseMoveResults(scoutLine, cfg.Inputs.ShowSteps); err != nil {
 							log.Fatalf("map: report %s: section %2s: %v\n", rpt.Id, section.Id, err)
 						} else {
 							for _, step := range steps {
@@ -198,7 +198,7 @@ var cmdMap = &cobra.Command{
 				}
 				if section.StatusLine != nil {
 					//log.Printf("map: report %s: section %2s: status  %q\n", rpt.Id, section.Id, section.StatusLine)
-					if steps, err := lbmoves.ParseMoveResults(section.StatusLine); err != nil {
+					if steps, err := lbmoves.ParseMoveResults(section.StatusLine, cfg.Inputs.ShowSteps); err != nil {
 						log.Fatalf("map: report %s: section %2s: %v\n", rpt.Id, section.Id, err)
 					} else {
 						for _, step := range steps {
@@ -213,6 +213,9 @@ var cmdMap = &cobra.Command{
 
 		if cfg.Inputs.ShowSteps {
 			for _, us := range allSteps {
+				if us.Resources != domain.RIronOre {
+					continue
+				}
 				boo, err := json.MarshalIndent(us, "", "\t")
 				if err != nil {
 					log.Fatalf("map: step: %v\n", err)
