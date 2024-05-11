@@ -165,7 +165,7 @@ var cmdMap = &cobra.Command{
 			// parse the report, stopping if there's an error
 			for _, section := range rpt.Sections {
 				if section.FollowsLine != nil {
-					log.Printf("map: report %s: section %2s: follows %q\n", rpt.Id, section.Id, section.FollowsLine)
+					//log.Printf("map: report %s: section %2s: follows %q\n", rpt.Id, section.Id, section.FollowsLine)
 					if steps, err := lbmoves.ParseMoveResults(section.FollowsLine); err != nil {
 						log.Fatalf("map: report %s: section %2s: %v\n", rpt.Id, section.Id, err)
 					} else {
@@ -175,7 +175,7 @@ var cmdMap = &cobra.Command{
 					}
 				}
 				if section.MovementLine != nil {
-					log.Printf("map: report %s: section %2s: moves   %q\n", rpt.Id, section.Id, section.MovementLine)
+					//log.Printf("map: report %s: section %2s: moves   %q\n", rpt.Id, section.Id, section.MovementLine)
 					if steps, err := lbmoves.ParseMoveResults(section.MovementLine); err != nil {
 						log.Fatalf("map: report %s: section %2s: %v\n", rpt.Id, section.Id, err)
 					} else {
@@ -186,7 +186,7 @@ var cmdMap = &cobra.Command{
 				}
 				for _, scoutLine := range section.ScoutLines {
 					if scoutLine != nil {
-						log.Printf("map: report %s: section %2s: scouts  %q\n", rpt.Id, section.Id, scoutLine)
+						//log.Printf("map: report %s: section %2s: scouts  %q\n", rpt.Id, section.Id, scoutLine)
 						if steps, err := lbmoves.ParseMoveResults(scoutLine); err != nil {
 							log.Fatalf("map: report %s: section %2s: %v\n", rpt.Id, section.Id, err)
 						} else {

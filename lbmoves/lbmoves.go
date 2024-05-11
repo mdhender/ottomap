@@ -31,16 +31,16 @@ type Step struct {
 	// properties below are set even if the step failed.
 	// that means they may be for the hex where the unit started.
 
-	Terrain        domain.Terrain    `json:"terrain,omitempty"`
-	BlockedBy      *BlockedByEdge    `json:"blockedBy,omitempty"`
-	Edges          []*Edge           `json:"edges,omitempty"`
-	Exhausted      *Exhausted        `json:"exhausted,omitempty"`
-	Follows        string            `json:"follows,omitempty"` // unit id this unit follows
-	Neighbors      []*Neighbor       `json:"neighbors,omitempty"`
-	ProhibitedFrom *ProhibitedFrom   `json:"prohibitedFrom,omitempty"`
-	Resources      []domain.Resource `json:"resources,omitempty"`
-	Settlement     *Settlement       `json:"settlement,omitempty"`
-	Units          []string          `json:"units,omitempty"` // unit ids
+	Terrain        domain.Terrain  `json:"terrain,omitempty"`
+	BlockedBy      *BlockedByEdge  `json:"blockedBy,omitempty"`
+	Edges          []*Edge         `json:"edges,omitempty"`
+	Exhausted      *Exhausted      `json:"exhausted,omitempty"`
+	Follows        string          `json:"follows,omitempty"` // unit id this unit follows
+	Neighbors      []*Neighbor     `json:"neighbors,omitempty"`
+	ProhibitedFrom *ProhibitedFrom `json:"prohibitedFrom,omitempty"`
+	Resources      domain.Resource `json:"resources,omitempty"`
+	Settlement     *Settlement     `json:"settlement,omitempty"`
+	Units          []string        `json:"units,omitempty"` // unit ids
 }
 
 // BlockedByEdge is returned when a step fails because the unit was blocked by an edge feature.
@@ -116,8 +116,8 @@ type FoundUnit struct {
 
 // Neighbor is the terrain in a neighboring hex that the unit from the current hex.
 type Neighbor struct {
-	Direction directions.Direction
-	Terrain   domain.Terrain
+	Direction directions.Direction `json:"direction,omitempty"`
+	Terrain   domain.Terrain       `json:"terrain,omitempty"`
 }
 
 func (n *Neighbor) String() string {
@@ -131,8 +131,8 @@ type NoGroupsFound struct{}
 
 // ProhibitedFrom is returned when a step fails because the unit is not allowed to enter the terrain.
 type ProhibitedFrom struct {
-	Direction directions.Direction
-	Terrain   domain.Terrain
+	Direction directions.Direction `json:"direction,omitempty"`
+	Terrain   domain.Terrain       `json:"terrain,omitempty"`
 }
 
 func (p *ProhibitedFrom) String() string {

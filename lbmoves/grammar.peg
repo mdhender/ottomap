@@ -17,7 +17,7 @@ func toAnySlice(v any) []any {
 
 }
 
-Step <- d:DIRECTION "-" t:TERRAIN EOF {
+Step <- d:DIRECTION "-" t:TERRAIN_CODE EOF {
     return DirectionTerrain{
         Direction: d.(directions.Direction),
         Terrain:   t.(domain.Terrain),
@@ -50,21 +50,32 @@ Step <- d:DIRECTION "-" t:TERRAIN EOF {
     }, nil
 } / [Nn] "othing of interest found" EOF {
     return FoundNothing{}, nil
-} / "Patrolled and found" SP u:UNIT_ID EOF {
-    // todo: input is comma separated, but we're only returning one
-    return FoundUnit{
-        Id: u.(UnitID),
-    }, nil
-} / "L" _ d:DIRECTION EOF {
-    return &Neighbor{
+} / "Patrolled and found" SP u:UNIT_ID ui:SpaceUnitID* EOF {
+    found := []UnitID{u.(UnitID)}
+    for _, u := range toAnySlice(ui) {
+        switch v := u.(type) {
+        case UnitID:
+            found = append(found, v)
+        default:
+            panic(fmt.Errorf("unexpected type %T", v))
+        }
+    }
+    return found, nil
+} / t:LakeOrOceanCode SP+ d:DIRECTION sdi:SpaceDirection* EOF {
+    kind := t.(domain.Terrain)
+    neighbors := []*Neighbor{{
         Direction: d.(directions.Direction),
-        Terrain:   domain.TLake,
-    }, nil
-} / "O" _ d:DIRECTION EOF {
-    return &Neighbor{
-        Direction: d.(directions.Direction),
-        Terrain:   domain.TOcean,
-    }, nil
+        Terrain:   kind,
+    }}
+    for _, sd := range toAnySlice(sdi) {
+        switch v := sd.(type) {
+        case directions.Direction:
+            neighbors = append(neighbors, &Neighbor{Direction: v, Terrain: kind})
+        default:
+            panic(fmt.Errorf("unexpected type %T", v))
+        }
+    }
+    return neighbors, nil
 } / et:EdgeType SP d:DIRECTION edi:SpaceDirection* EOF {
     kind := et.(domain.Edge)
     edges := []*Edge{&Edge{Direction: d.(directions.Direction), Edge: kind}}
@@ -96,8 +107,18 @@ EdgeType <- "Ford" {
     return domain.ERiver, nil
 }
 
+LakeOrOceanCode <- "L" {
+    return domain.TLake, nil
+} / "O" {
+    return domain.TOcean, nil
+}
+
 SpaceDirection <- SP d:DIRECTION {
     return d, nil
+}
+
+SpaceUnitID <- SP u:UNIT_ID {
+    return u, nil
 }
 
 ProhibitedBy <- "Lake" {
@@ -140,17 +161,19 @@ TERRAIN <- "CONIFER HILLS" {
     return domain.TConiferHills, nil
 } / "GRASSY HILLS" {
     return domain.TGrassyHills, nil
+} / "LAKE" {
+    return domain.TLake, nil
+} / "OCEAN" {
+    return domain.TOcean, nil
 } / "PRAIRIE" {
     return domain.TPrairie, nil
 } / "ROCKY HILLS" {
     return domain.TRockyHills, nil
 } / "SWAMP" {
     return domain.TSwamp, nil
-} / "LAKE" {
-    return domain.TLake, nil
-} / "OCEAN" {
-    return domain.TOcean, nil
-} / "CH" {
+}
+
+TERRAIN_CODE <- "CH" {
     return domain.TConiferHills, nil
 } / "GH" {
     return domain.TGrassyHills, nil
