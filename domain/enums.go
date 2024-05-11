@@ -173,6 +173,7 @@ const (
 	RNone Resource = iota
 	RCoal
 	RIronOre
+	RSalt
 )
 
 var (
@@ -181,12 +182,14 @@ var (
 		RNone:    "",
 		RCoal:    "Coal",
 		RIronOre: "Iron Ore",
+		RSalt:    "Salt",
 	}
 	// helper map for unmarshalling the enum
 	resourceStringToEnum = map[string]Resource{
 		"":         RNone,
 		"Coal":     RCoal,
 		"Iron Ore": RIronOre,
+		"Salt":     RSalt,
 	}
 )
 

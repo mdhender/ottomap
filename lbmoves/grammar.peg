@@ -93,8 +93,17 @@ Step <- d:DIRECTION "-" t:TERRAIN_CODE EOF {
         Quantity: n.(int),
         Item:     i.(items.Item),
     }, nil
-} / u:UNIT_ID EOF {
-    return u, nil
+} / u:UNIT_ID ui:SpaceUnitID* EOF {
+    found := []UnitID{u.(UnitID)}
+    for _, u := range toAnySlice(ui) {
+        switch v := u.(type) {
+        case UnitID:
+            found = append(found, v)
+        default:
+            panic(fmt.Errorf("unexpected type %T", v))
+        }
+    }
+    return found, nil
 } / d:DIRECTION EOF {
     return d, nil
 } / t:TERRAIN EOF {
@@ -157,6 +166,8 @@ RESOURCE <- "Coal" {
     return domain.RCoal, nil
 } / "Iron Ore" {
     return domain.RIronOre, nil
+} / "Salt" {
+    return domain.RSalt, nil
 }
 
 TERRAIN <- "CONIFER HILLS" {

@@ -31,6 +31,8 @@ func ParseMoveResults(line []byte) ([]*Step, error) {
 		rxScoutLine = regexp.MustCompile(`^Scout [12345678]:Scout `)
 		rxStatusLine = regexp.MustCompile(`^[0-9][[0-9][0-9][0-9]([cefg][0-9])? Status: `)
 	}
+	//line = []byte(`Scout 5:Scout NE-RH, ,River N NE\,No Ford on River to NE of HEX , Find 3 French Hens,  2 Turtle Doves,  1 Partridge,`)
+	//line = []byte(`Scout 1:Scout SW-PR,  O SE, SW, NW, S, Chel世界sk-70,Find Salt, 2540g3, 3540g6\N-PR,  O SW, NW, N\ Not enough M.P's to move to NE into GRASSY HILLS, Nothing of interest found`)
 	if bytes.HasPrefix(line, []byte("Tribe Follows")) {
 		return parseTribeFollows(line)
 	} else if bytes.HasPrefix(line, []byte("Tribe Movement: Move ")) {
@@ -77,55 +79,7 @@ func parseStep(step []byte) (result *Step, err error) {
 	step = bytes.TrimSpace(step)
 	//log.Printf("parser: step: %q\n", step)
 
-	// split the step into its components, which are comma-separated, and remove the empty components.
-	type node struct {
-		text []byte
-		next *node
-	}
-	var root, tail *node
-	for _, component := range bytes.Split(step, []byte{','}) {
-		if component = bytes.TrimSpace(component); len(component) != 0 {
-			if root == nil {
-				root = &node{text: component}
-				tail = root
-			} else {
-				tail.next = &node{text: component}
-				tail = tail.next
-			}
-		}
-	}
-
-	// that step broke some things. there are components that use commas as separators internally.
-	// we need to find them and splice them back together. brute force it.
-	for tmp := root; tmp != nil && tmp.next != nil; {
-		if acceptFordEdge(tmp.text) && acceptDirection(tmp.next.text) {
-			tmp.text = append(tmp.text, ' ')
-			tmp.text = append(tmp.text, tmp.next.text...)
-			tmp.next = tmp.next.next
-		} else if acceptLakeEdge(tmp.text) && acceptDirection(tmp.next.text) {
-			tmp.text = append(tmp.text, ' ')
-			tmp.text = append(tmp.text, tmp.next.text...)
-			tmp.next = tmp.next.next
-		} else if acceptOceanEdge(tmp.text) && acceptDirection(tmp.next.text) {
-			tmp.text = append(tmp.text, ' ')
-			tmp.text = append(tmp.text, tmp.next.text...)
-			tmp.next = tmp.next.next
-		} else if acceptPassEdge(tmp.text) && acceptDirection(tmp.next.text) {
-			tmp.text = append(tmp.text, ' ')
-			tmp.text = append(tmp.text, tmp.next.text...)
-			tmp.next = tmp.next.next
-		} else if acceptPatrolledAndFound(tmp.text) && acceptUnitId(tmp.next.text) {
-			tmp.text = append(tmp.text, ' ')
-			tmp.text = append(tmp.text, tmp.next.text...)
-			tmp.next = tmp.next.next
-		} else if acceptRiverEdge(tmp.text) && acceptDirection(tmp.next.text) {
-			tmp.text = append(tmp.text, ' ')
-			tmp.text = append(tmp.text, tmp.next.text...)
-			tmp.next = tmp.next.next
-		} else {
-			tmp = tmp.next
-		}
-	}
+	root := hexReportToNodes(step)
 
 	// convert our linked list into a slice for parsing.
 	var steps [][]byte
@@ -243,12 +197,6 @@ func parseStep(step []byte) (result *Step, err error) {
 				return nil, fmt.Errorf("settlement forbidden at beginning of step")
 			}
 			result.Settlement = v
-		case UnitID:
-			if result == nil {
-				log.Printf("parser:  sub: %q\n", subStep)
-				return nil, fmt.Errorf("units forbidden at beginning of step")
-			}
-			result.Units = append(result.Units, string(v))
 		case []UnitID:
 			if result == nil {
 				log.Printf("parser:  sub: %q\n", subStep)
