@@ -30,8 +30,9 @@ func (m *MovementResults) Id() string {
 
 // Step is one step of a Land Based Movement.
 type Step struct {
-	TurnId string
-	UnitId string
+	TurnId       string `json:"turnId,omitempty"`
+	UnitId       string `json:"unitId,omitempty"`
+	StartGridHex string `json:"startGridHex,omitempty"`
 
 	// Attempted direction is the direction the unit tried to move.
 	// It will be Unknown if the unit stays in place.
@@ -45,6 +46,7 @@ type Step struct {
 	// properties below are set even if the step failed.
 	// that means they may be for the hex where the unit started.
 
+	GridHex        string           `json:"gridHex,omitempty"`
 	Terrain        domain.Terrain   `json:"terrain,omitempty"`
 	BlockedBy      *BlockedByEdge   `json:"blockedBy,omitempty"`
 	Edges          []*Edge          `json:"edges,omitempty"`

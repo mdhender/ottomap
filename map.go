@@ -164,6 +164,8 @@ var cmdMap = &cobra.Command{
 
 			// parse the report, stopping if there's an error
 			for _, section := range rpt.Sections {
+				log.Printf("map: report %s: section %2s: need to extract grid hex data\n", rpt.Id, section.Id)
+
 				turnId, unitId := rpt.TurnId, section.UnitId
 				if section.FollowsLine != nil {
 					//log.Printf("map: report %s: section %2s: follows %q\n", rpt.Id, section.Id, section.FollowsLine)
@@ -234,7 +236,8 @@ var cmdMap = &cobra.Command{
 			allMovementResults = append(allMovementResults, mrl)
 		}
 		for _, uss := range allMovementResults {
-			log.Printf("map: mrl: %-24s %-16s %-12s %3d\n", uss.Id(), uss.TurnId, uss.UnitId, len(uss.HexReports))
+			first, last := uss.HexReports[0], uss.HexReports[len(uss.HexReports)-1]
+			log.Printf("map: mrl: %-24s %-16s %-12s %3d %-10q %-10q\n", uss.Id(), uss.TurnId, uss.UnitId, len(uss.HexReports), first.StartGridHex, last.GridHex)
 		}
 
 		// assume that unit moves are in order and create unit follows links
