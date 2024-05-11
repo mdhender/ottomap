@@ -9,6 +9,7 @@ import (
 	"github.com/mdhender/ottomap/directions"
 	"github.com/mdhender/ottomap/domain"
 	"log"
+	"regexp"
 	"time"
 
 	pfollows "github.com/mdhender/ottomap/parsers/follows"
@@ -17,6 +18,10 @@ import (
 	pscouts "github.com/mdhender/ottomap/parsers/scouts"
 	pstatus "github.com/mdhender/ottomap/parsers/status"
 	pturn "github.com/mdhender/ottomap/parsers/turns"
+)
+
+var (
+	rxScoutLine *regexp.Regexp
 )
 
 type Reports []*Report
@@ -304,14 +309,17 @@ func (r *Report) parseSection(section *Section) ([]*Move, error) {
 // Section makes parsing easier by splitting the report into the lines
 // that make up each section that we want to parse.
 type Section struct {
-	Id       string
-	Location []byte
-	TurnInfo []byte
-	Follows  []byte
-	Moves    [][]byte
-	Scout    []*ScoutLine
-	Status   []byte
-	Error    error
+	Id           string
+	Location     []byte
+	TurnInfo     []byte
+	Follows      []byte
+	Moves        [][]byte
+	Scout        []*ScoutLine
+	Status       []byte
+	FollowsLine  []byte
+	MovementLine []byte
+	ScoutLines   [][]byte
+	Error        error
 }
 
 type ScoutLine struct {
@@ -362,6 +370,9 @@ func Sections(input []byte, showSkippedSections bool) ([]*Section, error) {
 		// now that we know the unit id, we can extract the remaining lines that we are interested in
 		followsLine := []byte("Tribe Follows ")
 		movesLine := []byte("Tribe Movement: ")
+		if rxScoutLine == nil {
+			rxScoutLine = regexp.MustCompile(`^Scout [12345678]:Scout `)
+		}
 		var scoutLines [8][]byte
 		for sid := 0; sid < 8; sid++ {
 			scoutLines[sid] = []byte(fmt.Sprintf("Scout %d:Scout ", sid+1))
@@ -376,7 +387,9 @@ func Sections(input []byte, showSkippedSections bool) ([]*Section, error) {
 					break
 				}
 				section.Follows = line
+				section.FollowsLine = bdup(line)
 			} else if bytes.HasPrefix(line, movesLine) {
+				section.MovementLine = bdup(line)
 				// remove the prefix and trim the line
 				line = bytes.TrimSpace(bytes.TrimPrefix(line, movesLine))
 				if bytes.HasPrefix(line, []byte{'M', 'o', 'v', 'e'}) {
@@ -384,6 +397,9 @@ func Sections(input []byte, showSkippedSections bool) ([]*Section, error) {
 				}
 				section.Moves = scrubMoves(line)
 			} else if bytes.HasPrefix(line, []byte{'S', 'c', 'o', 'u', 't'}) {
+				if rxScoutLine.Match(line) {
+					section.ScoutLines = append(section.ScoutLines, bdup(line))
+				}
 				for sid := 0; sid < 8; sid++ {
 					if bytes.HasPrefix(line, scoutLines[sid]) {
 						scoutLine := &ScoutLine{ScoutId: sid + 1, Move: bdup(line)}

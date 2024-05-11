@@ -1,0 +1,177 @@
+{
+package lbmoves
+
+import (
+	"log"
+	"github.com/mdhender/ottomap/directions"
+	"github.com/mdhender/ottomap/domain"
+	"github.com/mdhender/ottomap/items"
+)
+
+func toAnySlice(v any) []any {
+    if v == nil {
+        return nil
+    }
+    return v.([]any)
+}
+
+}
+
+Step <- d:DIRECTION "-" t:TERRAIN EOF {
+    return DirectionTerrain{
+        Direction: d.(directions.Direction),
+        Terrain:   t.(domain.Terrain),
+    }, nil
+} / [Cc] "an't Move on" SP t:ProhibitedBy SP "to" SP d:DIRECTION SP "of HEX" EOF {
+    return &ProhibitedFrom{
+        Direction: d.(directions.Direction),
+        Terrain:   t.(domain.Terrain),
+    }, nil
+} / "Group did not return" EOF {
+    return DidNotReturn{}, nil
+} / "Find" SP r:RESOURCE EOF {
+    return r, nil
+} / "Find" SP n:NUMBER SP i:ITEMS EOF {
+    return RandomEncounter{
+        Quantity: n.(int),
+        Item :    i.(items.Item),
+    }, nil
+} / [Nn] "o Ford on River to" SP d:DIRECTION SP "of HEX" EOF {
+    return &BlockedByEdge{
+        Direction: d.(directions.Direction),
+        Edge:      domain.ERiver,
+    }, nil
+} / "No groups found" EOF {
+    return NoGroupsFound{}, nil
+} / [Nn] "ot enough M.P's to move to" SP d:DIRECTION SP "into" SP t:TERRAIN EOF {
+    return &Exhausted{
+        Direction: d.(directions.Direction),
+        Terrain:   t.(domain.Terrain),
+    }, nil
+} / [Nn] "othing of interest found" EOF {
+    return FoundNothing{}, nil
+} / "Patrolled and found" SP u:UNIT_ID EOF {
+    // todo: input is comma separated, but we're only returning one
+    return FoundUnit{
+        Id: u.(UnitID),
+    }, nil
+} / "L" _ d:DIRECTION EOF {
+    return &Neighbor{
+        Direction: d.(directions.Direction),
+        Terrain:   domain.TLake,
+    }, nil
+} / "O" _ d:DIRECTION EOF {
+    return &Neighbor{
+        Direction: d.(directions.Direction),
+        Terrain:   domain.TOcean,
+    }, nil
+} / et:EdgeType SP d:DIRECTION edi:SpaceDirection* EOF {
+    kind := et.(domain.Edge)
+    edges := []*Edge{&Edge{Direction: d.(directions.Direction), Edge: kind}}
+    for _, ed := range toAnySlice(edi) {
+        switch v := ed.(type) {
+        case directions.Direction:
+            edges = append(edges, &Edge{Direction: v, Edge: kind})
+        default:
+            panic(fmt.Errorf("unexpected type %T", v))
+        }
+    }
+    return edges, nil
+} / n:NUMBER SP i:ITEM EOF {
+    return RandomEncounter{
+        Quantity: n.(int),
+        Item:     i.(items.Item),
+    }, nil
+} / u:UNIT_ID EOF {
+    return u, nil
+} / d:DIRECTION EOF {
+    return d, nil
+}
+
+EdgeType <- "Ford" {
+    return domain.EFord, nil
+} / "Pass" {
+    return domain.EPass, nil
+} / "River" {
+    return domain.ERiver, nil
+}
+
+SpaceDirection <- SP d:DIRECTION {
+    return d, nil
+}
+
+ProhibitedBy <- "Lake" {
+    return domain.TLake, nil
+} / "Ocean" {
+    return domain.TOcean, nil
+}
+
+DIRECTION <- "NE" {
+    return directions.DNorthEast, nil
+} / "SE" {
+    return directions.DSouthEast, nil
+} / "SW" {
+    return directions.DSouthWest, nil
+} / "NW" {
+    return directions.DNorthWest, nil
+} / "N" {
+    return directions.DNorth, nil
+} / "S" {
+    return directions.DSouth, nil
+}
+
+ITEM <- "Diamond" {
+    return items.Diamond, nil
+} / "HORSES" {
+    return items.Horses, nil
+}
+
+NUMBER <- [0-9]+ {
+    return strconv.Atoi(string(c.text))
+}
+
+RESOURCE <- "Coal" {
+    return domain.RCoal, nil
+} / "Iron Ore" {
+    return domain.RIronOre, nil
+}
+
+TERRAIN <- "CONIFER HILLS" {
+    return domain.TConiferHills, nil
+} / "GRASSY HILLS" {
+    return domain.TGrassyHills, nil
+} / "PRAIRIE" {
+    return domain.TPrairie, nil
+} / "ROCKY HILLS" {
+    return domain.TRockyHills, nil
+} / "SWAMP" {
+    return domain.TSwamp, nil
+} / "LAKE" {
+    return domain.TLake, nil
+} / "OCEAN" {
+    return domain.TOcean, nil
+} / "CH" {
+    return domain.TConiferHills, nil
+} / "GH" {
+    return domain.TGrassyHills, nil
+} / "PR" {
+    return domain.TPrairie, nil
+} / "RH" {
+    return domain.TRockyHills, nil
+} / "SW" {
+    return domain.TSwamp, nil
+} / "L" {
+    return domain.TLake, nil
+} / "O" {
+    return domain.TOcean, nil
+}
+
+UNIT_ID <- DIGIT DIGIT DIGIT DIGIT ([cefg] DIGIT)? {
+    return UnitID(string(c.text)), nil
+}
+
+EOF    = !.
+DIGIT  = [0-9]
+LETTER = [A-Z]
+SP     = [ \t]+
+_      = [ \t]*

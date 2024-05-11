@@ -3,9 +3,11 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/mdhender/ottomap/config"
 	"github.com/mdhender/ottomap/domain"
+	"github.com/mdhender/ottomap/lbmoves"
 	"github.com/mdhender/ottomap/parsers/report"
 	"github.com/mdhender/ottomap/reports"
 	"github.com/mdhender/ottomap/wxx"
@@ -130,7 +132,7 @@ var cmdMap = &cobra.Command{
 		}
 		log.Printf("map: reports %d\n", len(allReports))
 
-		var moves []*reports.Move
+		var allSteps []*lbmoves.Step
 
 		// parse the report files into a single map
 		for _, rpt := range cfg.Reports {
@@ -161,73 +163,54 @@ var cmdMap = &cobra.Command{
 			}
 
 			// parse the report, stopping if there's an error
-			ums, err := rpt.Parse()
-			if err != nil {
-				log.Fatalf("map: report %s: %v\n", rpt.Id, err)
-			}
-			moves = append(moves, ums...)
-		}
-
-		for _, um := range moves {
-			var edges string
-			for _, e := range um.Step.Hex.Edges {
-				if edges != "" {
-					edges += " "
-				}
-				edges += e.Direction.String() + "-" + e.Edge.String()
-			}
-			if edges != "" {
-				edges = "e(" + edges + ")"
-			}
-			var neighbors string
-			if len(um.Step.Hex.Neighbors) > 0 {
-				if um.Step.Result == reports.Blocked && len(um.Step.Hex.Neighbors) == 1 {
-					// nothing to report on
-				} else {
-					for _, n := range um.Step.Hex.Neighbors {
-						if n.Terrain != domain.TUnknown {
-							if neighbors != "" {
-								neighbors += " "
-							}
-							neighbors += n.Direction.String() + "-" + n.Terrain.String()
+			for _, section := range rpt.Sections {
+				if section.FollowsLine != nil {
+					log.Printf("map: report %s: section %2s: follows %q\n", rpt.Id, section.Id, section.FollowsLine)
+					if steps, err := lbmoves.ParseMoveResults(section.FollowsLine); err != nil {
+						log.Fatalf("map: report %s: section %2s: %v\n", rpt.Id, section.Id, err)
+					} else {
+						for _, step := range steps {
+							allSteps = append(allSteps, step)
 						}
 					}
-					if neighbors != "" {
-						neighbors = "n(" + neighbors + ")"
+				}
+				if section.MovementLine != nil {
+					log.Printf("map: report %s: section %2s: moves   %q\n", rpt.Id, section.Id, section.MovementLine)
+					if steps, err := lbmoves.ParseMoveResults(section.MovementLine); err != nil {
+						log.Fatalf("map: report %s: section %2s: %v\n", rpt.Id, section.Id, err)
+					} else {
+						for _, step := range steps {
+							allSteps = append(allSteps, step)
+						}
+					}
+				}
+				for _, scoutLine := range section.ScoutLines {
+					if scoutLine != nil {
+						log.Printf("map: report %s: section %2s: scouts  %q\n", rpt.Id, section.Id, scoutLine)
+						if steps, err := lbmoves.ParseMoveResults(scoutLine); err != nil {
+							log.Fatalf("map: report %s: section %2s: %v\n", rpt.Id, section.Id, err)
+						} else {
+							for _, step := range steps {
+								allSteps = append(allSteps, step)
+							}
+						}
 					}
 				}
 			}
-			var settlements string
-			for _, st := range um.Step.Hex.Settlements {
-				if settlements != "" {
-					settlements += ", "
-				}
-				settlements += st.Name
-			}
-			if settlements != "" {
-				settlements = "s(" + settlements + ")"
-			}
-			var terrain domain.Terrain
-			if len(um.Step.Hex.Neighbors) > 0 {
-				terrain = um.Step.Hex.Neighbors[0].Terrain
-			}
-			switch um.Step.Result {
-			case reports.Blocked:
-				log.Printf("%s %-6s %-2s %s  (blocked) %s %s\n", um.TurnId, um.UnitId, um.Step.Direction, terrain, neighbors, edges)
-			case reports.ExhaustedMovementPoints:
-				log.Printf("%s %-6s %-2s %s  (exhausted) %s %s\n", um.TurnId, um.UnitId, um.Step.Direction, terrain, neighbors, edges)
-			case reports.Followed:
-				log.Printf("%s %-6s .. followed %s\n", um.TurnId, um.UnitId, um.Follows)
-			case reports.StayedInPlace:
-				log.Printf("%s %-6s .. %s  (stayed in place) %s %s\n", um.TurnId, um.UnitId, um.Step.Hex.Terrain, neighbors, edges)
-			case reports.Succeeded:
-				log.Printf("%s %-6s %-2s %s %s %s %s\n", um.TurnId, um.UnitId, um.Step.Direction, um.Step.Hex.Terrain, neighbors, edges, settlements)
-			}
 		}
 
-		log.Printf("map: todo: the map above is not complete\n")
+		log.Printf("map: todo: maybe status line can be mapped like a step\n")
+		log.Printf("map: todo: named hexes that are only in the status line are missed\n")
 
-		log.Printf("map: todo: parse scout lines\n")
+		if cfg.Inputs.ShowSteps {
+			for _, us := range allSteps {
+				boo, err := json.MarshalIndent(us, "", "\t")
+				if err != nil {
+					log.Fatalf("map: step: %v\n", err)
+				}
+				fmt.Printf("step: %s\n", string(boo))
+			}
+		}
 
 		//// sort unit moves by turn then unit
 		//sort.Slice(unitMoves, func(i, j int) bool {

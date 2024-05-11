@@ -25,6 +25,7 @@ type Config struct {
 		ClanId              string `json:"-"` // clan to process
 		ShowIgnoredReports  bool   `json:"-"` // show ignored reports
 		ShowSkippedSections bool   `json:"-"` // show skipped sections
+		ShowSteps           bool   `json:"-"` // show all steps in the parser
 	} `json:"-"`
 	Reports reports.Reports `json:"reports,omitempty"` // list of report files we have loaded
 }
