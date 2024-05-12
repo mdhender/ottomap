@@ -23,6 +23,7 @@ type Config struct {
 		Year                int    `json:"-"` // year to process
 		Month               int    `json:"-"` // month to process
 		ClanId              string `json:"-"` // clan to process
+		GridOriginId        string `json:"-"` // grid id of the origin
 		ShowIgnoredReports  bool   `json:"-"` // show ignored reports
 		ShowSkippedSections bool   `json:"-"` // show skipped sections
 		ShowSteps           bool   `json:"-"` // show all steps in the parser

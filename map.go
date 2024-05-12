@@ -19,10 +19,11 @@ import (
 )
 
 var argsMap struct {
-	config string // path to configuration file
-	clanId string // clan id to use
-	turnId string // turn id to use
-	debug  struct {
+	config       string // path to configuration file
+	clanId       string // clan id to use
+	turnId       string // turn id to use
+	gridOriginId string // grid id to use for origin
+	debug        struct {
 		units bool
 	}
 }
@@ -31,6 +32,19 @@ var cmdMap = &cobra.Command{
 	Use:   "map",
 	Short: "Create a map from a report",
 	Long:  `Load a parsed report and create a map.`,
+	PreRunE: func(cmd *cobra.Command, args []string) error {
+		// if grid origin id is specified, it must be AA ... ZZ
+		if argsMap.gridOriginId != "" {
+			if strings.TrimSpace(argsMap.gridOriginId) != argsMap.gridOriginId {
+				return fmt.Errorf("grid-origin: can not contain spaces")
+			} else if len(argsMap.gridOriginId) != 2 {
+				return fmt.Errorf("grid orgin: must be two upper-case letters")
+			} else if strings.Trim(argsMap.gridOriginId, "ABCDEFGHIJKLMNOPQRSTUVWYZ") != "" {
+				return fmt.Errorf("grid orgin: must be two upper-case letters")
+			}
+		}
+		return nil
+	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		log.Printf("maps: todo: detect when a unit is created as an after-move action\n")
 
@@ -82,6 +96,11 @@ var cmdMap = &cobra.Command{
 
 		cfg.Inputs.ClanId = argsMap.clanId
 		log.Printf("map: config: clan %q\n", cfg.Inputs.ClanId)
+
+		cfg.Inputs.GridOriginId = argsMap.gridOriginId
+		if cfg.Inputs.GridOriginId != "" {
+			log.Printf("map: config: originGridId %q\n", cfg.Inputs.GridOriginId)
+		}
 
 		// if turn id is not on the command line, use the current turn from the configuration.
 		if argsMap.turnId == "" {
@@ -177,9 +196,9 @@ var cmdMap = &cobra.Command{
 						log.Fatalf("map: report %s: section %2s: %v\n", rpt.Id, section.Id, err)
 					}
 					mrl := &lbmoves.MovementResults{
-						TurnId:                 turnId,
-						UnitId:                 unitId,
-						StaringGridCoordinates: prevGridCoords,
+						TurnId:                  turnId,
+						UnitId:                  unitId,
+						StartingGridCoordinates: prevGridCoords,
 					}
 					for _, step := range steps {
 						mrl.HexReports = append(mrl.HexReports, step)
@@ -193,9 +212,9 @@ var cmdMap = &cobra.Command{
 						log.Fatalf("map: report %s: section %2s: %v\n", rpt.Id, section.Id, err)
 					}
 					mrl := &lbmoves.MovementResults{
-						TurnId:                 turnId,
-						UnitId:                 unitId,
-						StaringGridCoordinates: prevGridCoords,
+						TurnId:                  turnId,
+						UnitId:                  unitId,
+						StartingGridCoordinates: prevGridCoords,
 					}
 					for _, step := range steps {
 						mrl.HexReports = append(mrl.HexReports, step)
@@ -210,9 +229,9 @@ var cmdMap = &cobra.Command{
 							log.Fatalf("map: report %s: section %2s: %v\n", rpt.Id, section.Id, err)
 						}
 						mrl := &lbmoves.MovementResults{
-							TurnId:                 turnId,
-							UnitId:                 unitId,
-							StaringGridCoordinates: prevGridCoords,
+							TurnId:                  turnId,
+							UnitId:                  unitId,
+							StartingGridCoordinates: prevGridCoords,
 						}
 						for _, step := range steps {
 							mrl.HexReports = append(mrl.HexReports, step)
@@ -227,9 +246,9 @@ var cmdMap = &cobra.Command{
 						log.Fatalf("map: report %s: section %2s: %v\n", rpt.Id, section.Id, err)
 					}
 					mrl := &lbmoves.MovementResults{
-						TurnId:                 turnId,
-						UnitId:                 unitId,
-						StaringGridCoordinates: prevGridCoords,
+						TurnId:                  turnId,
+						UnitId:                  unitId,
+						StartingGridCoordinates: prevGridCoords,
 					}
 					for _, step := range steps {
 						mrl.HexReports = append(mrl.HexReports, step)
@@ -237,6 +256,21 @@ var cmdMap = &cobra.Command{
 					allMovementResults = append(allMovementResults, mrl)
 				}
 			}
+		}
+
+		if len(allMovementResults) == 0 {
+			log.Fatalf("map: no movement results found\n")
+		}
+
+		// users are required to provide starting grid coordinates if they're not already in the report
+		log.Printf("map: starting grid coordinates: %q\n", allMovementResults[0].StartingGridCoordinates)
+		if strings.HasPrefix(allMovementResults[0].StartingGridCoordinates, "##") {
+			log.Printf("map: warning: hidden grid origin: %q\n", allMovementResults[0].StartingGridCoordinates)
+			if cfg.Inputs.GridOriginId == "" {
+				log.Fatalf("map: starting grid coordinates must be specified\n")
+			}
+			allMovementResults[0].StartingGridCoordinates = cfg.Inputs.GridOriginId + strings.TrimPrefix(allMovementResults[0].StartingGridCoordinates, "##")
+			log.Printf("map: warning: grid origin set to %q\n", allMovementResults[0].StartingGridCoordinates)
 		}
 
 		//// sort unit moves by turn then unit
@@ -251,7 +285,7 @@ var cmdMap = &cobra.Command{
 
 		for _, uss := range allMovementResults {
 			var firstGridCoords, lastGridCoords string
-			firstGridCoords, lastGridCoords = uss.StaringGridCoordinates, "?"
+			firstGridCoords, lastGridCoords = uss.StartingGridCoordinates, "?"
 			log.Printf("map: mrl: %-24s %-16s %-12s %3d %-10q %-10q\n", uss.Id(), uss.TurnId, uss.UnitId, len(uss.HexReports), firstGridCoords, lastGridCoords)
 		}
 

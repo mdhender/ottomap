@@ -45,6 +45,7 @@ func Execute() error {
 	if err := cmdMap.MarkFlagRequired("config"); err != nil {
 		log.Fatalf("map: config: mark required: %v\n", err)
 	}
+	cmdMap.Flags().StringVar(&argsMap.gridOriginId, "grid-origin-id", "", "grid id for origin")
 	cmdMap.Flags().StringVar(&argsMap.turnId, "turn", "", "turn to process (yyyy-mm format)")
 
 	cmdParse.PersistentFlags().BoolVar(&argsParse.debug.units, "debug-units", false, "enable unit debugging")
