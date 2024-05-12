@@ -8,6 +8,7 @@ import (
 	"github.com/mdhender/ottomap/cerrs"
 	"github.com/mdhender/ottomap/directions"
 	"github.com/mdhender/ottomap/domain"
+	"github.com/mdhender/ottomap/lbmoves"
 	"log"
 	"regexp"
 	"time"
@@ -65,16 +66,17 @@ type Report struct {
 	Sections    []*Section `json:"-"`                     // sections of the report file
 }
 
-func (r *Report) Parse() ([]*Move, error) {
-	var moves []*Move
-	for _, section := range r.Sections {
-		ums, err := r.parseSection(section)
-		if err != nil {
-			return nil, err
-		}
-		moves = append(moves, ums...)
-	}
-	return moves, nil
+func (r *Report) Parse() ([]*lbmoves.MovementResults, error) {
+	panic("!obsolete!")
+	//var mrls []*lbmoves.MovementResults
+	//for _, section := range r.Sections {
+	//	ums, err := r.parseSection(section)
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//	moves = append(moves, ums...)
+	//}
+	//return mrls, nil
 }
 
 func (r *Report) parseSection(section *Section) ([]*Move, error) {
@@ -309,8 +311,12 @@ func (r *Report) parseSection(section *Section) ([]*Move, error) {
 // Section makes parsing easier by splitting the report into the lines
 // that make up each section that we want to parse.
 type Section struct {
-	Id           string
-	UnitId       string
+	Id string
+
+	UnitId     string
+	PrevCoords string // grid coordinates before the unit moved
+	CurrCoords string // grid coordinates after the unit moved
+
 	Location     []byte
 	TurnInfo     []byte
 	Follows      []byte
@@ -369,6 +375,8 @@ func Sections(input []byte, showSkippedSections bool) ([]*Section, error) {
 			panic(fmt.Sprintf("expected *locations.Location, got %T", v))
 		}
 		section.UnitId = ul.UnitId
+		section.PrevCoords = ul.PrevCoords
+		section.CurrCoords = ul.CurrCoords
 
 		// now that we know the unit id, we can extract the remaining lines that we are interested in
 		followsLine := []byte("Tribe Follows ")

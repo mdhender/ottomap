@@ -19,9 +19,10 @@ import (
 
 // MovementResults is the set of hex reports from a single movement results line.
 type MovementResults struct {
-	TurnId     string
-	UnitId     string
-	HexReports []*Step
+	TurnId                 string
+	UnitId                 string
+	StaringGridCoordinates string // grid coordinates before the unit moves
+	HexReports             []*Step
 }
 
 func (m *MovementResults) Id() string {

@@ -132,7 +132,8 @@ var cmdMap = &cobra.Command{
 		}
 		log.Printf("map: reports %d\n", len(allReports))
 
-		var allSteps []*lbmoves.Step
+		// create a map for every movement result we have
+		var allMovementResults []*lbmoves.MovementResults
 
 		// parse the report files into a single map
 		for _, rpt := range cfg.Reports {
@@ -162,52 +163,78 @@ var cmdMap = &cobra.Command{
 				log.Fatalf("map: report %s: please fix errors listed above, then restart\n", rpt.Id)
 			}
 
+			// each section may contain multiple movement results, so we need to collect them all
+
 			// parse the report, stopping if there's an error
 			for _, section := range rpt.Sections {
 				log.Printf("map: report %s: section %2s: need to extract grid hex data\n", rpt.Id, section.Id)
 
-				turnId, unitId := rpt.TurnId, section.UnitId
+				turnId, unitId, prevGridCoords := rpt.TurnId, section.UnitId, section.PrevCoords
 				if section.FollowsLine != nil {
 					//log.Printf("map: report %s: section %2s: follows %q\n", rpt.Id, section.Id, section.FollowsLine)
-					if steps, err := lbmoves.ParseMoveResults(turnId, unitId, section.FollowsLine, cfg.Inputs.ShowSteps); err != nil {
+					steps, err := lbmoves.ParseMoveResults(turnId, unitId, section.FollowsLine, cfg.Inputs.ShowSteps)
+					if err != nil {
 						log.Fatalf("map: report %s: section %2s: %v\n", rpt.Id, section.Id, err)
-					} else {
-						for _, step := range steps {
-							allSteps = append(allSteps, step)
-						}
 					}
+					mrl := &lbmoves.MovementResults{
+						TurnId:                 turnId,
+						UnitId:                 unitId,
+						StaringGridCoordinates: prevGridCoords,
+					}
+					for _, step := range steps {
+						mrl.HexReports = append(mrl.HexReports, step)
+					}
+					allMovementResults = append(allMovementResults, mrl)
 				}
 				if section.MovementLine != nil {
 					//log.Printf("map: report %s: section %2s: moves   %q\n", rpt.Id, section.Id, section.MovementLine)
-					if steps, err := lbmoves.ParseMoveResults(turnId, unitId, section.MovementLine, cfg.Inputs.ShowSteps); err != nil {
+					steps, err := lbmoves.ParseMoveResults(turnId, unitId, section.MovementLine, cfg.Inputs.ShowSteps)
+					if err != nil {
 						log.Fatalf("map: report %s: section %2s: %v\n", rpt.Id, section.Id, err)
-					} else {
-						for _, step := range steps {
-							allSteps = append(allSteps, step)
-						}
 					}
+					mrl := &lbmoves.MovementResults{
+						TurnId:                 turnId,
+						UnitId:                 unitId,
+						StaringGridCoordinates: prevGridCoords,
+					}
+					for _, step := range steps {
+						mrl.HexReports = append(mrl.HexReports, step)
+					}
+					allMovementResults = append(allMovementResults, mrl)
 				}
 				for _, scoutLine := range section.ScoutLines {
 					if scoutLine != nil {
 						//log.Printf("map: report %s: section %2s: scouts  %q\n", rpt.Id, section.Id, scoutLine)
-						if steps, err := lbmoves.ParseMoveResults(turnId, unitId, scoutLine, cfg.Inputs.ShowSteps); err != nil {
+						steps, err := lbmoves.ParseMoveResults(turnId, unitId, scoutLine, cfg.Inputs.ShowSteps)
+						if err != nil {
 							log.Fatalf("map: report %s: section %2s: %v\n", rpt.Id, section.Id, err)
-						} else {
-							for _, step := range steps {
-								allSteps = append(allSteps, step)
-							}
 						}
+						mrl := &lbmoves.MovementResults{
+							TurnId:                 turnId,
+							UnitId:                 unitId,
+							StaringGridCoordinates: prevGridCoords,
+						}
+						for _, step := range steps {
+							mrl.HexReports = append(mrl.HexReports, step)
+						}
+						allMovementResults = append(allMovementResults, mrl)
 					}
 				}
 				if section.StatusLine != nil {
 					//log.Printf("map: report %s: section %2s: status  %q\n", rpt.Id, section.Id, section.StatusLine)
-					if steps, err := lbmoves.ParseMoveResults(turnId, unitId, section.StatusLine, cfg.Inputs.ShowSteps); err != nil {
+					steps, err := lbmoves.ParseMoveResults(turnId, unitId, section.StatusLine, cfg.Inputs.ShowSteps)
+					if err != nil {
 						log.Fatalf("map: report %s: section %2s: %v\n", rpt.Id, section.Id, err)
-					} else {
-						for _, step := range steps {
-							allSteps = append(allSteps, step)
-						}
 					}
+					mrl := &lbmoves.MovementResults{
+						TurnId:                 turnId,
+						UnitId:                 unitId,
+						StaringGridCoordinates: prevGridCoords,
+					}
+					for _, step := range steps {
+						mrl.HexReports = append(mrl.HexReports, step)
+					}
+					allMovementResults = append(allMovementResults, mrl)
 				}
 			}
 		}
@@ -217,41 +244,31 @@ var cmdMap = &cobra.Command{
 		//	return unitMoves[i].SortKey() < unitMoves[j].SortKey()
 		//})
 
-		// create a map for every movement result we have
-		var allMovementResults []*lbmoves.MovementResults
 		movementResultsMap := map[string]*lbmoves.MovementResults{}
-		var mrl *lbmoves.MovementResults
-		for _, us := range allSteps {
-			if mrl == nil {
-				mrl = &lbmoves.MovementResults{TurnId: us.TurnId, UnitId: us.UnitId}
-			} else if !(us.TurnId == mrl.TurnId && us.UnitId == mrl.UnitId) {
-				movementResultsMap[fmt.Sprintf("%s.%s", mrl.TurnId, mrl.UnitId)] = mrl
-				allMovementResults = append(allMovementResults, mrl)
-				mrl = &lbmoves.MovementResults{TurnId: us.TurnId, UnitId: us.UnitId}
-			}
-			mrl.HexReports = append(mrl.HexReports, us)
+		for _, mrl := range allMovementResults {
+			movementResultsMap[fmt.Sprintf("%s.%s", mrl.TurnId, mrl.UnitId)] = mrl
 		}
-		if mrl != nil {
-			movementResultsMap[mrl.Id()] = mrl
-			allMovementResults = append(allMovementResults, mrl)
-		}
+
 		for _, uss := range allMovementResults {
-			first, last := uss.HexReports[0], uss.HexReports[len(uss.HexReports)-1]
-			log.Printf("map: mrl: %-24s %-16s %-12s %3d %-10q %-10q\n", uss.Id(), uss.TurnId, uss.UnitId, len(uss.HexReports), first.StartGridHex, last.GridHex)
+			var firstGridCoords, lastGridCoords string
+			firstGridCoords, lastGridCoords = uss.StaringGridCoordinates, "?"
+			log.Printf("map: mrl: %-24s %-16s %-12s %3d %-10q %-10q\n", uss.Id(), uss.TurnId, uss.UnitId, len(uss.HexReports), firstGridCoords, lastGridCoords)
 		}
 
 		// assume that unit moves are in order and create unit follows links
-		for _, us := range allSteps {
-			if us.Follows == "" {
-				continue
+		for _, mrl := range allMovementResults {
+			for _, us := range mrl.HexReports {
+				if us.Follows == "" {
+					continue
+				}
+				log.Printf("map: turn %s: unit %-8s: follows: need to link to other unit's step this turn\n", us.TurnId, us.UnitId)
+				turnUnitStepId := fmt.Sprintf("%s.%s", us.TurnId, us.UnitId)
+				that, ok := movementResultsMap[turnUnitStepId]
+				if !ok {
+					log.Fatalf("map: turn %s: unit %-8s: follows: %s: turn %s not found\n", us.TurnId, us.UnitId, us.Follows, turnUnitStepId)
+				}
+				us.FollowsLink = that
 			}
-			log.Printf("map: turn %s: unit %-8s: follows: need to link to other unit's step this turn\n", us.TurnId, us.UnitId)
-			turnUnitStepId := fmt.Sprintf("%s.%s", us.TurnId, us.UnitId)
-			that, ok := movementResultsMap[turnUnitStepId]
-			if !ok {
-				log.Fatalf("map: turn %s: unit %-8s: follows: %s: turn %s not found\n", us.TurnId, us.UnitId, us.Follows, turnUnitStepId)
-			}
-			us.FollowsLink = that
 		}
 
 		log.Printf("map: todo: hexes are not assigned for each step in the results\n")
@@ -259,12 +276,14 @@ var cmdMap = &cobra.Command{
 		log.Printf("map: todo: named hexes that are only in the status line are missed\n")
 
 		if cfg.Inputs.ShowSteps {
-			for _, us := range allSteps {
-				boo, err := json.MarshalIndent(us, "", "\t")
-				if err != nil {
-					log.Fatalf("map: step: %v\n", err)
+			for _, mrl := range allMovementResults {
+				for _, us := range mrl.HexReports {
+					boo, err := json.MarshalIndent(us, "", "\t")
+					if err != nil {
+						log.Fatalf("map: step: %v\n", err)
+					}
+					fmt.Printf("step: %s\n", string(boo))
 				}
-				fmt.Printf("step: %s\n", string(boo))
 			}
 		}
 
