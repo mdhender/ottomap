@@ -22,7 +22,15 @@ type MovementResults struct {
 	TurnId                  string
 	UnitId                  string
 	StartingGridCoordinates string // grid coordinates before the unit moves
-	HexReports              []*Step
+	EndingGridCoordinates   string // grid coordinates after the unit moves
+
+	Follows   string             `json:"follows,omitempty"` // unit id this unit follows
+	Followers []*MovementResults `json:"-"`                 // link to following units' movement
+
+	// hex reports
+	StatusLine      *Step     `json:"statusLine,omitempty"`
+	MovementReports []*Step   `json:"movementReports,omitempty"`
+	ScoutReports    [][]*Step `json:"scoutReports,omitempty"`
 }
 
 func (m *MovementResults) Id() string {
@@ -47,18 +55,17 @@ type Step struct {
 	// properties below are set even if the step failed.
 	// that means they may be for the hex where the unit started.
 
-	GridHex        string           `json:"gridHex,omitempty"`
-	Terrain        domain.Terrain   `json:"terrain,omitempty"`
-	BlockedBy      *BlockedByEdge   `json:"blockedBy,omitempty"`
-	Edges          []*Edge          `json:"edges,omitempty"`
-	Exhausted      *Exhausted       `json:"exhausted,omitempty"`
-	Follows        string           `json:"follows,omitempty"` // unit id this unit follows
-	FollowsLink    *MovementResults `json:"-"`                 // link to follow unit's movement
-	Neighbors      []*Neighbor      `json:"neighbors,omitempty"`
-	ProhibitedFrom *ProhibitedFrom  `json:"prohibitedFrom,omitempty"`
-	Resources      domain.Resource  `json:"resources,omitempty"`
-	Settlement     *Settlement      `json:"settlement,omitempty"`
-	Units          []string         `json:"units,omitempty"` // unit ids
+	GridHex        string          `json:"gridHex,omitempty"`
+	Terrain        domain.Terrain  `json:"terrain,omitempty"`
+	BlockedBy      *BlockedByEdge  `json:"blockedBy,omitempty"`
+	Edges          []*Edge         `json:"edges,omitempty"`
+	Exhausted      *Exhausted      `json:"exhausted,omitempty"`
+	Follows        string          `json:"follows,omitempty"` // unit id this unit follows
+	Neighbors      []*Neighbor     `json:"neighbors,omitempty"`
+	ProhibitedFrom *ProhibitedFrom `json:"prohibitedFrom,omitempty"`
+	Resources      domain.Resource `json:"resources,omitempty"`
+	Settlement     *Settlement     `json:"settlement,omitempty"`
+	Units          []string        `json:"units,omitempty"` // unit ids
 }
 
 // BlockedByEdge is returned when a step fails because the unit was blocked by an edge feature.
