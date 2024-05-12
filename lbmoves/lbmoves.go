@@ -8,6 +8,8 @@ import (
 	"github.com/mdhender/ottomap/directions"
 	"github.com/mdhender/ottomap/domain"
 	"github.com/mdhender/ottomap/items"
+	"strconv"
+	"strings"
 )
 
 // Land Based Movement is a series of steps.
@@ -26,6 +28,9 @@ type MovementResults struct {
 
 	Follows   string             `json:"follows,omitempty"` // unit id this unit follows
 	Followers []*MovementResults `json:"-"`                 // link to following units' movement
+
+	// ParentMR is set only if this unit did not move and doesn't have a starting grid coordinate.
+	ParentMR *MovementResults `json:"-"`
 
 	// hex reports
 	StatusLine      *Step     `json:"statusLine,omitempty"`
@@ -192,3 +197,43 @@ func (s *Settlement) String() string {
 }
 
 type UnitID string
+
+func (u UnitID) ParentId() string {
+	return ParentId(string(u))
+}
+
+func ParentId(unitId string) string {
+	switch len(unitId) {
+	case 4:
+		if strings.HasPrefix(unitId, "0") {
+			return ""
+		}
+		return "0" + unitId[1:]
+	case 6:
+		return unitId[:4]
+	}
+	panic(fmt.Sprintf("assert(len(unitId) != %d)", len(unitId)))
+}
+
+func NextTurnId(turnId string) string {
+	if len(turnId) != 7 {
+		panic(fmt.Sprintf("assert(len(turnId) != %d)", len(turnId)))
+	}
+	yyyy, mm, ok := strings.Cut(turnId, "-")
+	if !ok {
+		panic("assert(ok)")
+	}
+	year, err := strconv.Atoi(yyyy)
+	if err != nil {
+		panic(err)
+	}
+	month, err := strconv.Atoi(mm)
+	if err != nil {
+		panic(err)
+	}
+	month++
+	if month == 13 {
+		year, month = year+1, 1
+	}
+	return fmt.Sprintf("%04d-%02d", year, month)
+}

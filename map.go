@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/mdhender/ottomap/config"
+	"github.com/mdhender/ottomap/coords"
+	"github.com/mdhender/ottomap/directions"
 	"github.com/mdhender/ottomap/domain"
 	"github.com/mdhender/ottomap/lbmoves"
 	"github.com/mdhender/ottomap/parsers/report"
@@ -14,17 +16,17 @@ import (
 	"github.com/spf13/cobra"
 	"log"
 	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
 )
 
 var argsMap struct {
-	config       string // path to configuration file
-	clanId       string // clan id to use
-	turnId       string // turn id to use
-	gridOriginId string // grid id to use for origin
-	debug        struct {
+	config string // path to configuration file
+	clanId string // clan id to use
+	turnId string // turn id to use
+	debug  struct {
 		units bool
 	}
 }
@@ -33,19 +35,6 @@ var cmdMap = &cobra.Command{
 	Use:   "map",
 	Short: "Create a map from a report",
 	Long:  `Load a parsed report and create a map.`,
-	PreRunE: func(cmd *cobra.Command, args []string) error {
-		// if grid origin id is specified, it must be AA ... ZZ
-		if argsMap.gridOriginId != "" {
-			if strings.TrimSpace(argsMap.gridOriginId) != argsMap.gridOriginId {
-				return fmt.Errorf("grid-origin: can not contain spaces")
-			} else if len(argsMap.gridOriginId) != 2 {
-				return fmt.Errorf("grid orgin: must be two upper-case letters")
-			} else if strings.Trim(argsMap.gridOriginId, "ABCDEFGHIJKLMNOPQRSTUVWYZ") != "" {
-				return fmt.Errorf("grid orgin: must be two upper-case letters")
-			}
-		}
-		return nil
-	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		log.Printf("maps: todo: detect when a unit is created as an after-move action\n")
 
@@ -63,11 +52,6 @@ var cmdMap = &cobra.Command{
 
 		cfg.Inputs.ClanId = argsMap.clanId
 		log.Printf("map: config: clan %q\n", cfg.Inputs.ClanId)
-
-		cfg.Inputs.GridOriginId = argsMap.gridOriginId
-		if cfg.Inputs.GridOriginId != "" {
-			log.Printf("map: config: originGridId %q\n", cfg.Inputs.GridOriginId)
-		}
 
 		// if turn id is not on the command line, use the current turn from the configuration.
 		if argsMap.turnId == "" {
@@ -157,10 +141,15 @@ var cmdMap = &cobra.Command{
 
 				turnId, unitId, prevGridCoords := rpt.TurnId, section.UnitId, section.PrevCoords
 				if prevGridCoords == "" {
-					prevGridCoords = section.CurrCoords
-					if prevGridCoords == "" {
-						log.Fatalf("map: report %s: section %2s: no starting grid coordinates\n", rpt.Id, section.Id)
-					}
+					// this can happen when a unit is created as an after-move action.
+					// it can also happen when a unit is created as a before-move action and doesn't move.
+					log.Printf("map: report %s: section %2s: turn %s: unit %-6s: warning: missing coordinates\n", rpt.Id, section.Id, turnId, unitId)
+				} else if strings.HasPrefix(prevGridCoords, "##") {
+					// remove these and let the walk logic populate them
+					log.Printf("map: report %s: section %2s: turn %s: unit %-6s: stripping %q\n", rpt.Id, section.Id, turnId, unitId, prevGridCoords)
+					prevGridCoords = ""
+				} else {
+					log.Printf("map: report %s: section %2s: turn %s: unit %-6s: keeping %q\n", rpt.Id, section.Id, turnId, unitId, prevGridCoords)
 				}
 
 				mrl := &lbmoves.MovementResults{
@@ -281,40 +270,6 @@ var cmdMap = &cobra.Command{
 			}
 		}
 
-		hexes := []wxx.Hex{
-			{Grid: "OO", Coords: wxx.Offset{Column: 11, Row: 8}, Terrain: domain.TPrairie},
-			{Grid: "OO", Coords: wxx.Offset{Column: 11, Row: 7}, Terrain: domain.TOcean},
-			{Grid: "OO", Coords: wxx.Offset{Column: 11, Row: 6}, Terrain: domain.TSwamp},
-			{Grid: "OO", Coords: wxx.Offset{Column: 10, Row: 7}, Terrain: domain.TRockyHills},
-			{Grid: "OO", Coords: wxx.Offset{Column: 10, Row: 6}, Terrain: domain.TGrassyHills},
-			{Grid: "OO", Coords: wxx.Offset{Column: 9, Row: 7}, Terrain: domain.TSwamp},
-			{Grid: "OO", Coords: wxx.Offset{Column: 9, Row: 6}, Terrain: domain.TGrassyHills},
-			{Grid: "OO", Coords: wxx.Offset{Column: 9, Row: 5}, Terrain: domain.TGrassyHills},
-			{Grid: "OO", Coords: wxx.Offset{Column: 8, Row: 4}, Terrain: domain.TPrairie},
-
-			{Grid: "OO", Coords: wxx.Offset{Column: 9, Row: 8}, Terrain: domain.TRockyHills},
-			{Grid: "OO", Coords: wxx.Offset{Column: 8, Row: 7}, Terrain: domain.TGrassyHills},
-			{Grid: "OO", Coords: wxx.Offset{Column: 8, Row: 8}, Terrain: domain.TRockyHills},
-			{Grid: "OO", Coords: wxx.Offset{Column: 7, Row: 9}, Terrain: domain.TGrassyHills},
-			{Grid: "OO", Coords: wxx.Offset{Column: 7, Row: 8}, Terrain: domain.TGrassyHills},
-			{Grid: "OO", Coords: wxx.Offset{Column: 7, Row: 7}, Terrain: domain.TLowAridMountains},
-
-			{Grid: "OO", Coords: wxx.Offset{Column: 8, Row: 6}, Terrain: domain.TSwamp},
-
-			{Grid: "OO", Coords: wxx.Offset{Column: 8, Row: 9}, Terrain: domain.TGrassyHills},
-			{Grid: "OO", Coords: wxx.Offset{Column: 8, Row: 10}, Terrain: domain.TRockyHills},
-			{Grid: "OO", Coords: wxx.Offset{Column: 9, Row: 11}, Terrain: domain.TRockyHills},
-			{Grid: "OO", Coords: wxx.Offset{Column: 10, Row: 11}, Terrain: domain.TRockyHills},
-
-			{Grid: "OO", Coords: wxx.Offset{Column: 10, Row: 8}, Terrain: domain.TPrairie},
-			{Grid: "OO", Coords: wxx.Offset{Column: 11, Row: 9}, Terrain: domain.TBrushHills},
-			{Grid: "OO", Coords: wxx.Offset{Column: 12, Row: 9}, Terrain: domain.TPrairie},
-			{Grid: "OO", Coords: wxx.Offset{Column: 13, Row: 9}, Terrain: domain.TPrairie},
-			{Grid: "OO", Coords: wxx.Offset{Column: 14, Row: 9}, Terrain: domain.TRockyHills},
-			{Grid: "OO", Coords: wxx.Offset{Column: 14, Row: 8}, Terrain: domain.TPrairie},
-			{Grid: "OO", Coords: wxx.Offset{Column: 13, Row: 8}, Terrain: domain.TRockyHills},
-		}
-
 		//// create a map of all units to help with linking moves together.
 		//allUnits := map[string]*unitNode{}
 		//for _, u := range unitMoves {
@@ -429,8 +384,10 @@ var cmdMap = &cobra.Command{
 		}
 
 		// process the movement results one turn at a time
-		for _, turnId := range allTurnIds {
+		for n, turnId := range allTurnIds {
 			log.Printf("map: todo: walk the hex reports and update grid as well as ending coordinates\n")
+
+			// process the movement results for this turn
 			for _, mrl := range allMovementResults {
 				if mrl.TurnId != turnId {
 					continue
@@ -438,54 +395,201 @@ var cmdMap = &cobra.Command{
 
 				statusLine := mrl.StatusLine
 				if statusLine == nil {
-					log.Fatalf("map: %s: %-8q: status line is missing\n", mrl.TurnId, mrl.UnitId)
+					log.Fatalf("map: %s: %-6s: status line is missing\n", mrl.TurnId, mrl.UnitId)
 				}
 
 				start := mrl.StartingGridCoordinates
 				if start == "" {
-					log.Fatalf("map: %s: %-8q: starting hex is missing\n", mrl.TurnId, mrl.UnitId)
+					// attempt to use the coordinates from the parent's move
+					parentTurnUnitStepId := fmt.Sprintf("%s.%s", turnId, lbmoves.ParentId(mrl.UnitId))
+					log.Printf("map: %s: %-6s: start %s: parent %-6s: turnId %q\n", mrl.TurnId, mrl.UnitId, start, lbmoves.ParentId(mrl.UnitId), parentTurnUnitStepId)
+					parentTurn, ok := movementResultsMap[parentTurnUnitStepId]
+					if !ok {
+						log.Fatalf("map: %s: %-6s: start %s: parent %-6s: turnId %q: missing\n", mrl.TurnId, mrl.UnitId, start, lbmoves.ParentId(mrl.UnitId), parentTurn.TurnId)
+					} else if parentTurn.StartingGridCoordinates == "" {
+						log.Printf("map: %s: %-6s: start %s: parent %-6s: turnId %q: start %q\n", mrl.TurnId, mrl.UnitId, start, lbmoves.ParentId(mrl.UnitId), parentTurn.TurnId, parentTurn.StartingGridCoordinates)
+						panic(`assert(parentTurn.StartingGridCoordinates != "")`)
+					}
+					start, mrl.StartingGridCoordinates = parentTurn.StartingGridCoordinates, parentTurn.StartingGridCoordinates
+					log.Printf("map: %s: %-6s: start %s: parent %-6s: turnId %q: start %q\n", mrl.TurnId, mrl.UnitId, start, lbmoves.ParentId(mrl.UnitId), parentTurn.TurnId, parentTurn.StartingGridCoordinates)
 				}
-				// log.Printf("map: %s: %-8q: origin %s\n", mrl.TurnId, mrl.UnitId, start)
+				log.Printf("map: %s: %-6s: origin %s\n", mrl.TurnId, mrl.UnitId, start)
 
-				if len(mrl.MovementReports) == 0 {
-					//log.Printf("map: %s: %-8q: steps %2d\n", mrl.TurnId, mrl.UnitId, len(mrl.HexReports))
-					mrl.EndingGridCoordinates = start
-				} else {
-					//log.Printf("map: %s: %-8q: steps %2d\n", mrl.TurnId, mrl.UnitId, len(mrl.MovementReports))
-					// mrl.EndingGridCoordinates = "AA 0101"
+				currGridCoords, err := coords.StringToGridCoords(start)
+				if err != nil {
+					log.Fatalf("map: %s: %-6s: toGridCoords: error %v\n", mrl.TurnId, mrl.UnitId, err)
 				}
-
-				// use the ending grid coordinates as the starting grid coordinates for the next turn's movement
+				log.Printf("map: %s: %-6s: step %2d: grid %s\n", mrl.TurnId, mrl.UnitId, n, currGridCoords)
+				currMapCoords, err := currGridCoords.ToMapCoords()
+				if err != nil {
+					log.Fatalf("map: %s: %-6s: toMapCoords: error %v\n", mrl.TurnId, mrl.UnitId, err)
+				}
+				for n, step := range mrl.MovementReports {
+					log.Printf("map: %s: %-6s: step %2d: mapc %s\n", mrl.TurnId, mrl.UnitId, n, currMapCoords)
+					switch step.Result {
+					case lbmoves.Blocked:
+					case lbmoves.ExhaustedMovementPoints:
+					case lbmoves.Follows:
+					case lbmoves.Prohibited:
+					case lbmoves.Status:
+					case lbmoves.Succeeded:
+						if step.Attempted == directions.DUnknown {
+							panic(fmt.Sprintf("assert(step.Attempted != %d)", int(step.Attempted)))
+						}
+						currMapCoords = currMapCoords.Add(step.Attempted)
+					case lbmoves.StayedInPlace:
+					case lbmoves.Vanished:
+					default:
+						panic(fmt.Sprintf("assert(step.Result != %d)", int(step.Result)))
+					}
+					gridId := currMapCoords.GridString()[:2]
+					log.Printf("grid id is %q\n", gridId)
+					daGrid, ok := worldMap[gridId]
+					if !ok {
+						daGrid = &gridHexes{
+							Grid:  gridId,
+							Hexes: map[string]*wxx.Hex{},
+						}
+						worldMap[daGrid.Grid] = daGrid
+					}
+					daHex, ok := daGrid.Hexes[currMapCoords.GridString()]
+					if !ok {
+						// normalize the map coordinates to the grid's origin
+						gc := currMapCoords.ToGrid()
+						daHex = &wxx.Hex{
+							Grid:    gridId,
+							Coords:  wxx.Offset{Column: gc.GridColumn, Row: gc.GridRow},
+							Terrain: domain.TPrairie,
+						}
+						daGrid.Hexes[currMapCoords.GridString()] = daHex
+					}
+				}
+				log.Printf("map: %s: %-6s: steps %2d start %s: curr %s\n", mrl.TurnId, mrl.UnitId, len(mrl.MovementReports), start, currMapCoords.GridString())
+				mrl.EndingGridCoordinates = currMapCoords.GridString()
+				//mrl.EndingGridCoordinates = "AA 0101"
 			}
 
-			// resolve "follows" links
+			// resolve "follows" links for this turn
 			for _, mrl := range allMovementResults {
 				if mrl.TurnId != turnId || mrl.Followers == nil {
 					continue
 				}
+
 				for _, follower := range mrl.Followers {
-					log.Printf("map: %s: %-8q: follower %-8q %q -> %q\n", mrl.TurnId, mrl.UnitId, follower.UnitId, follower.EndingGridCoordinates, mrl.EndingGridCoordinates)
+					log.Printf("map: %s: %-6s: follower %-8q %q -> %q\n", mrl.TurnId, mrl.UnitId, follower.UnitId, follower.EndingGridCoordinates, mrl.EndingGridCoordinates)
 					follower.EndingGridCoordinates = mrl.EndingGridCoordinates
 				}
 			}
 
-			//// final sanity check for ending positions
-			//for _, u := range unitMoves {
-			//	if u.End == "" {
-			//		log.Fatalf("map: unit %-8q: turn %04d-%02d: ending hex is missing\n", u.Id, u.Turn.Year, u.Turn.Month)
-			//	}
-			//}
-		}
+			// process the scout results for this turn
+			for _, mrl := range allMovementResults {
+				if mrl.TurnId != turnId {
+					continue
+				}
 
-		log.Printf("map: world: %d\n", len(worldMap))
+				for s, scout := range mrl.ScoutReports {
+					// each scout starts at the unit's current location
+					startGridCoords, err := coords.StringToGridCoords(mrl.EndingGridCoordinates)
+					if err != nil {
+						log.Fatalf("map: %s: %-6s: toGridCoords: error %v\n", mrl.TurnId, mrl.UnitId, err)
+					}
+					log.Printf("map: %s: %-6s: scout %d: grid %s\n", mrl.TurnId, mrl.UnitId, s+1, startGridCoords)
+					currMapCoords, err := startGridCoords.ToMapCoords()
+					if err != nil {
+						log.Fatalf("map: %s: %-6s: scout %d: toMapCoords: error %v\n", mrl.TurnId, mrl.UnitId, s+1, err)
+					}
 
-		// now we can create the Worldographer map!
-		log.Printf("map: creating WXX map\n")
-		w := &wxx.WXX{}
-		if err := w.Create("working/testmap.wxx", hexes, false); err != nil {
-			log.Fatal(err)
+					movementReports := scout
+					for n, step := range movementReports {
+						log.Printf("map: %s: %-6s: scout %d: step %2d: mapc %s\n", mrl.TurnId, mrl.UnitId, s+1, n+1, currMapCoords)
+						switch step.Result {
+						case lbmoves.Blocked:
+						case lbmoves.ExhaustedMovementPoints:
+						case lbmoves.Follows:
+						case lbmoves.Prohibited:
+						case lbmoves.Status:
+						case lbmoves.Succeeded:
+							if step.Attempted == directions.DUnknown {
+								panic(fmt.Sprintf("assert(step.Attempted != %d)", int(step.Attempted)))
+							}
+							currMapCoords = currMapCoords.Add(step.Attempted)
+						case lbmoves.StayedInPlace:
+						case lbmoves.Vanished:
+						default:
+							panic(fmt.Sprintf("assert(step.Result != %d)", int(step.Result)))
+						}
+						gridId := currMapCoords.GridString()[:2]
+						log.Printf("grid id is %q\n", gridId)
+						daGrid, ok := worldMap[gridId]
+						if !ok {
+							daGrid = &gridHexes{
+								Grid:  gridId,
+								Hexes: map[string]*wxx.Hex{},
+							}
+							worldMap[daGrid.Grid] = daGrid
+						}
+						daHex, ok := daGrid.Hexes[currMapCoords.GridString()]
+						if !ok {
+							// normalize the map coordinates to the grid's origin
+							gc := currMapCoords.ToGrid()
+							daHex = &wxx.Hex{
+								Grid:    gridId,
+								Coords:  wxx.Offset{Column: gc.GridColumn, Row: gc.GridRow},
+								Terrain: step.Terrain,
+							}
+							daGrid.Hexes[currMapCoords.GridString()] = daHex
+						}
+						log.Printf("map: %s: %-6s: scout %d: start %s: curr %s\n", mrl.TurnId, mrl.UnitId, s+1, startGridCoords.String(), currMapCoords.GridString())
+					}
+				}
+			}
+
+			// if there are more turns to process, then the ending position this turn becomes the starting position for the next turn
+			if n < len(allTurnIds)-1 {
+				missingEnds, nextTurnId := 0, allTurnIds[n+1]
+				log.Printf("map: turnId %s: next turnId %s\n", turnId, nextTurnId)
+				for _, mrl := range allMovementResults {
+					if mrl.TurnId != turnId {
+						continue
+					}
+
+					log.Printf("map: %s: %-6s: start %s: end: %s\n", mrl.TurnId, mrl.UnitId, mrl.StartingGridCoordinates, mrl.EndingGridCoordinates)
+					if mrl.EndingGridCoordinates == "" {
+						log.Printf("map: %s: %-6s: start %s: end: missing\n", mrl.TurnId, mrl.UnitId, mrl.StartingGridCoordinates)
+						missingEnds++
+					}
+
+					// does the unit have a move next turn? if they don't, we're hosed since we can't look forward multiple turns yet.
+					nextTurnUnitStepId := fmt.Sprintf("%s.%s", nextTurnId, mrl.UnitId)
+					nextTurn, ok := movementResultsMap[nextTurnUnitStepId]
+					if !ok {
+						log.Fatalf("map: %s: %-6s: start %s: end: missing next turn\n", mrl.TurnId, mrl.UnitId, mrl.StartingGridCoordinates)
+					}
+					nextTurn.StartingGridCoordinates = mrl.EndingGridCoordinates
+					log.Printf("map: %s: %-6s: start %s: end: %s <-- next turn\n", nextTurn.TurnId, nextTurn.UnitId, nextTurn.StartingGridCoordinates, nextTurn.EndingGridCoordinates)
+				}
+				if missingEnds != 0 {
+					log.Fatalf("map: %s: error: walk did not populate %d units\n", turnId, missingEnds)
+				}
+			}
+
+			log.Printf("map: world: %d\n", len(worldMap))
+			for gridId, daMap := range worldMap {
+				log.Printf("map: world: %s: %d\n", gridId, len(daMap.Hexes))
+				// now we can create the Worldographer map!
+				mapName := filepath.Join(cfg.OutputPath, fmt.Sprintf("%s.%s.%s.wxx", turnId, argsMap.clanId, gridId))
+				log.Printf("map: creating %s\n", mapName)
+				var daHexes []*wxx.Hex
+				for _, hex := range daMap.Hexes {
+					daHexes = append(daHexes, hex)
+				}
+				w := &wxx.WXX{}
+				if err := w.Create(mapName, daHexes, false); err != nil {
+					log.Fatal(err)
+				}
+				log.Printf("map: created  %s\n", mapName)
+			}
 		}
-		log.Printf("map: created %s\n", "working/testmap.wxx")
 
 		return nil
 	},
