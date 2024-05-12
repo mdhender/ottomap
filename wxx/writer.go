@@ -19,6 +19,8 @@ type Hex struct {
 	Grid    string // AA ... ZZ
 	Coords  Offset // coordinates in a grid hex are one-based
 	Terrain domain.Terrain
+	Visited bool
+	Scouted bool
 }
 
 // Tile is a hex on the Worldographer map.

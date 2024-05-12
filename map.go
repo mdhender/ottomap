@@ -367,12 +367,7 @@ var cmdMap = &cobra.Command{
 		//	log.Printf("map: %s: %5d\n", id, turnIdCounter[id])
 		//}
 
-		type gridHexes struct {
-			Grid  string              // the grid in the big map
-			Hexes map[string]*wxx.Hex // key is hex coordinates
-		}
-
-		worldMap := map[string]*gridHexes{}
+		worldHexMap := map[string]*wxx.Hex{}
 
 		// unitNode is a unit that will be added to the map.
 		// it will contain all the unit's moves. the parent
@@ -383,6 +378,39 @@ var cmdMap = &cobra.Command{
 			Moves  []*report.Unit
 		}
 
+		// initialize the world hex map from the first unit's status line
+		for n, mrl := range allMovementResults {
+			statusLine := mrl.StatusLine
+			if statusLine == nil {
+				log.Fatalf("map: %s: %-6s: status line is missing\n", mrl.TurnId, mrl.UnitId)
+			}
+
+			if n == 0 {
+				start := mrl.StartingGridCoordinates
+				if start == "" {
+					log.Fatalf("map: %s: %-6s: origin is not defined for first unit's first turn\n", mrl.TurnId, mrl.UnitId)
+				}
+
+				originGridCoords, err := coords.StringToGridCoords(start)
+				if err != nil {
+					log.Fatalf("map: %s: %-6s: toGridCoords: error %v\n", mrl.TurnId, mrl.UnitId, err)
+				}
+				log.Printf("map: %s: %-6s: status line: grid %s\n", mrl.TurnId, mrl.UnitId, originGridCoords)
+				originMapCoords, err := originGridCoords.ToMapCoords()
+				if err != nil {
+					log.Fatalf("map: %s: %-6s: toMapCoords: error %v\n", mrl.TurnId, mrl.UnitId, err)
+				}
+				gridColumn, gridRow := originMapCoords.GridColumnRow()
+				worldHexMap[originMapCoords.GridString()] = &wxx.Hex{
+					Grid:    originMapCoords.GridId(),
+					Coords:  wxx.Offset{Column: gridColumn, Row: gridRow},
+					Terrain: statusLine.Terrain,
+				}
+
+				log.Printf("map: %s: %-6s: status line: %s\n", mrl.TurnId, mrl.UnitId, statusLine.Terrain)
+			}
+		}
+
 		// process the movement results one turn at a time
 		for n, turnId := range allTurnIds {
 			log.Printf("map: todo: walk the hex reports and update grid as well as ending coordinates\n")
@@ -391,11 +419,6 @@ var cmdMap = &cobra.Command{
 			for _, mrl := range allMovementResults {
 				if mrl.TurnId != turnId {
 					continue
-				}
-
-				statusLine := mrl.StatusLine
-				if statusLine == nil {
-					log.Fatalf("map: %s: %-6s: status line is missing\n", mrl.TurnId, mrl.UnitId)
 				}
 
 				start := mrl.StartingGridCoordinates
@@ -424,49 +447,15 @@ var cmdMap = &cobra.Command{
 				if err != nil {
 					log.Fatalf("map: %s: %-6s: toMapCoords: error %v\n", mrl.TurnId, mrl.UnitId, err)
 				}
-				for n, step := range mrl.MovementReports {
-					log.Printf("map: %s: %-6s: step %2d: mapc %s\n", mrl.TurnId, mrl.UnitId, n, currMapCoords)
-					switch step.Result {
-					case lbmoves.Blocked:
-					case lbmoves.ExhaustedMovementPoints:
-					case lbmoves.Follows:
-					case lbmoves.Prohibited:
-					case lbmoves.Status:
-					case lbmoves.Succeeded:
-						if step.Attempted == directions.DUnknown {
-							panic(fmt.Sprintf("assert(step.Attempted != %d)", int(step.Attempted)))
-						}
-						currMapCoords = currMapCoords.Add(step.Attempted)
-					case lbmoves.StayedInPlace:
-					case lbmoves.Vanished:
-					default:
-						panic(fmt.Sprintf("assert(step.Result != %d)", int(step.Result)))
-					}
-					gridId := currMapCoords.GridString()[:2]
-					log.Printf("grid id is %q\n", gridId)
-					daGrid, ok := worldMap[gridId]
-					if !ok {
-						daGrid = &gridHexes{
-							Grid:  gridId,
-							Hexes: map[string]*wxx.Hex{},
-						}
-						worldMap[daGrid.Grid] = daGrid
-					}
-					daHex, ok := daGrid.Hexes[currMapCoords.GridString()]
-					if !ok {
-						// normalize the map coordinates to the grid's origin
-						gc := currMapCoords.ToGrid()
-						daHex = &wxx.Hex{
-							Grid:    gridId,
-							Coords:  wxx.Offset{Column: gc.GridColumn, Row: gc.GridRow},
-							Terrain: domain.TPrairie,
-						}
-						daGrid.Hexes[currMapCoords.GridString()] = daHex
-					}
+				for stepNo, step := range mrl.MovementReports {
+					log.Printf("map: %s: %-6s: step %2d: mapc %s\n", mrl.TurnId, mrl.UnitId, stepNo+1, currMapCoords)
+					nextCoords := walk(turnId, mrl.UnitId, worldHexMap, stepNo+1, step, currMapCoords)
+					log.Printf("map: %s: %-6s: step %2d: mapc %s next %s\n", mrl.TurnId, mrl.UnitId, stepNo+1, currMapCoords, nextCoords)
+					currMapCoords = nextCoords
 				}
+
 				log.Printf("map: %s: %-6s: steps %2d start %s: curr %s\n", mrl.TurnId, mrl.UnitId, len(mrl.MovementReports), start, currMapCoords.GridString())
 				mrl.EndingGridCoordinates = currMapCoords.GridString()
-				//mrl.EndingGridCoordinates = "AA 0101"
 			}
 
 			// resolve "follows" links for this turn
@@ -487,59 +476,24 @@ var cmdMap = &cobra.Command{
 					continue
 				}
 
-				for s, scout := range mrl.ScoutReports {
+				for scoutNo, scout := range mrl.ScoutReports {
 					// each scout starts at the unit's current location
 					startGridCoords, err := coords.StringToGridCoords(mrl.EndingGridCoordinates)
 					if err != nil {
 						log.Fatalf("map: %s: %-6s: toGridCoords: error %v\n", mrl.TurnId, mrl.UnitId, err)
 					}
-					log.Printf("map: %s: %-6s: scout %d: grid %s\n", mrl.TurnId, mrl.UnitId, s+1, startGridCoords)
+					log.Printf("map: %s: %-6s: scout %d: grid %s\n", mrl.TurnId, mrl.UnitId, scoutNo+1, startGridCoords)
 					currMapCoords, err := startGridCoords.ToMapCoords()
 					if err != nil {
-						log.Fatalf("map: %s: %-6s: scout %d: toMapCoords: error %v\n", mrl.TurnId, mrl.UnitId, s+1, err)
+						log.Fatalf("map: %s: %-6s: scout %d: toMapCoords: error %v\n", mrl.TurnId, mrl.UnitId, scoutNo+1, err)
 					}
 
 					movementReports := scout
-					for n, step := range movementReports {
-						log.Printf("map: %s: %-6s: scout %d: step %2d: mapc %s\n", mrl.TurnId, mrl.UnitId, s+1, n+1, currMapCoords)
-						switch step.Result {
-						case lbmoves.Blocked:
-						case lbmoves.ExhaustedMovementPoints:
-						case lbmoves.Follows:
-						case lbmoves.Prohibited:
-						case lbmoves.Status:
-						case lbmoves.Succeeded:
-							if step.Attempted == directions.DUnknown {
-								panic(fmt.Sprintf("assert(step.Attempted != %d)", int(step.Attempted)))
-							}
-							currMapCoords = currMapCoords.Add(step.Attempted)
-						case lbmoves.StayedInPlace:
-						case lbmoves.Vanished:
-						default:
-							panic(fmt.Sprintf("assert(step.Result != %d)", int(step.Result)))
-						}
-						gridId := currMapCoords.GridString()[:2]
-						log.Printf("grid id is %q\n", gridId)
-						daGrid, ok := worldMap[gridId]
-						if !ok {
-							daGrid = &gridHexes{
-								Grid:  gridId,
-								Hexes: map[string]*wxx.Hex{},
-							}
-							worldMap[daGrid.Grid] = daGrid
-						}
-						daHex, ok := daGrid.Hexes[currMapCoords.GridString()]
-						if !ok {
-							// normalize the map coordinates to the grid's origin
-							gc := currMapCoords.ToGrid()
-							daHex = &wxx.Hex{
-								Grid:    gridId,
-								Coords:  wxx.Offset{Column: gc.GridColumn, Row: gc.GridRow},
-								Terrain: step.Terrain,
-							}
-							daGrid.Hexes[currMapCoords.GridString()] = daHex
-						}
-						log.Printf("map: %s: %-6s: scout %d: start %s: curr %s\n", mrl.TurnId, mrl.UnitId, s+1, startGridCoords.String(), currMapCoords.GridString())
+					for stepNo, step := range movementReports {
+						log.Printf("map: %s: %-6s: scout %d: step %2d: mapc %s\n", mrl.TurnId, mrl.UnitId, scoutNo+1, stepNo+1, currMapCoords)
+						nextCoords := walk(turnId, mrl.UnitId, worldHexMap, stepNo+1, step, currMapCoords)
+						log.Printf("map: %s: %-6s: scout %d: step %2d: mapc %s next %s\n", mrl.TurnId, mrl.UnitId, scoutNo+1, stepNo+1, currMapCoords, nextCoords)
+						currMapCoords = nextCoords
 					}
 				}
 			}
@@ -553,7 +507,7 @@ var cmdMap = &cobra.Command{
 						continue
 					}
 
-					log.Printf("map: %s: %-6s: start %s: end: %s\n", mrl.TurnId, mrl.UnitId, mrl.StartingGridCoordinates, mrl.EndingGridCoordinates)
+					//log.Printf("map: %s: %-6s: start %s: end: %s\n", mrl.TurnId, mrl.UnitId, mrl.StartingGridCoordinates, mrl.EndingGridCoordinates)
 					if mrl.EndingGridCoordinates == "" {
 						log.Printf("map: %s: %-6s: start %s: end: missing\n", mrl.TurnId, mrl.UnitId, mrl.StartingGridCoordinates)
 						missingEnds++
@@ -566,11 +520,25 @@ var cmdMap = &cobra.Command{
 						log.Fatalf("map: %s: %-6s: start %s: end: missing next turn\n", mrl.TurnId, mrl.UnitId, mrl.StartingGridCoordinates)
 					}
 					nextTurn.StartingGridCoordinates = mrl.EndingGridCoordinates
-					log.Printf("map: %s: %-6s: start %s: end: %s <-- next turn\n", nextTurn.TurnId, nextTurn.UnitId, nextTurn.StartingGridCoordinates, nextTurn.EndingGridCoordinates)
+					//log.Printf("map: %s: %-6s: start %s: end: %s <-- next turn\n", nextTurn.TurnId, nextTurn.UnitId, nextTurn.StartingGridCoordinates, nextTurn.EndingGridCoordinates)
 				}
 				if missingEnds != 0 {
 					log.Fatalf("map: %s: error: walk did not populate %d units\n", turnId, missingEnds)
 				}
+			}
+
+			worldMap := map[string]*gridHexes{}
+			for _, hex := range worldHexMap {
+				gridId := hex.Grid
+				gh, ok := worldMap[gridId]
+				if !ok {
+					gh = &gridHexes{
+						Grid:  gridId,
+						Hexes: map[string]*wxx.Hex{},
+					}
+					worldMap[gridId] = gh
+				}
+				gh.Hexes[fmt.Sprintf("%s %02d%02d", hex.Grid, hex.Coords.Column, hex.Coords.Row)] = hex
 			}
 
 			log.Printf("map: world: %d\n", len(worldMap))
@@ -593,4 +561,90 @@ var cmdMap = &cobra.Command{
 
 		return nil
 	},
+}
+
+type gridHexes struct {
+	Grid  string              // the grid in the big map
+	Hexes map[string]*wxx.Hex // key is hex coordinates
+}
+
+func walk(turnId, unitId string, worldHexMap map[string]*wxx.Hex, stepNo int, step *lbmoves.Step, start coords.Map) coords.Map {
+	log.Printf("map: %s: %-6s: step %2d: mapc %s\n", turnId, unitId, stepNo, start)
+
+	// advance a hex if the move succeeded
+	curr := start
+	if step.Result == lbmoves.Succeeded {
+		if step.Attempted == directions.DUnknown {
+			panic(fmt.Sprintf("assert(step.Attempted != %d)", int(step.Attempted)))
+		}
+		curr = start.Add(step.Attempted)
+	}
+
+	// fetch hex based on the current map coordinates (create as needed)
+	fetchHex := func(mc coords.Map, defaultTerrain domain.Terrain) *wxx.Hex {
+		daHex, ok := worldHexMap[mc.GridString()]
+		if !ok { // create a new hex with normalized map coordinates (to the grid's origin)
+			gridColumn, gridRow := mc.GridColumnRow()
+			daHex = &wxx.Hex{
+				Grid:    mc.GridId(),
+				Coords:  wxx.Offset{Column: gridColumn, Row: gridRow},
+				Terrain: defaultTerrain,
+			}
+			worldHexMap[mc.GridString()] = daHex
+		}
+		return daHex
+	}
+
+	daHex := fetchHex(curr, step.Terrain)
+	log.Printf("map: %s: %-6s: step %2d: mapc %s: grid id %q\n", turnId, unitId, stepNo, curr, curr.GridId())
+
+	if step.Result == lbmoves.Succeeded {
+		daHex.Visited = true
+	}
+
+	if step.Result == lbmoves.Prohibited {
+		if step.ProhibitedFrom == nil {
+			panic("assert(step.ProhibitedFrom != nil)")
+		}
+		if step.ProhibitedFrom.Direction == directions.DUnknown {
+			panic(fmt.Sprintf("assert(prohibitedFrom.Direction != %d)", int(step.ProhibitedFrom.Direction)))
+		}
+		neighborMapCoords := curr.Add(step.ProhibitedFrom.Direction)
+		log.Printf("map: %s: %-6s: step %2d: curr %s: pro %s\n", turnId, unitId, stepNo, curr, neighborMapCoords)
+
+		daNeighborHex := fetchHex(neighborMapCoords, step.ProhibitedFrom.Terrain)
+		if daNeighborHex.Terrain != step.ProhibitedFrom.Terrain {
+			panic(fmt.Sprintf("assert(daNeighborHex.Terrain  == %d)", int(step.ProhibitedFrom.Terrain)))
+		}
+	}
+
+	// update the hex's neighbors
+	for _, neighbor := range step.Neighbors {
+		if neighbor.Direction == directions.DUnknown {
+			panic(fmt.Sprintf("assert(neighbor.Direction != %d)", int(neighbor.Direction)))
+		}
+		neighborMapCoords := curr.Add(neighbor.Direction)
+		log.Printf("map: %s: %-6s: step %2d: curr %s: nbr %s\n", turnId, unitId, stepNo, curr, neighborMapCoords)
+
+		daNeighborHex := fetchHex(neighborMapCoords, neighbor.Terrain)
+		if daNeighborHex.Terrain != neighbor.Terrain {
+			log.Printf("map: %s: %-6s: step %2d: nbr: want %s, got %s\n", turnId, unitId, stepNo, neighbor.Terrain, daNeighborHex.Terrain)
+			panic(fmt.Sprintf("assert(daNeighborHex.Terrain  == %d)", int(neighbor.Terrain)))
+		}
+	}
+
+	switch step.Result {
+	case lbmoves.Blocked:
+	case lbmoves.ExhaustedMovementPoints:
+	case lbmoves.Follows:
+	case lbmoves.Prohibited:
+	case lbmoves.Status:
+	case lbmoves.Succeeded:
+	case lbmoves.StayedInPlace:
+	case lbmoves.Vanished:
+	default:
+		panic(fmt.Sprintf("assert(step.Result != %d)", int(step.Result)))
+	}
+
+	return curr
 }

@@ -14,6 +14,14 @@ type Map struct {
 	Row    int
 }
 
+func (m Map) GridId() string {
+	return m.ToGrid().String()[:2]
+}
+
+func (m Map) GridColumnRow() (int, int) {
+	return m.Column%30 + 1, m.Row%21 + 1
+}
+
 func (m Map) GridString() string {
 	return m.ToGrid().String()
 }
