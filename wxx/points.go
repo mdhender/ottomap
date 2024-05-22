@@ -69,16 +69,8 @@ func coordsToPoints(column, row int) [7]Point {
 	return points
 }
 
-func bottomCenter(v [7]Point) Point {
-	return Point{X: (v[5].X + v[6].X) / 2, Y: (v[5].Y + v[6].Y) / 2}
-}
-
-func bottomLeft(v [7]Point) Point {
-	return Point{X: v[6].X, Y: v[6].Y}
-}
-
 func bottomLeftCenter(v [7]Point) Point {
-	bc := bottomCenter(v)
+	bc := edgeCenter(directions.DSouth, v)
 	return Point{X: (v[6].X + bc.X) / 2, Y: bc.Y}
 }
 
@@ -106,7 +98,7 @@ func edgeCenter(edge directions.Direction, v [7]Point) Point {
 	default:
 		panic(fmt.Sprintf("assert(direction != %d)", edge))
 	}
-	return Point{X: (v[from].X + v[to].X) / 2, Y: (v[from].Y + v[to].Y) / 2}
+	return midpoint(v[from], v[to])
 }
 
 func midpoint(p1, p2 Point) Point {
@@ -117,5 +109,5 @@ func midpoint(p1, p2 Point) Point {
 }
 
 func settlementLabelXY(label string, v [7]Point) Point {
-	return bottomCenter(v).Translate(Point{X: float64(-3 * len(label)), Y: -25})
+	return edgeCenter(directions.DSouth, v).Translate(Point{X: float64(-3 * len(label)), Y: -25})
 }
