@@ -151,7 +151,7 @@ func (w *WXX) Create(path string, hexes []*Hex, showGridNumbering, showGridCente
 		}
 		terrainSlice = append(terrainSlice, value)
 	}
-	log.Printf("terrains: %d: %v\n", len(terrainSlice), terrainSlice)
+	//log.Printf("terrains: %d: %v\n", len(terrainSlice), terrainSlice)
 
 	// start writing the XML
 	w.buffer = &bytes.Buffer{}
@@ -169,10 +169,8 @@ func (w *WXX) Create(path string, hexes []*Hex, showGridNumbering, showGridCente
 	w.Printf("<terrainmap>")
 	for n, terrain := range terrainSlice {
 		if n == 0 {
-			log.Printf("%s\t%d", terrain, n)
 			w.Printf("%s\t%d", terrain, n)
 		} else {
-			log.Printf("\t%s\t%d", terrain, n)
 			w.Printf("\t%s\t%d", terrain, n)
 		}
 	}
