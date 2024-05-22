@@ -49,69 +49,117 @@ type Offset struct {
 	Row    int
 }
 
-func (w *WXX) Create(path string, hexes []*Hex, showGridNumbering bool) error {
-	// wmap is the consolidated Worldographer map.
-	// It is indexed by column then row.
-	var wmap [][]Tile
+func (w *WXX) Create(path string, hexes []*Hex, showGridNumbering, showGridCenter bool) error {
+	// we must track the minimum and maximum grid coordinates so that we can create the larger map
+	var minGridRow, maxGridRow, minGridColumn, maxGridColumn = 26, 0, 26, 0
 
-	// one grid on the Worldographer map is 30 columns wide by 21 rows high.
-	columns, rows := 30, 21
-
-	// allocate memory for the wmap and populate with blank tiles.
-	wmap = make([][]Tile, columns)
-	for column := 0; column < columns; column++ {
-		wmap[column] = make([]Tile, rows)
+	// group the hexes by grid
+	grids := map[string][]*Hex{}
+	for gridId, grid := range grids {
+		log.Printf("map: grid %q: %4d hexes\n", gridId, len(grid))
 	}
-
-	// convert the grid hexes to tiles
 	for _, hex := range hexes {
-		tile := &wmap[hex.Coords.Column-1][hex.Coords.Row-1]
-		tile.Terrain = hex.Terrain
-		switch tile.Terrain {
-		case domain.TLake:
-			tile.Elevation = -1
-		case domain.TOcean:
-			tile.Elevation = -3
-		case domain.TPrairie:
-			tile.Elevation = 1_000
-		default:
-			tile.Elevation = 1
+		if hex.Grid == "" {
+			panic(fmt.Sprintf("assert(hex.Grid!= %q)", hex.Grid))
 		}
-		tile.Label = &Label{Text: fmt.Sprintf("%s %02d%02d", hex.Grid, hex.Coords.Column, hex.Coords.Row)}
+
+		grids[hex.Grid] = append(grids[hex.Grid], hex)
+
+		// update the minimum and maximum grid coordinates
+		gridRow, gridColumn := int(hex.Grid[0]-'A'), int(hex.Grid[1]-'A')
+		if gridRow < minGridRow {
+			minGridRow = gridRow
+		}
+		if gridRow > maxGridRow {
+			maxGridRow = gridRow
+		}
+		if gridColumn < minGridColumn {
+			minGridColumn = gridColumn
+		}
+		if gridColumn > maxGridColumn {
+			maxGridColumn = gridColumn
+		}
+	}
+	for gridId, grid := range grids {
+		log.Printf("map: grid %q: %4d hexes\n", gridId, len(grid))
 	}
 
-	w.buffer = &bytes.Buffer{}
+	// create any missing grids
+	for gridRow := minGridRow; gridRow <= maxGridRow; gridRow++ {
+		for gridColumn := minGridColumn; gridColumn <= maxGridColumn; gridColumn++ {
+			gridId := fmt.Sprintf("%c%c", gridRow+'A', gridColumn+'A')
+			if _, ok := grids[gridId]; !ok {
+				grids[gridId] = []*Hex{}
+			}
+		}
+	}
+	for gridId, grid := range grids {
+		log.Printf("map: grid %q: %4d hexes\n", gridId, len(grid))
+	}
+	log.Printf("map: grid (%c%c %c%c) (%c%c %c%c)", minGridRow+'A', minGridColumn+'A', maxGridRow+'A', maxGridColumn+'A', minGridRow+'A', minGridColumn+'A', maxGridRow+'A', maxGridColumn+'A')
+
+	// one grid on the consolidated map is 30 columns wide by 21 rows high.
+	const columnsPerGrid, rowsPerGrid = 30, 21
+
+	// calculate the size of the consolidated map
+	gridsWide, gridsHigh := int(maxGridColumn-minGridColumn)+1, int(maxGridRow-minGridRow)+1
+	tilesWide, tilesHigh := columnsPerGrid*gridsWide, rowsPerGrid*gridsHigh
+	log.Printf("map: grid columns %4d rows %4d", gridsWide, gridsHigh)
+	log.Printf("map: tile columns %4d rows %4d", tilesWide, tilesHigh)
+
+	// create a consolidated map of tiles
+	var wmap [][]Tile
+	for column := 0; column < tilesWide; column++ {
+		wmap = append(wmap, make([]Tile, tilesHigh))
+	}
+
+	// convert the grids to tiles and then update the consolidated map.
+	// It is indexed by column then row.
+	for gridId, grid := range grids {
+		log.Printf("map: grid %q: %4d hexes\n", gridId, len(grid))
+		// extract this grid's coordinates and determine where it fits in the consolidated map.
+		gridRow, gridColumn := int(gridId[0]-'A'), int(gridId[1]-'A')
+		log.Printf("map: grid %q: row %4d col %4d: minRow %4d minColum %4d\n", gridId, gridRow, gridColumn, minGridRow, minGridColumn)
+		gridRow, gridColumn = gridRow-minGridRow, gridColumn-minGridColumn
+		log.Printf("map: grid %q: row %4d col %4d\n", gridId, gridRow, gridColumn)
+		mapColumn, mapRow := gridColumn*columnsPerGrid, gridRow*rowsPerGrid
+		log.Printf("map: grid %q: row %4d col %4d: map (%4d, %4d)", gridId, gridRow, gridColumn, mapColumn, mapRow)
+
+		gridTiles, err := w.CreateGrid(grid, showGridNumbering)
+		if err != nil {
+			return err
+		}
+
+		for column, tiles := range gridTiles {
+			for row, tile := range tiles {
+				// log.Printf("map: grid %s: (%4d, %4d): tile (%4d, %4d)", gridId, mapColumn, mapRow, column, row)
+				wmap[mapColumn+column][mapRow+row] = tile
+			}
+		}
+	}
 
 	// create the slice that maps our terrains to the Worldographer terrain names.
 	// todo: this is a hack and should be extracted into the domain package.
-	var terrains []string
-	var maxTerrain domain.Terrain
-	for k := range domain.TileTerrainNames {
-		if k > maxTerrain {
-			maxTerrain = k
+	var terrainSlice []string // the first row must be the Blank terrain
+	for n := 0; n < domain.NumberOfTerrainTypes; n++ {
+		value, ok := domain.TileTerrainNames[domain.Terrain(n)]
+		// all rows must have a value
+		if !ok {
+			panic(fmt.Sprintf(`assert(terrains[%d] != false)`, n))
+		} else if value == "" {
+			panic(fmt.Sprintf(`assert(terrains[%d] != "")`, n))
 		}
+		terrainSlice = append(terrainSlice, value)
 	}
-	terrains = make([]string, maxTerrain+1)
-	for k, v := range domain.TileTerrainNames {
-		terrains[k] = v
-	}
-	// the first row must be the Blank terrain
-	if terrains[0] != "Blank" {
-		panic(`assert(terrains[0] == "Blank")`)
-	}
-	// all rows must have a value
-	for k, v := range terrains {
-		if v == "" {
-			log.Fatalf("map: terrain %q has no associated terrain type!\n", domain.Terrain(k).String())
-		}
-	}
+	log.Printf("terrains: %d: %v\n", len(terrainSlice), terrainSlice)
 
 	// start writing the XML
+	w.buffer = &bytes.Buffer{}
 
 	w.Println(`<?xml version='1.0' encoding='utf-16'?>`)
 
 	// hexWidth and hexHeight are used to control the initial "zoom" on the map.
-	const hexWidth, hexHeight = 46.18, 40.0 // standard, unzoomed map scale
+	const hexWidth, hexHeight = 46.18, 40.0
 
 	w.Println(`<map type="WORLD" version="1.74" lastViewLevel="WORLD" continentFactor="0" kingdomFactor="0" provinceFactor="0" worldToContinentHOffset="0.0" continentToKingdomHOffset="0.0" kingdomToProvinceHOffset="0.0" worldToContinentVOffset="0.0" continentToKingdomVOffset="0.0" kingdomToProvinceVOffset="0.0" `)
 	w.Println(`hexWidth="%g" hexHeight="%g" hexOrientation="COLUMNS" mapProjection="FLAT" showNotes="true" showGMOnly="true" showGMOnlyGlow="false" showFeatureLabels="true" showGrid="true" showGridNumbers="false" showShadows="true"  triangleSize="12">`, hexWidth, hexHeight)
@@ -119,15 +167,18 @@ func (w *WXX) Create(path string, hexes []*Hex, showGridNumbering bool) error {
 	w.Println(`<gridandnumbering color0="0x00000040" color1="0x00000040" color2="0x00000040" color3="0x00000040" color4="0x00000040" width0="1.0" width1="2.0" width2="3.0" width3="4.0" width4="1.0" gridOffsetContinentKingdomX="0.0" gridOffsetContinentKingdomY="0.0" gridOffsetWorldContinentX="0.0" gridOffsetWorldContinentY="0.0" gridOffsetWorldKingdomX="0.0" gridOffsetWorldKingdomY="0.0" gridSquare="0" gridSquareHeight="-1.0" gridSquareWidth="-1.0" gridOffsetX="0.0" gridOffsetY="0.0" numberFont="Arial" numberColor="0x000000ff" numberSize="20" numberStyle="PLAIN" numberFirstCol="0" numberFirstRow="0" numberOrder="COL_ROW" numberPosition="BOTTOM" numberPrePad="DOUBLE_ZERO" numberSeparator="." />`)
 
 	w.Printf("<terrainmap>")
-	for n, terrain := range terrains {
+	for n, terrain := range terrainSlice {
 		if n == 0 {
+			log.Printf("%s\t%d", terrain, n)
 			w.Printf("%s\t%d", terrain, n)
 		} else {
+			log.Printf("\t%s\t%d", terrain, n)
 			w.Printf("\t%s\t%d", terrain, n)
 		}
 	}
 	w.Printf("</terrainmap>\n")
 
+	w.Println(`<maplayer name="Tribenet Coords" isVisible="true"/>`)
 	w.Println(`<maplayer name="Labels" isVisible="true"/>`)
 	w.Println(`<maplayer name="Grid" isVisible="true"/>`)
 	w.Println(`<maplayer name="Features" isVisible="true"/>`)
@@ -138,12 +189,12 @@ func (w *WXX) Create(path string, hexes []*Hex, showGridNumbering bool) error {
 	w.Println(`<maplayer name="Below All" isVisible="true"/>`)
 
 	// width is the number of columns, height is the number of rows.
-	w.Println(`<tiles viewLevel="WORLD" tilesWide="%d" tilesHigh="%d">`, columns, rows)
+	w.Println(`<tiles viewLevel="WORLD" tilesWide="%d" tilesHigh="%d">`, tilesWide, tilesHigh)
 
-	// NB: the element is named "tilerow" but it holds the tiles for a single column.
-	for col := 0; col < columns; col++ {
+	// NB: the element is named "tilerow" but it holds the tiles for a single column because we're using COLUMNS orientation.
+	for col := 0; col < tilesWide; col++ {
 		w.Printf("<tilerow>\n")
-		for row := 0; row < rows; row++ {
+		for row := 0; row < tilesHigh; row++ {
 			tr := wmap[col][row]
 			w.Printf("%d\t%d", int(tr.Terrain), tr.Elevation)
 			if tr.IsIcy {
@@ -179,31 +230,30 @@ func (w *WXX) Create(path string, hexes []*Hex, showGridNumbering bool) error {
 
 	w.Printf("<labels>\n")
 
-	const halfHeight, halfWidth = 300.0 / 2.0, 300.0 / 2.0
+	if showGridCenter {
+		for column := 0; column < tilesWide; column++ {
+			for row := 0; row < tilesHigh; row++ {
+				points := coordsToPoints(column, row)
+				w.Printf(`<label  mapLayer="Tribenet Coords" style="null" fontFace="null" color="0.0,0.0,0.0,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags="">`)
+				w.Printf(`<location viewLevel="WORLD" x="%g" y="%g" scale="6.25" />`, points[0].X, points[0].Y)
+				if column&1 == 0 {
+					w.Printf("%d", column&1)
+				} else {
+					w.Printf("%d", column&1)
+				}
+				w.Printf("</label>\n")
+			}
+		}
+	}
 
 	if showGridNumbering {
-		//for column := 0; column < columns; column++ {
-		//	for row := 0; row < rows; row++ {
-		//		points := coordsToPoints(column, row)
-		//		w.Printf(`<label  mapLayer="Labels" style="null" fontFace="null" color="0.0,0.0,0.0,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags="">`)
-		//		w.Printf(`<location viewLevel="WORLD" x="%g" y="%g" scale="6.25" />`, points[0].X, points[0].Y)
-		//		if column&1 == 0 {
-		//			w.Printf("%d", column&1)
-		//		} else {
-		//			w.Printf("%d", column&1)
-		//		}
-		//		w.Printf("</label>\n")
-		//	}
-		//}
-
-		for col := 0; col < columns; col++ {
-			for row := 0; row < rows; row++ {
-				// todo: make this a function.
+		for col := 0; col < tilesWide; col++ {
+			for row := 0; row < tilesHigh; row++ {
 				// todo: include the grid numbering.
-				label := fmt.Sprintf("%02d%02d", col+1, row+1)
 				points := coordsToPoints(col, row)
+				label := fmt.Sprintf("%02d%02d", (col%columnsPerGrid)+1, (row%rowsPerGrid)+1)
 				labelXY := bottomLeftCenter(points)
-				w.Printf(`<label  mapLayer="Labels" style="null" fontFace="null" color="0.0,0.0,0.0,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags="">`)
+				w.Printf(`<label  mapLayer="Tribenet Coords" style="null" fontFace="null" color="0.0,0.0,0.0,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags="">`)
 				w.Printf(`<location viewLevel="WORLD" x="%g" y="%g" scale="6.25" />`, labelXY.X-15, labelXY.Y-2.5)
 				w.Printf("%s", label)
 				w.Printf("</label>\n")
@@ -212,18 +262,15 @@ func (w *WXX) Create(path string, hexes []*Hex, showGridNumbering bool) error {
 	}
 
 	// add labels to tiles when needed.
-	for col := 0; col < columns; col++ {
-		for row := 0; row < rows; row++ {
+	for col := 0; col < tilesWide; col++ {
+		for row := 0; row < tilesHigh; row++ {
 			tile := wmap[col][row]
 			if tile.Label == nil {
 				continue
 			}
-			w.Printf(`<label  mapLayer="Labels" style="null" fontFace="null" color="0.0,0.0,0.0,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags="">`)
-			//p := crs_to_pixel(col, row)
-			//p.X += 25  // nudge labels to the center of the tile.
-			//p.Y += 125 // nudge labels down to the bottom of the tile.
 			points := coordsToPoints(col, row)
-			labelXY := points[0] // .Translate(Point{halfWidth * 0.75, -halfHeight * 0.75})
+			labelXY := points[0]
+			w.Printf(`<label  mapLayer="Labels" style="null" fontFace="null" color="0.0,0.0,0.0,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags="">`)
 			w.Printf(`<location viewLevel="WORLD" x="%g" y="%g" scale="12.5" />`, labelXY.X, labelXY.Y)
 			w.Printf("%s", tile.Label.Text)
 			w.Printf("</label>\n")

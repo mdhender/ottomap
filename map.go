@@ -552,11 +552,27 @@ var cmdMap = &cobra.Command{
 					daHexes = append(daHexes, hex)
 				}
 				w := &wxx.WXX{}
-				if err := w.Create(mapName, daHexes, true); err != nil {
+				if err := w.Create(mapName, daHexes, true, false); err != nil {
 					log.Fatal(err)
 				}
 				log.Printf("map: created  %s\n", mapName)
 			}
+
+			consolidatedMap := []*wxx.Hex{}
+			for _, hex := range worldHexMap {
+				consolidatedMap = append(consolidatedMap, hex)
+			}
+
+			log.Printf("map: world %6d: consolidated %6d\n", len(worldMap), len(consolidatedMap))
+			// now we can create the Worldographer map!
+			mapName := filepath.Join(cfg.OutputPath, fmt.Sprintf("%s.%s.wxx", turnId, argsMap.clanId))
+			log.Printf("map: creating %s\n", mapName)
+			w := &wxx.WXX{}
+			if err := w.Create(mapName, consolidatedMap, true, false); err != nil {
+				log.Fatal(err)
+			}
+			log.Printf("map: created  %s\n", mapName)
+
 		}
 
 		return nil

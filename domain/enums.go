@@ -222,7 +222,8 @@ func (r Resource) String() string {
 type Terrain int
 
 const (
-	TUnknown Terrain = iota
+	// TBlank must be the first enum value or the map will not render
+	TBlank Terrain = iota
 	TBrushHills
 	TConiferHills
 	TGrassyHills
@@ -233,6 +234,9 @@ const (
 	TRockyHills
 	TSwamp
 )
+
+// NumberOfTerrainTypes must be updated if we add new terrain types
+const NumberOfTerrainTypes = int(TSwamp + 1)
 
 // MarshalJSON implements the json.Marshaler interface.
 func (d Terrain) MarshalJSON() ([]byte, error) {
@@ -263,13 +267,13 @@ func StringToTerrain(s string) (Terrain, bool) {
 	if d, ok := terrainStringToEnum[s]; ok {
 		return d, ok
 	}
-	return TUnknown, false
+	return TBlank, false
 }
 
 var (
 	// helper map for marshalling the enum
 	terrainEnumToString = map[Terrain]string{
-		TUnknown:          "?",
+		TBlank:            "",
 		TBrushHills:       "BH",
 		TConiferHills:     "CH",
 		TGrassyHills:      "GH",
@@ -282,7 +286,7 @@ var (
 	}
 	// helper map for unmarshalling the enum
 	terrainStringToEnum = map[string]Terrain{
-		"?":   TUnknown,
+		"":    TBlank,
 		"BH":  TBrushHills,
 		"CH":  TConiferHills,
 		"GH":  TGrassyHills,
@@ -298,7 +302,7 @@ var (
 	// if you're adding to this list, the values are found by hovering over the
 	// terrain in the GUI.
 	TileTerrainNames = map[Terrain]string{
-		TUnknown:          "Blank",
+		TBlank:            "Blank",
 		TBrushHills:       "Hills Shrubland",
 		TConiferHills:     "Hills Forest Evergreen",
 		TGrassyHills:      "Hills Grassland",

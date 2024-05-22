@@ -65,7 +65,7 @@ var cmdSetup = &cobra.Command{
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ot, ok := domain.StringToTerrain(argsSetup.originTerrain)
-		if !ok || ot == domain.TUnknown {
+		if !ok || ot == domain.TBlank {
 			log.Fatalf("setup: origin terrain %q is not valid\n", argsSetup.originTerrain)
 		}
 
