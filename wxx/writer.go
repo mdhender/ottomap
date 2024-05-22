@@ -394,6 +394,40 @@ func (w *WXX) Create(path string, hexes []*Hex, showGridNumbering, showGridCente
 
 			var from, to Point
 
+			for _, dir := range tile.Features.Edges.Ford {
+				switch dir {
+				case directions.DNorth:
+					from, to = points[2], points[3]
+				case directions.DNorthEast:
+					from, to = points[3], points[4]
+				case directions.DSouthEast:
+					from, to = points[4], points[5]
+				case directions.DSouth:
+					from, to = points[5], points[6]
+				case directions.DSouthWest:
+					from, to = points[6], points[1]
+				case directions.DNorthWest:
+					from, to = points[1], points[2]
+				default:
+					panic(fmt.Sprintf("assert(direction != %d)", dir))
+				}
+
+				ford := edgeCenter(dir, points)
+				midpointFrom := midpoint(from, ford)
+				midpointTo := midpoint(to, ford)
+
+				w.Printf(`<shape  type="Path" isCurve="false" isGMOnly="false" isSnapVertices="true" isMatchTileBorders="false" tags="" creationType="BASIC" isDropShadow="false" isInnerShadow="false" isBoxBlur="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" dsSpread="0.2" dsRadius="50.0" dsOffsetX="0.0" dsOffsetY="0.0" insChoke="0.2" insRadius="50.0" insOffsetX="0.0" insOffsetY="0.0" bbWidth="10.0" bbHeight="10.0" bbIterations="3" mapLayer="Above Terrain" fillTexture="" strokeTexture="" strokeType="SIMPLE" highestViewLevel="WORLD" currentShapeViewLevel="WORLD" lineCap="ROUND" lineJoin="ROUND" opacity="1.0" fillRule="NON_ZERO" strokeColor="0.6000000238418579,0.800000011920929,1.0,1.0" strokeWidth="%f" dsColor="1.0,0.8941176533699036,0.7686274647712708,1.0" insColor="1.0,0.8941176533699036,0.7686274647712708,1.0">`, riverWidth)
+				w.Printf(` <p type="m" x="%f" y="%f"/>`, from.X, from.Y)
+				w.Printf(` <p x="%f" y="%f"/>`, midpointFrom.X, midpointFrom.Y)
+				w.Println(`</shape>`)
+
+				w.Printf(`<shape  type="Path" isCurve="false" isGMOnly="false" isSnapVertices="true" isMatchTileBorders="false" tags="" creationType="BASIC" isDropShadow="false" isInnerShadow="false" isBoxBlur="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" dsSpread="0.2" dsRadius="50.0" dsOffsetX="0.0" dsOffsetY="0.0" insChoke="0.2" insRadius="50.0" insOffsetX="0.0" insOffsetY="0.0" bbWidth="10.0" bbHeight="10.0" bbIterations="3" mapLayer="Above Terrain" fillTexture="" strokeTexture="" strokeType="SIMPLE" highestViewLevel="WORLD" currentShapeViewLevel="WORLD" lineCap="ROUND" lineJoin="ROUND" opacity="1.0" fillRule="NON_ZERO" strokeColor="0.6000000238418579,0.800000011920929,1.0,1.0" strokeWidth="%f" dsColor="1.0,0.8941176533699036,0.7686274647712708,1.0" insColor="1.0,0.8941176533699036,0.7686274647712708,1.0">`, riverWidth)
+				w.Printf(` <p type="m" x="%f" y="%f"/>`, midpointTo.X, midpointTo.Y)
+				w.Printf(` <p x="%f" y="%f"/>`, to.X, to.Y)
+				w.Println(`</shape>`)
+
+			}
+
 			for _, dir := range tile.Features.Edges.River {
 				switch dir {
 				case directions.DNorth:
@@ -411,7 +445,6 @@ func (w *WXX) Create(path string, hexes []*Hex, showGridNumbering, showGridCente
 				default:
 					panic(fmt.Sprintf("assert(direction != %d)", dir))
 				}
-				// draw a blue line here
 				w.Printf(`<shape  type="Path" isCurve="false" isGMOnly="false" isSnapVertices="true" isMatchTileBorders="false" tags="" creationType="BASIC" isDropShadow="false" isInnerShadow="false" isBoxBlur="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" dsSpread="0.2" dsRadius="50.0" dsOffsetX="0.0" dsOffsetY="0.0" insChoke="0.2" insRadius="50.0" insOffsetX="0.0" insOffsetY="0.0" bbWidth="10.0" bbHeight="10.0" bbIterations="3" mapLayer="Above Terrain" fillTexture="" strokeTexture="" strokeType="SIMPLE" highestViewLevel="WORLD" currentShapeViewLevel="WORLD" lineCap="ROUND" lineJoin="ROUND" opacity="1.0" fillRule="NON_ZERO" strokeColor="0.6000000238418579,0.800000011920929,1.0,1.0" strokeWidth="%f" dsColor="1.0,0.8941176533699036,0.7686274647712708,1.0" insColor="1.0,0.8941176533699036,0.7686274647712708,1.0">`, riverWidth)
 				w.Printf(` <p type="m" x="%f" y="%f"/>`, from.X, from.Y)
 				w.Printf(` <p x="%f" y="%f"/>`, to.X, to.Y)
@@ -506,65 +539,6 @@ func crs_to_pixel(column, row int, _ bool) Point {
 	return Point{X: x + leftMargin, Y: y + topMargin}
 }
 
-var (
-	// Define the offsets based on the flattened hexagon dimensions
-	flattenedHexOffsets = [6][2]float64{
-		{-150, 0},   // left vertex
-		{-75, -150}, // top-left vertex
-		{75, -150},  // top-right vertex
-		{150, 0},    // right vertex
-		{75, 150},   // bottom-right vertex
-		{-75, 150},  // bottom-left vertex
-	}
-)
-
-// coordsToPoints returns the center point and vertices of a hexagon centered at the
-// given column and row. It converts the column, row to the pixel at the center of the
-// corresponding tile, then calculates the vertices based on that point.
-// The center point is the first value in the returned slice.
-func coordsToPoints(column, row int) [7]Point {
-	const height, width = 300, 300
-	const halfHeight, oneQuarterWidth, threeQuarterWidth = height / 2, width / 4, width * 3 / 4
-	const leftMargin, topMargin = width / 2, halfHeight
-
-	// points is the center plus the six vertices
-	var points [7]Point
-
-	points[0].X = float64(column)*threeQuarterWidth + leftMargin
-	if column&1 == 1 { // shove odd rows down half the height of a tile
-		points[0].Y = float64(row)*height + halfHeight + topMargin
-	} else {
-		points[0].Y = float64(row)*height + topMargin
-	}
-
-	// Calculate vertices based on offsets from center
-	for i, offset := range flattenedHexOffsets {
-		points[i+1] = Point{
-			X: points[0].X + offset[0],
-			Y: points[0].Y + offset[1],
-		}
-	}
-
-	return points
-}
-
-func bottomCenter(v [7]Point) Point {
-	return Point{X: (v[5].X + v[6].X) / 2, Y: (v[5].Y + v[6].Y) / 2}
-}
-
-func bottomLeft(v [7]Point) Point {
-	return Point{X: v[6].X, Y: v[6].Y}
-}
-
-func bottomLeftCenter(v [7]Point) Point {
-	bc := bottomCenter(v)
-	return Point{X: (v[6].X + bc.X) / 2, Y: bc.Y}
-}
-
-func settlementLabelXY(label string, v [7]Point) Point {
-	return bottomCenter(v).Translate(Point{X: float64(-3 * len(label)), Y: -25})
-}
-
 // NB: most of the code below is derived from https://www.redblobgames.com/grids/hexagons/.
 // It turns out that it isn't used because Worldographer doesn't output regular hexagons.
 
@@ -653,25 +627,6 @@ func oddq_to_axial(o Offset) Axial {
 	return Axial{
 		Q: float64(o.Column),
 		R: float64(o.Row - (o.Column-(o.Column&1))/2),
-	}
-}
-
-type Point struct {
-	X float64
-	Y float64
-}
-
-func (p Point) Scale(s float64) Point {
-	return Point{
-		X: p.X * s,
-		Y: p.Y * s,
-	}
-}
-
-func (p Point) Translate(t Point) Point {
-	return Point{
-		X: p.X + t.X,
-		Y: p.Y + t.Y,
 	}
 }
 
