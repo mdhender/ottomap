@@ -669,7 +669,7 @@ func walk(turnId, unitId string, worldHexMap map[string]*wxx.Hex, stepNo int, st
 		}
 	}
 
-	// update the hexes edges
+	// update the hex edges
 	for _, edge := range step.Edges {
 		switch edge.Edge {
 		case domain.ENone:
@@ -682,6 +682,16 @@ func walk(turnId, unitId string, worldHexMap map[string]*wxx.Hex, stepNo int, st
 			daHex.Features.Edges.Pass = append(daHex.Features.Edges.Pass, edge.Direction)
 		default:
 			panic(fmt.Sprintf("assert(edge != %d)", edge.Edge))
+		}
+	}
+
+	// update the hex resources
+	if step.Resources != domain.RNone {
+		if daHex.Features.Resources == domain.RNone {
+			daHex.Features.Resources = step.Resources
+		} else if daHex.Features.Resources != step.Resources {
+			log.Printf("why? changing %q to %q\n", daHex.Features.Resources, step.Resources)
+			panic("!")
 		}
 	}
 

@@ -7,6 +7,7 @@ import (
 	"compress/gzip"
 	"encoding/binary"
 	"fmt"
+	"github.com/google/uuid"
 	"github.com/mdhender/ottomap/directions"
 	"github.com/mdhender/ottomap/domain"
 	"log"
@@ -43,6 +44,7 @@ type Features struct {
 		River []directions.Direction
 	}
 	Label      *Label
+	Resources  domain.Resource
 	Settlement *Settlement // name of settlement
 }
 
@@ -190,6 +192,7 @@ func (w *WXX) Create(path string, hexes []*Hex, showGridNumbering, showGridCoord
 	w.Printf("</terrainmap>\n")
 
 	w.Println(`<maplayer name="Tribenet Coords" isVisible="true"/>`)
+	w.Println(`<maplayer name="Tribenet Resources" isVisible="true"/>`)
 	w.Println(`<maplayer name="Tribenet Settlements" isVisible="true"/>`)
 	w.Println(`<maplayer name="Labels" isVisible="true"/>`)
 	w.Println(`<maplayer name="Grid" isVisible="true"/>`)
@@ -239,11 +242,22 @@ func (w *WXX) Create(path string, hexes []*Hex, showGridNumbering, showGridCoord
 
 			points := coordsToPoints(column, row)
 
+			if tile.Features.Resources != domain.RNone {
+				origin := points[0]
+				w.Printf(`<feature type="Resource Mines" rotate="0.0" uuid="%s" mapLayer="Tribenet Resources" isFlipHorizontal="false" isFlipVertical="false" scale="35.0" scaleHt="-1.0" tags="" color="null" ringcolor="null" isGMOnly="false" isPlaceFreely="false" labelPosition="6:00" labelDistance="0" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isFillHexBottom="false" isHideTerrainIcon="false">`, uuid.New().String())
+				w.Printf(`<location viewLevel="WORLD" x="%f" y="%f" />`, origin.X, origin.Y)
+				w.Printf(`<label  mapLayer="Tribenet Resources" style="null" fontFace="null" color="0.0,0.0,0.0,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags="">`)
+				w.Printf(`<location viewLevel="WORLD" x="%g" y="%g" scale="12.5" />`, origin.X, origin.Y)
+				w.Printf("%s", tile.Features.Resources)
+				w.Printf(`</label>`)
+				w.Println(`</feature>`)
+			}
+
 			if tile.Features.Settlement != nil {
 				settlement := points[0]
 				//w.Printf(`<feature type="Settlement City" rotate="0.0" uuid="%s" mapLayer="Tribenet Settlements" isFlipHorizontal="false" isFlipVertical="false" scale="35.0" scaleHt="-1.0" tags="" color="null" ringcolor="null" isGMOnly="false" isPlaceFreely="false" labelPosition="6:00" labelDistance="0" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isFillHexBottom="false" isHideTerrainIcon="false"><location viewLevel="WORLD" x="%f" y="%f" /><label  mapLayer="Tribenet Settlements" style="City" fontFace=".AppleSystemUIFont" color="0.0,0.0,0.0,1.0" outlineColor="0.0,0.0,0.0,1.0" outlineSize="2.0" rotate="0.0" isBold="false" isItalic="false" isWorld="false" isContinent="false" isKingdom="false" isProvince="false" isGMOnly="false" tags=""><location viewLevel="WORLD" x="%f" y="%f" scale="12.5" /></label>`, tile.Features.Settlement.UUID, settlement.X, settlement.Y, settlement.X, settlement.Y)
 				//w.Printf(`<feature type="Settlement City" rotate="0.0" uuid="%s" mapLayer="Tribenet Settlements" isFlipHorizontal="false" isFlipVertical="false" scale="35.0" scaleHt="-1.0" tags="" color="null" ringcolor="null" isGMOnly="false" isPlaceFreely="false" labelPosition="6:00" labelDistance="0" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isFillHexBottom="false" isHideTerrainIcon="false"><location viewLevel="WORLD" x="%f" y="%f" /><label  mapLayer="Tribenet Settlements" style="null" fontFace="null" color="0.0,0.0,0.0,1.0" outlineColor="0.0,0.0,0.0,1.0" outlineSize="2.0" rotate="0.0" isBold="false" isItalic="false" isWorld="false" isContinent="false" isKingdom="false" isProvince="false" isGMOnly="false" tags=""><location viewLevel="WORLD" x="%f" y="%f" scale="12.5" /></label>`, tile.Features.Settlement.UUID, settlement.X, settlement.Y, settlement.X, settlement.Y)
-				w.Printf(`<feature type="Settlement City" rotate="0.0" uuid="%s" mapLayer="Tribenet Settlements" isFlipHorizontal="false" isFlipVertical="false" scale="35.0" scaleHt="-1.0" tags="" color="null" ringcolor="null" isGMOnly="false" isPlaceFreely="false" labelPosition="6:00" labelDistance="0" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isFillHexBottom="false" isHideTerrainIcon="false"><location viewLevel="WORLD" x="%f" y="%f" />`, tile.Features.Settlement.UUID, settlement.X, settlement.Y)
+				w.Printf(`<feature type="Settlement City" rotate="0.0" uuid="%s" mapLayer="Tribenet Settlements" isFlipHorizontal="false" isFlipVertical="false" scale="35.0" scaleHt="-1.0" tags="" color="null" ringcolor="null" isGMOnly="false" isPlaceFreely="false" labelPosition="6:00" labelDistance="0" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isFillHexBottom="false" isHideTerrainIcon="false"><location viewLevel="WORLD" x="%f" y="%f" />`, uuid.New().String(), settlement.X, settlement.Y)
 				w.Println(`</feature>`)
 			}
 		}
