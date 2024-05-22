@@ -7,6 +7,7 @@ import (
 	"compress/gzip"
 	"encoding/binary"
 	"fmt"
+	"github.com/mdhender/ottomap/directions"
 	"github.com/mdhender/ottomap/domain"
 	"log"
 	"os"
@@ -37,9 +38,9 @@ type Tile struct {
 // Features are things to display on the map
 type Features struct {
 	Edges struct {
-		Ford  [6]bool
-		Pass  [6]bool
-		River [6]bool
+		Ford  []directions.Direction
+		Pass  []directions.Direction
+		River []directions.Direction
 	}
 	Label      *Label
 	Settlement *Settlement // name of settlement
@@ -348,40 +349,76 @@ func (w *WXX) Create(path string, hexes []*Hex, showGridNumbering, showGridCente
 	w.Printf("</labels>\n")
 
 	w.Println(`<shapes>`)
+
 	//w.Println(`<shape  type="Path" isCurve="false" isGMOnly="false" isSnapVertices="true" isMatchTileBorders="false" tags="" creationType="BASIC" isDropShadow="false" isInnerShadow="false" isBoxBlur="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" dsSpread="0.2" dsRadius="50.0" dsOffsetX="0.0" dsOffsetY="0.0" insChoke="0.2" insRadius="50.0" insOffsetX="0.0" insOffsetY="0.0" bbWidth="10.0" bbHeight="10.0" bbIterations="3" mapLayer="Above Terrain" fillTexture="" strokeTexture="" strokeType="SIMPLE" highestViewLevel="WORLD" currentShapeViewLevel="WORLD" lineCap="ROUND" lineJoin="ROUND" opacity="1.0" fillRule="NON_ZERO" strokeColor="0.0,0.0,0.0,1.0" strokeWidth="0.03" dsColor="1.0,0.8941176533699036,0.7686274647712708,1.0" insColor="1.0,0.8941176533699036,0.7686274647712708,1.0">`)
 	//w.Println(` <p type="m" x="225.0" y = "0.0"/>`)
 	//w.Println(`</shape>`)
 
-	var line [2]Point
+	//var line [2]Point
+	//
+	//line = [2]Point{{75.0, 0.0}, {225.0, 0.0}}
+	//for seg := 0; seg < 3; seg++ {
+	//	w.Println(`<shape  type="Path" isCurve="false" isGMOnly="false" isSnapVertices="true" isMatchTileBorders="false" tags="" creationType="BASIC" isDropShadow="false" isInnerShadow="false" isBoxBlur="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" dsSpread="0.2" dsRadius="50.0" dsOffsetX="0.0" dsOffsetY="0.0" insChoke="0.2" insRadius="50.0" insOffsetX="0.0" insOffsetY="0.0" bbWidth="10.0" bbHeight="10.0" bbIterations="3" mapLayer="Above Terrain" fillTexture="" strokeTexture="" strokeType="SIMPLE" highestViewLevel="WORLD" currentShapeViewLevel="WORLD" lineCap="ROUND" lineJoin="ROUND" opacity="1.0" fillRule="NON_ZERO" strokeColor="1.0,1.0,1.0,1.0" strokeWidth="0.03" dsColor="1.0,0.8941176533699036,0.7686274647712708,1.0" insColor="1.0,0.8941176533699036,0.7686274647712708,1.0">`)
+	//	for n, p := range line {
+	//		if n == 0 {
+	//			w.Printf(` <p type="m" x="%f" y="%f"/>`+"\n", p.X, p.Y)
+	//		} else {
+	//			w.Printf(` <p x="%f" y="%f"/>`+"\n", p.X, p.Y)
+	//		}
+	//	}
+	//	line[0].Y, line[1].Y = line[0].Y+150.0, line[1].Y+150.0
+	//	w.Println(`</shape>`)
+	//}
+	//
+	//w.Println(`<shape  type="Path" isCurve="false" isGMOnly="false" isSnapVertices="true" isMatchTileBorders="false" tags="" creationType="BASIC" isDropShadow="false" isInnerShadow="false" isBoxBlur="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" dsSpread="0.2" dsRadius="50.0" dsOffsetX="0.0" dsOffsetY="0.0" insChoke="0.2" insRadius="50.0" insOffsetX="0.0" insOffsetY="0.0" bbWidth="10.0" bbHeight="10.0" bbIterations="3" mapLayer="Above Terrain" fillTexture="" strokeTexture="" strokeType="SIMPLE" highestViewLevel="WORLD" currentShapeViewLevel="WORLD" lineCap="ROUND" lineJoin="ROUND" opacity="1.0" fillRule="NON_ZERO" strokeColor="1.0,1.0,1.0,1.0" strokeWidth="0.03" dsColor="1.0,0.8941176533699036,0.7686274647712708,1.0" insColor="1.0,0.8941176533699036,0.7686274647712708,1.0">`)
+	//w.Println(` <p type="m" x="75.0" y = "0.0"/>`)
+	//w.Println(` <p x="225.0" y="0.0"/>`)
+	//w.Println(`</shape>`)
+	//
+	//w.Println(`<shape  type="Path" isCurve="false" isGMOnly="false" isSnapVertices="true" isMatchTileBorders="false" tags="" creationType="BASIC" isDropShadow="false" isInnerShadow="false" isBoxBlur="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" dsSpread="0.2" dsRadius="50.0" dsOffsetX="0.0" dsOffsetY="0.0" insChoke="0.2" insRadius="50.0" insOffsetX="0.0" insOffsetY="0.0" bbWidth="10.0" bbHeight="10.0" bbIterations="3" mapLayer="Above Terrain" fillTexture="" strokeTexture="" strokeType="SIMPLE" highestViewLevel="WORLD" currentShapeViewLevel="WORLD" lineCap="ROUND" lineJoin="ROUND" opacity="1.0" fillRule="NON_ZERO" strokeColor="0.6000000238418579,0.800000011920929,1.0,1.0" strokeWidth="0.03" dsColor="1.0,0.8941176533699036,0.7686274647712708,1.0" insColor="1.0,0.8941176533699036,0.7686274647712708,1.0">`)
+	//w.Println(` <p type="m" x="450.0" y="0.0"/>`)
+	//w.Println(` <p x="750.0" y="0.0"/>`)
+	//w.Println(`</shape>`)
+	//
+	//w.Println(`<shape  type="Path" isCurve="false" isGMOnly="false" isSnapVertices="true" isMatchTileBorders="false" tags="" creationType="BASIC" isDropShadow="false" isInnerShadow="false" isBoxBlur="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" dsSpread="0.2" dsRadius="50.0" dsOffsetX="0.0" dsOffsetY="0.0" insChoke="0.2" insRadius="50.0" insOffsetX="0.0" insOffsetY="0.0" bbWidth="10.0" bbHeight="10.0" bbIterations="3" mapLayer="Above Terrain" fillTexture="" strokeTexture="" strokeType="SIMPLE" highestViewLevel="WORLD" currentShapeViewLevel="WORLD" lineCap="ROUND" lineJoin="ROUND" opacity="1.0" fillRule="NON_ZERO" strokeColor="0.6000000238418579,0.800000011920929,1.0,1.0" strokeWidth="0.03" dsColor="1.0,0.8941176533699036,0.7686274647712708,1.0" insColor="1.0,0.8941176533699036,0.7686274647712708,1.0">`)
+	//w.Println(` <p type="m" x="450.0" y="150.0"/>`)
+	//w.Println(` <p x="750.0" y="150.0"/>`)
+	//w.Println(`</shape>`)
 
-	line = [2]Point{{75.0, 0.0}, {225.0, 0.0}}
-	for seg := 0; seg < 3; seg++ {
-		w.Println(`<shape  type="Path" isCurve="false" isGMOnly="false" isSnapVertices="true" isMatchTileBorders="false" tags="" creationType="BASIC" isDropShadow="false" isInnerShadow="false" isBoxBlur="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" dsSpread="0.2" dsRadius="50.0" dsOffsetX="0.0" dsOffsetY="0.0" insChoke="0.2" insRadius="50.0" insOffsetX="0.0" insOffsetY="0.0" bbWidth="10.0" bbHeight="10.0" bbIterations="3" mapLayer="Above Terrain" fillTexture="" strokeTexture="" strokeType="SIMPLE" highestViewLevel="WORLD" currentShapeViewLevel="WORLD" lineCap="ROUND" lineJoin="ROUND" opacity="1.0" fillRule="NON_ZERO" strokeColor="1.0,1.0,1.0,1.0" strokeWidth="0.03" dsColor="1.0,0.8941176533699036,0.7686274647712708,1.0" insColor="1.0,0.8941176533699036,0.7686274647712708,1.0">`)
-		for n, p := range line {
-			if n == 0 {
-				w.Printf(` <p type="m" x="%f" y="%f"/>`+"\n", p.X, p.Y)
-			} else {
-				w.Printf(` <p x="%f" y="%f"/>`+"\n", p.X, p.Y)
+	// add shapes from tile features when needed
+	const riverWidth = 0.0625
+	for column := 0; column < tilesWide; column++ {
+		for row := 0; row < tilesHigh; row++ {
+			tile := wmap[column][row]
+			points := coordsToPoints(column, row)
+
+			var from, to Point
+
+			for _, dir := range tile.Features.Edges.River {
+				switch dir {
+				case directions.DNorth:
+					from, to = points[2], points[3]
+				case directions.DNorthEast:
+					from, to = points[3], points[4]
+				case directions.DSouthEast:
+					from, to = points[4], points[5]
+				case directions.DSouth:
+					from, to = points[5], points[6]
+				case directions.DSouthWest:
+					from, to = points[6], points[1]
+				case directions.DNorthWest:
+					from, to = points[1], points[2]
+				default:
+					panic(fmt.Sprintf("assert(direction != %d)", dir))
+				}
+				// draw a blue line here
+				w.Printf(`<shape  type="Path" isCurve="false" isGMOnly="false" isSnapVertices="true" isMatchTileBorders="false" tags="" creationType="BASIC" isDropShadow="false" isInnerShadow="false" isBoxBlur="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" dsSpread="0.2" dsRadius="50.0" dsOffsetX="0.0" dsOffsetY="0.0" insChoke="0.2" insRadius="50.0" insOffsetX="0.0" insOffsetY="0.0" bbWidth="10.0" bbHeight="10.0" bbIterations="3" mapLayer="Above Terrain" fillTexture="" strokeTexture="" strokeType="SIMPLE" highestViewLevel="WORLD" currentShapeViewLevel="WORLD" lineCap="ROUND" lineJoin="ROUND" opacity="1.0" fillRule="NON_ZERO" strokeColor="0.6000000238418579,0.800000011920929,1.0,1.0" strokeWidth="%f" dsColor="1.0,0.8941176533699036,0.7686274647712708,1.0" insColor="1.0,0.8941176533699036,0.7686274647712708,1.0">`, riverWidth)
+				w.Printf(` <p type="m" x="%f" y="%f"/>`, from.X, from.Y)
+				w.Printf(` <p x="%f" y="%f"/>`, to.X, to.Y)
+				w.Println(`</shape>`)
 			}
 		}
-		line[0].Y, line[1].Y = line[0].Y+150.0, line[1].Y+150.0
-		w.Println(`</shape>`)
 	}
-
-	w.Println(`<shape  type="Path" isCurve="false" isGMOnly="false" isSnapVertices="true" isMatchTileBorders="false" tags="" creationType="BASIC" isDropShadow="false" isInnerShadow="false" isBoxBlur="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" dsSpread="0.2" dsRadius="50.0" dsOffsetX="0.0" dsOffsetY="0.0" insChoke="0.2" insRadius="50.0" insOffsetX="0.0" insOffsetY="0.0" bbWidth="10.0" bbHeight="10.0" bbIterations="3" mapLayer="Above Terrain" fillTexture="" strokeTexture="" strokeType="SIMPLE" highestViewLevel="WORLD" currentShapeViewLevel="WORLD" lineCap="ROUND" lineJoin="ROUND" opacity="1.0" fillRule="NON_ZERO" strokeColor="1.0,1.0,1.0,1.0" strokeWidth="0.03" dsColor="1.0,0.8941176533699036,0.7686274647712708,1.0" insColor="1.0,0.8941176533699036,0.7686274647712708,1.0">`)
-	w.Println(` <p type="m" x="75.0" y = "0.0"/>`)
-	w.Println(` <p x="225.0" y="0.0"/>`)
-	w.Println(`</shape>`)
-
-	w.Println(`<shape  type="Path" isCurve="false" isGMOnly="false" isSnapVertices="true" isMatchTileBorders="false" tags="" creationType="BASIC" isDropShadow="false" isInnerShadow="false" isBoxBlur="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" dsSpread="0.2" dsRadius="50.0" dsOffsetX="0.0" dsOffsetY="0.0" insChoke="0.2" insRadius="50.0" insOffsetX="0.0" insOffsetY="0.0" bbWidth="10.0" bbHeight="10.0" bbIterations="3" mapLayer="Above Terrain" fillTexture="" strokeTexture="" strokeType="SIMPLE" highestViewLevel="WORLD" currentShapeViewLevel="WORLD" lineCap="ROUND" lineJoin="ROUND" opacity="1.0" fillRule="NON_ZERO" strokeColor="0.6000000238418579,0.800000011920929,1.0,1.0" strokeWidth="0.03" dsColor="1.0,0.8941176533699036,0.7686274647712708,1.0" insColor="1.0,0.8941176533699036,0.7686274647712708,1.0">`)
-	w.Println(` <p type="m" x="450.0" y="0.0"/>`)
-	w.Println(` <p x="750.0" y="0.0"/>`)
-	w.Println(`</shape>`)
-
-	w.Println(`<shape  type="Path" isCurve="false" isGMOnly="false" isSnapVertices="true" isMatchTileBorders="false" tags="" creationType="BASIC" isDropShadow="false" isInnerShadow="false" isBoxBlur="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" dsSpread="0.2" dsRadius="50.0" dsOffsetX="0.0" dsOffsetY="0.0" insChoke="0.2" insRadius="50.0" insOffsetX="0.0" insOffsetY="0.0" bbWidth="10.0" bbHeight="10.0" bbIterations="3" mapLayer="Above Terrain" fillTexture="" strokeTexture="" strokeType="SIMPLE" highestViewLevel="WORLD" currentShapeViewLevel="WORLD" lineCap="ROUND" lineJoin="ROUND" opacity="1.0" fillRule="NON_ZERO" strokeColor="0.6000000238418579,0.800000011920929,1.0,1.0" strokeWidth="0.03" dsColor="1.0,0.8941176533699036,0.7686274647712708,1.0" insColor="1.0,0.8941176533699036,0.7686274647712708,1.0">`)
-	w.Println(` <p type="m" x="450.0" y="150.0"/>`)
-	w.Println(` <p x="750.0" y="150.0"/>`)
-	w.Println(`</shape>`)
 
 	w.Println(`</shapes>`)
 

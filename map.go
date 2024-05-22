@@ -52,6 +52,8 @@ var cmdMap = &cobra.Command{
 		log.Printf("map: config: path   %s\n", cfg.Path)
 		log.Printf("map: config: output %s\n", cfg.OutputPath)
 
+		showGridNumbering, showGridCenters := false, false
+
 		cfg.Inputs.ClanId = argsMap.clanId
 		log.Printf("map: config: clan %q\n", cfg.Inputs.ClanId)
 
@@ -554,7 +556,7 @@ var cmdMap = &cobra.Command{
 					daHexes = append(daHexes, hex)
 				}
 				w := &wxx.WXX{}
-				if err := w.Create(mapName, daHexes, true, false); err != nil {
+				if err := w.Create(mapName, daHexes, showGridNumbering, showGridCenters); err != nil {
 					log.Fatal(err)
 				}
 				log.Printf("map: created  %s\n", mapName)
@@ -628,6 +630,14 @@ func walk(turnId, unitId string, worldHexMap map[string]*wxx.Hex, stepNo int, st
 		}
 	}
 
+	if step.Result == lbmoves.Blocked {
+		log.Printf("step: blocked: attempted %s\n", step.Attempted)
+		if step.BlockedBy == nil {
+			panic("assert(blockedBy != nil")
+		}
+		log.Printf("step: blocked: edge: %+v\n", *step.BlockedBy)
+	}
+
 	if step.Result == lbmoves.Prohibited {
 		if step.ProhibitedFrom == nil {
 			panic("assert(step.ProhibitedFrom != nil)")
@@ -656,6 +666,22 @@ func walk(turnId, unitId string, worldHexMap map[string]*wxx.Hex, stepNo int, st
 		if daNeighborHex.Terrain != neighbor.Terrain {
 			log.Printf("map: %s: %-6s: step %2d: nbr: want %s, got %s\n", turnId, unitId, stepNo, neighbor.Terrain, daNeighborHex.Terrain)
 			panic(fmt.Sprintf("assert(daNeighborHex.Terrain  == %d)", int(neighbor.Terrain)))
+		}
+	}
+
+	// update the hexes edges
+	for _, edge := range step.Edges {
+		switch edge.Edge {
+		case domain.ENone:
+			// ignore, shouldn't ever happen
+		case domain.EFord:
+			daHex.Features.Edges.Ford = append(daHex.Features.Edges.Ford, edge.Direction)
+		case domain.ERiver:
+			daHex.Features.Edges.River = append(daHex.Features.Edges.River, edge.Direction)
+		case domain.EPass:
+			daHex.Features.Edges.Pass = append(daHex.Features.Edges.Pass, edge.Direction)
+		default:
+			panic(fmt.Sprintf("assert(edge != %d)", edge.Edge))
 		}
 	}
 
