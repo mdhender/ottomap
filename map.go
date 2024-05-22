@@ -60,6 +60,10 @@ var cmdMap = &cobra.Command{
 		cfg.Inputs.ClanId = argsMap.clanId
 		log.Printf("map: config: clan %q\n", cfg.Inputs.ClanId)
 
+		if argsMap.show.gridCoords && argsMap.show.gridNumbers {
+			argsMap.show.gridNumbers = false
+		}
+
 		// if turn id is not on the command line, use the current turn from the configuration.
 		if argsMap.turnId == "" {
 			// assumes that the configuration's reports are sorted by turn id.
@@ -559,7 +563,7 @@ var cmdMap = &cobra.Command{
 					daHexes = append(daHexes, hex)
 				}
 				w := &wxx.WXX{}
-				if err := w.Create(mapName, daHexes, argsMap.show.gridCoords, argsMap.show.gridNumbers, argsMap.show.gridCenters); err != nil {
+				if err := w.Create(mapName, daHexes, argsMap.show.gridNumbers, argsMap.show.gridCoords, argsMap.show.gridCenters); err != nil {
 					log.Fatal(err)
 				}
 				log.Printf("map: created  %s\n", mapName)

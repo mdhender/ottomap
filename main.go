@@ -37,6 +37,8 @@ func Execute() error {
 	}
 
 	cmdMap.Flags().BoolVar(&argsMap.debug.units, "debug-units", false, "enable unit debugging")
+	cmdMap.Flags().BoolVar(&argsMap.show.gridCenters, "show-grid-centers", false, "show grid centers")
+	cmdMap.Flags().BoolVar(&argsMap.show.gridCoords, "show-grid-coords", false, "show grid coordinates")
 	cmdMap.Flags().BoolVar(&argsMap.show.gridNumbers, "show-numbers", false, "show grid numbers")
 	cmdMap.Flags().StringVar(&argsMap.clanId, "clan", "", "clan id to process")
 	if err := cmdMap.MarkFlagRequired("clan"); err != nil {

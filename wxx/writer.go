@@ -43,6 +43,7 @@ type Features struct {
 		Pass  []directions.Direction
 		River []directions.Direction
 	}
+	Coords     string
 	Label      *Label
 	Resources  domain.Resource
 	Settlement *Settlement // name of settlement
@@ -140,7 +141,7 @@ func (w *WXX) Create(path string, hexes []*Hex, showGridNumbering, showGridCoord
 		mapColumn, mapRow := gridColumn*columnsPerGrid, gridRow*rowsPerGrid
 		log.Printf("map: grid %q: row %4d col %4d: map (%4d, %4d)", gridId, gridRow, gridColumn, mapColumn, mapRow)
 
-		gridTiles, err := w.CreateGrid(grid, showGridCoords)
+		gridTiles, err := w.CreateGrid(grid, showGridCoords, showGridNumbering)
 		if err != nil {
 			return err
 		}
@@ -269,6 +270,7 @@ func (w *WXX) Create(path string, hexes []*Hex, showGridNumbering, showGridCoord
 
 	for column := 0; column < tilesWide; column++ {
 		for row := 0; row < tilesHigh; row++ {
+			tile := wmap[column][row]
 			points := coordsToPoints(column, row)
 
 			if showGridCenter {
@@ -282,17 +284,19 @@ func (w *WXX) Create(path string, hexes []*Hex, showGridNumbering, showGridCoord
 				w.Printf("</label>\n")
 			}
 
-			if showGridNumbering {
-				label := fmt.Sprintf("%02d%02d", (column%columnsPerGrid)+1, (row%rowsPerGrid)+1)
+			if tile.Features.Coords != "" {
 				labelXY := bottomLeftCenter(points)
+				if len(tile.Features.Coords) == 4 {
+					labelXY = labelXY.Translate(Point{-15, -2.5})
+				} else {
+					labelXY = labelXY.Translate(Point{-9, -2.5})
+				}
 				w.Printf(`<label  mapLayer="Tribenet Coords" style="null" fontFace="null" color="0.0,0.0,0.0,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags="">`)
-				w.Printf(`<location viewLevel="WORLD" x="%g" y="%g" scale="6.25" />`, labelXY.X-15, labelXY.Y-2.5)
-				w.Printf("%s", label)
+				w.Printf(`<location viewLevel="WORLD" x="%g" y="%g" scale="6.25" />`, labelXY.X, labelXY.Y)
+				w.Printf("%s", tile.Features.Coords)
 				w.Printf("</label>\n")
 			}
 
-			// add labels to tiles when needed.
-			tile := wmap[column][row]
 			if tile.Features.Label != nil {
 				labelXY := points[0]
 				w.Printf(`<label  mapLayer="Labels" style="null" fontFace="null" color="0.0,0.0,0.0,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags="">`)

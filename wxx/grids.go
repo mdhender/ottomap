@@ -9,7 +9,7 @@ import (
 
 // CreateGrid creates the tiles for a single grid on the larger Tribenet map.
 // The caller is responsible for stitching the grids together in the final map.
-func (w *WXX) CreateGrid(hexes []*Hex, addGridCoords bool) ([][]Tile, error) {
+func (w *WXX) CreateGrid(hexes []*Hex, showGridCoords, showGridNumbers bool) ([][]Tile, error) {
 	// one grid on the Worldographer map is 30 columns wide by 21 rows high.
 	const columns, rows = 30, 21
 
@@ -38,8 +38,10 @@ func (w *WXX) CreateGrid(hexes []*Hex, addGridCoords bool) ([][]Tile, error) {
 			tile.Elevation = 1_000
 		}
 		tile.Features = hex.Features
-		if addGridCoords {
-			tile.Features.Label = &Label{Text: fmt.Sprintf("%s %02d%02d", hex.Grid, hex.Coords.Column, hex.Coords.Row)}
+		if showGridCoords {
+			tile.Features.Coords = fmt.Sprintf("%s %02d%02d", hex.Grid, hex.Coords.Column, hex.Coords.Row)
+		} else if showGridNumbers {
+			tile.Features.Coords = fmt.Sprintf("%02d%02d", hex.Coords.Column, hex.Coords.Row)
 		}
 	}
 
