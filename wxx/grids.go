@@ -37,8 +37,9 @@ func (w *WXX) CreateGrid(hexes []*Hex, addGridCoords bool) ([][]Tile, error) {
 		case domain.TPrairie:
 			tile.Elevation = 1_000
 		}
+		tile.Features = hex.Features
 		if addGridCoords {
-			tile.Label = &Label{Text: fmt.Sprintf("%s %02d%02d", hex.Grid, hex.Coords.Column, hex.Coords.Row)}
+			tile.Features.Label = &Label{Text: fmt.Sprintf("%s %02d%02d", hex.Grid, hex.Coords.Column, hex.Coords.Row)}
 		}
 	}
 

@@ -16,11 +16,12 @@ import (
 
 // Hex is a hex on the Tribenet map.
 type Hex struct {
-	Grid    string // AA ... ZZ
-	Coords  Offset // coordinates in a grid hex are one-based
-	Terrain domain.Terrain
-	Visited bool
-	Scouted bool
+	Grid     string // AA ... ZZ
+	Coords   Offset // coordinates in a grid hex are one-based
+	Terrain  domain.Terrain
+	Visited  bool
+	Scouted  bool
+	Features Features
 }
 
 // Tile is a hex on the Worldographer map.
@@ -30,7 +31,18 @@ type Tile struct {
 	IsIcy     bool
 	IsGMOnly  bool
 	Resources Resources
-	Label     *Label
+	Features  Features
+}
+
+// Features are things to display on the map
+type Features struct {
+	Edges struct {
+		Ford  [6]bool
+		Pass  [6]bool
+		River [6]bool
+	}
+	Label      *Label
+	Settlement *Settlement // name of settlement
 }
 
 type Resources struct {
@@ -177,6 +189,7 @@ func (w *WXX) Create(path string, hexes []*Hex, showGridNumbering, showGridCente
 	w.Printf("</terrainmap>\n")
 
 	w.Println(`<maplayer name="Tribenet Coords" isVisible="true"/>`)
+	w.Println(`<maplayer name="Tribenet Settlements" isVisible="true"/>`)
 	w.Println(`<maplayer name="Labels" isVisible="true"/>`)
 	w.Println(`<maplayer name="Grid" isVisible="true"/>`)
 	w.Println(`<maplayer name="Features" isVisible="true"/>`)
@@ -216,22 +229,32 @@ func (w *WXX) Create(path string, hexes []*Hex, showGridNumbering, showGridCente
 	w.Println(`<mapkey positionx="0.0" positiony="0.0" viewlevel="WORLD" height="-1" backgroundcolor="0.9803921580314636,0.9215686321258545,0.843137264251709,1.0" backgroundopacity="50" titleText="Map Key" titleFontFace="Arial"  titleFontColor="0.0,0.0,0.0,1.0" titleFontBold="true" titleFontItalic="false" titleScale="80" scaleText="1 Hex = ? units" scaleFontFace="Arial"  scaleFontColor="0.0,0.0,0.0,1.0" scaleFontBold="true" scaleFontItalic="false" scaleScale="65" entryFontFace="Arial"  entryFontColor="0.0,0.0,0.0,1.0" entryFontBold="true" entryFontItalic="false" entryScale="55"  >`)
 	w.Println(`</mapkey>`)
 
+	// add features
 	w.Println(`<features>`)
 
-	//w.Println(`<feature type="Building Cottage" rotate="0.0" uuid="2be6a8ee-4fad-421c-8bee-80335405e11d" mapLayer="Features" isFlipHorizontal="false" isFlipVertical="false" scale="-1.0" scaleHt="-1.0" tags="" color="null" ringcolor="null" isGMOnly="false" isPlaceFreely="false" labelPosition="6:00" labelDistance="0" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isFillHexBottom="false" isHideTerrainIcon="false"><location viewLevel="WORLD" x="150.0" y="150.0" /><label  mapLayer="Features" style="City" fontFace=".AppleSystemUIFont" color="0.0,0.0,0.0,1.0" outlineColor="0.0,0.0,0.0,1.0" outlineSize="2.0" rotate="0.0" isBold="false" isItalic="false" isWorld="false" isContinent="false" isKingdom="false" isProvince="false" isGMOnly="false" tags=""><location viewLevel="WORLD" x="150.0" y="150.0" scale="25.0" /></label>`)
-	//w.Println(`</feature>`)
+	for column := 0; column < tilesWide; column++ {
+		for row := 0; row < tilesHigh; row++ {
+			tile := wmap[column][row]
 
-	//w.Println(`<feature type="Settlement City" rotate="0.0" uuid="fcb48970-c74d-4984-a920-6819d56a9e25" mapLayer="Features" isFlipHorizontal="false" isFlipVertical="false" scale="-1.0" scaleHt="-1.0" tags="" color="null" ringcolor="null" isGMOnly="false" isPlaceFreely="false" labelPosition="6:00" labelDistance="0" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isFillHexBottom="false" isHideTerrainIcon="false"><location viewLevel="WORLD" x="2400.0" y="2250.0" /><label  mapLayer="Features" style="City" fontFace=".AppleSystemUIFont" color="0.0,0.0,0.0,1.0" outlineColor="0.0,0.0,0.0,1.0" outlineSize="2.0" rotate="0.0" isBold="false" isItalic="false" isWorld="false" isContinent="false" isKingdom="false" isProvince="false" isGMOnly="false" tags=""><location viewLevel="WORLD" x="2400.0" y="2250.0" scale="25.0" /></label>`)
-	//w.Println(`</feature>`)
+			points := coordsToPoints(column, row)
+
+			if tile.Features.Settlement != nil {
+				settlement := points[0]
+				w.Printf(`<feature type="Settlement City" rotate="0.0" uuid="%s" mapLayer="Tribenet Settlements" isFlipHorizontal="false" isFlipVertical="false" scale="35.0" scaleHt="-1.0" tags="" color="null" ringcolor="null" isGMOnly="false" isPlaceFreely="false" labelPosition="6:00" labelDistance="0" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isFillHexBottom="false" isHideTerrainIcon="false"><location viewLevel="WORLD" x="%f" y="%f" /><label  mapLayer="Tribenet Settlements" style="City" fontFace=".AppleSystemUIFont" color="0.0,0.0,0.0,1.0" outlineColor="0.0,0.0,0.0,1.0" outlineSize="2.0" rotate="0.0" isBold="false" isItalic="false" isWorld="false" isContinent="false" isKingdom="false" isProvince="false" isGMOnly="false" tags=""><location viewLevel="WORLD" x="%f" y="%f" scale="12.5" /></label>`, tile.Features.Settlement.UUID, settlement.X, settlement.Y, settlement.X, settlement.Y)
+				w.Println(`</feature>`)
+			}
+		}
+	}
 
 	w.Println(`</features>`)
 
 	w.Printf("<labels>\n")
 
-	if showGridCenter {
-		for column := 0; column < tilesWide; column++ {
-			for row := 0; row < tilesHigh; row++ {
-				points := coordsToPoints(column, row)
+	for column := 0; column < tilesWide; column++ {
+		for row := 0; row < tilesHigh; row++ {
+			points := coordsToPoints(column, row)
+
+			if showGridCenter {
 				w.Printf(`<label  mapLayer="Tribenet Coords" style="null" fontFace="null" color="0.0,0.0,0.0,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags="">`)
 				w.Printf(`<location viewLevel="WORLD" x="%g" y="%g" scale="6.25" />`, points[0].X, points[0].Y)
 				if column&1 == 0 {
@@ -241,37 +264,34 @@ func (w *WXX) Create(path string, hexes []*Hex, showGridNumbering, showGridCente
 				}
 				w.Printf("</label>\n")
 			}
-		}
-	}
 
-	if showGridNumbering {
-		for col := 0; col < tilesWide; col++ {
-			for row := 0; row < tilesHigh; row++ {
-				// todo: include the grid numbering.
-				points := coordsToPoints(col, row)
-				label := fmt.Sprintf("%02d%02d", (col%columnsPerGrid)+1, (row%rowsPerGrid)+1)
+			if showGridNumbering {
+				label := fmt.Sprintf("%02d%02d", (column%columnsPerGrid)+1, (row%rowsPerGrid)+1)
 				labelXY := bottomLeftCenter(points)
 				w.Printf(`<label  mapLayer="Tribenet Coords" style="null" fontFace="null" color="0.0,0.0,0.0,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags="">`)
 				w.Printf(`<location viewLevel="WORLD" x="%g" y="%g" scale="6.25" />`, labelXY.X-15, labelXY.Y-2.5)
 				w.Printf("%s", label)
 				w.Printf("</label>\n")
 			}
-		}
-	}
 
-	// add labels to tiles when needed.
-	for col := 0; col < tilesWide; col++ {
-		for row := 0; row < tilesHigh; row++ {
-			tile := wmap[col][row]
-			if tile.Label == nil {
-				continue
+			// add labels to tiles when needed.
+			tile := wmap[column][row]
+			if tile.Features.Label != nil {
+				labelXY := points[0]
+				w.Printf(`<label  mapLayer="Labels" style="null" fontFace="null" color="0.0,0.0,0.0,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags="">`)
+				w.Printf(`<location viewLevel="WORLD" x="%g" y="%g" scale="12.5" />`, labelXY.X, labelXY.Y)
+				w.Printf("%s", tile.Features.Label.Text)
+				w.Printf("</label>\n")
 			}
-			points := coordsToPoints(col, row)
-			labelXY := points[0]
-			w.Printf(`<label  mapLayer="Labels" style="null" fontFace="null" color="0.0,0.0,0.0,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags="">`)
-			w.Printf(`<location viewLevel="WORLD" x="%g" y="%g" scale="12.5" />`, labelXY.X, labelXY.Y)
-			w.Printf("%s", tile.Label.Text)
-			w.Printf("</label>\n")
+
+			if tile.Features.Settlement != nil {
+				label := tile.Features.Settlement.Name
+				labelXY := settlementLabelXY(label, points)
+				w.Printf(`<label  mapLayer="Tribenet Settlements" style="null" fontFace="null" color="0.0,0.0,0.0,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags="">`)
+				w.Printf(`<location viewLevel="WORLD" x="%g" y="%g" scale="12.5" />`, labelXY.X, labelXY.Y)
+				w.Printf("%s", tile.Features.Settlement.Name)
+				w.Printf("</label>\n")
+			}
 		}
 	}
 
@@ -502,6 +522,10 @@ func bottomLeftCenter(v [7]Point) Point {
 	return Point{X: (v[6].X + bc.X) / 2, Y: bc.Y}
 }
 
+func settlementLabelXY(label string, v [7]Point) Point {
+	return bottomCenter(v).Translate(Point{X: float64(-3 * len(label)), Y: -25})
+}
+
 // NB: most of the code below is derived from https://www.redblobgames.com/grids/hexagons/.
 // It turns out that it isn't used because Worldographer doesn't output regular hexagons.
 
@@ -525,6 +549,11 @@ const (
 
 type Label struct {
 	Text string
+}
+
+type Settlement struct {
+	UUID string
+	Name string
 }
 
 // Cube are the coordinates of a hex in a cube.

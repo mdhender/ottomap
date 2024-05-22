@@ -5,6 +5,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/google/uuid"
 	"github.com/mdhender/ottomap/config"
 	"github.com/mdhender/ottomap/coords"
 	"github.com/mdhender/ottomap/directions"
@@ -13,6 +14,7 @@ import (
 	"github.com/mdhender/ottomap/parsers/report"
 	"github.com/mdhender/ottomap/reports"
 	"github.com/mdhender/ottomap/wxx"
+
 	"github.com/spf13/cobra"
 	"log"
 	"os"
@@ -616,6 +618,14 @@ func walk(turnId, unitId string, worldHexMap map[string]*wxx.Hex, stepNo int, st
 
 	if step.Result == lbmoves.Succeeded {
 		daHex.Visited = true
+
+		if step.Settlement != nil {
+			log.Printf(">>> %+v\n", *step.Settlement)
+			daHex.Features.Settlement = &wxx.Settlement{
+				UUID: uuid.New().String(),
+				Name: step.Settlement.Name,
+			}
+		}
 	}
 
 	if step.Result == lbmoves.Prohibited {
