@@ -62,7 +62,7 @@ type Offset struct {
 	Row    int
 }
 
-func (w *WXX) Create(path string, hexes []*Hex, showGridNumbering, showGridCenter bool) error {
+func (w *WXX) Create(path string, hexes []*Hex, showGridNumbering, showGridCoords, showGridCenter bool) error {
 	// we must track the minimum and maximum grid coordinates so that we can create the larger map
 	var minGridRow, maxGridRow, minGridColumn, maxGridColumn = 26, 0, 26, 0
 
@@ -138,7 +138,7 @@ func (w *WXX) Create(path string, hexes []*Hex, showGridNumbering, showGridCente
 		mapColumn, mapRow := gridColumn*columnsPerGrid, gridRow*rowsPerGrid
 		log.Printf("map: grid %q: row %4d col %4d: map (%4d, %4d)", gridId, gridRow, gridColumn, mapColumn, mapRow)
 
-		gridTiles, err := w.CreateGrid(grid, showGridNumbering)
+		gridTiles, err := w.CreateGrid(grid, showGridCoords)
 		if err != nil {
 			return err
 		}
@@ -283,7 +283,7 @@ func (w *WXX) Create(path string, hexes []*Hex, showGridNumbering, showGridCente
 				labelXY := points[0]
 				w.Printf(`<label  mapLayer="Labels" style="null" fontFace="null" color="0.0,0.0,0.0,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags="">`)
 				w.Printf(`<location viewLevel="WORLD" x="%g" y="%g" scale="12.5" />`, labelXY.X, labelXY.Y)
-				w.Printf("%s", tile.Features.Label.Text)
+				w.Printf("%s", tile.Features.Label.Text+"!!!!")
 				w.Printf("</label>\n")
 			}
 
