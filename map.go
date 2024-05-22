@@ -31,6 +31,11 @@ var argsMap struct {
 	debug  struct {
 		units bool
 	}
+	show struct {
+		gridCenters bool
+		gridCoords  bool
+		gridNumbers bool
+	}
 }
 
 var cmdMap = &cobra.Command{
@@ -51,8 +56,6 @@ var cmdMap = &cobra.Command{
 
 		log.Printf("map: config: path   %s\n", cfg.Path)
 		log.Printf("map: config: output %s\n", cfg.OutputPath)
-
-		showGridNumbering, showGridCoords, showGridCenters := true, false, false
 
 		cfg.Inputs.ClanId = argsMap.clanId
 		log.Printf("map: config: clan %q\n", cfg.Inputs.ClanId)
@@ -556,7 +559,7 @@ var cmdMap = &cobra.Command{
 					daHexes = append(daHexes, hex)
 				}
 				w := &wxx.WXX{}
-				if err := w.Create(mapName, daHexes, showGridCoords, showGridNumbering, showGridCenters); err != nil {
+				if err := w.Create(mapName, daHexes, argsMap.show.gridCoords, argsMap.show.gridNumbers, argsMap.show.gridCenters); err != nil {
 					log.Fatal(err)
 				}
 				log.Printf("map: created  %s\n", mapName)
@@ -572,7 +575,7 @@ var cmdMap = &cobra.Command{
 			mapName := filepath.Join(cfg.OutputPath, fmt.Sprintf("%s.%s.wxx", turnId, argsMap.clanId))
 			log.Printf("map: creating %s\n", mapName)
 			w := &wxx.WXX{}
-			if err := w.Create(mapName, consolidatedMap, showGridNumbering, showGridCoords, showGridCenters); err != nil {
+			if err := w.Create(mapName, consolidatedMap, argsMap.show.gridNumbers, argsMap.show.gridCoords, argsMap.show.gridCenters); err != nil {
 				log.Fatal(err)
 			}
 			log.Printf("map: created  %s\n", mapName)
