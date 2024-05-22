@@ -552,7 +552,7 @@ var cmdMap = &cobra.Command{
 					daHexes = append(daHexes, hex)
 				}
 				w := &wxx.WXX{}
-				if err := w.Create(mapName, daHexes, false); err != nil {
+				if err := w.Create(mapName, daHexes, true); err != nil {
 					log.Fatal(err)
 				}
 				log.Printf("map: created  %s\n", mapName)
