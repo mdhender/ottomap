@@ -36,6 +36,7 @@ func Execute() error {
 		log.Fatalf("input: parse: output: mark required: %v\n", err)
 	}
 
+	cmdMap.Flags().BoolVar(&argsMap.debug.sectionMaps, "debug-section-maps", false, "save section maps for debugging")
 	cmdMap.Flags().BoolVar(&argsMap.debug.units, "debug-units", false, "enable unit debugging")
 	cmdMap.Flags().BoolVar(&argsMap.show.gridCenters, "show-grid-centers", false, "show grid centers")
 	cmdMap.Flags().BoolVar(&argsMap.show.gridCoords, "show-grid-coords", false, "show grid coordinates")
