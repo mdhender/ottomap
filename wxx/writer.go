@@ -20,11 +20,8 @@ type Hex struct {
 	Grid     string // AA ... ZZ
 	Coords   Offset // coordinates in a grid hex are one-based
 	Terrain  domain.Terrain
-	Visited  bool
 	Scouted  bool
 	Features Features
-	Created  string // turn id when the hex was created
-	Updated  string // turn id when the hex was updated
 }
 
 // Tile is a hex on the Worldographer map.
@@ -51,9 +48,14 @@ type Features struct {
 	Coords  string
 	Numbers string
 
+	IsOrigin   bool // true for the clan's origin hex
 	Label      *Label
 	Resources  domain.Resource
 	Settlement *Settlement // name of settlement
+
+	Created string // turn id when the hex was created
+	Updated string // turn id when the hex was updated
+	Visited string // turn id when the hex was last visited
 }
 
 type Resources struct {
@@ -84,6 +86,12 @@ func (w *WXX) Create(path string, showGridCenters bool) error {
 	if w.totalGrids == 0 {
 		return fmt.Errorf("wxx: create: no grids")
 	}
+
+	// handy way to figure out offset for features and labels
+	//origin := coordsToPoints(0, 0)
+	//log.Printf("origin (%f, %f)\n", origin[0].X, origin[0].Y)
+	//x, y := 148.14830212120597, 241.81408953094206
+	//log.Printf("delta (%f, %f)\n", x-origin[0].X, y-origin[0].Y)
 
 	// create any missing grids
 	for gridRow := w.minGridRow; gridRow <= w.maxGridRow; gridRow++ {
@@ -142,8 +150,10 @@ func (w *WXX) Create(path string, showGridCenters bool) error {
 	w.Printf("</terrainmap>\n")
 
 	w.Println(`<maplayer name="Tribenet Coords" isVisible="true"/>`)
+	w.Println(`<maplayer name="Tribenet Origin" isVisible="false"/>`)
 	w.Println(`<maplayer name="Tribenet Resources" isVisible="true"/>`)
 	w.Println(`<maplayer name="Tribenet Settlements" isVisible="true"/>`)
+	w.Println(`<maplayer name="Tribenet Unvisited" isVisible="true"/>`)
 	w.Println(`<maplayer name="Labels" isVisible="true"/>`)
 	w.Println(`<maplayer name="Grid" isVisible="true"/>`)
 	w.Println(`<maplayer name="Features" isVisible="true"/>`)
@@ -220,6 +230,16 @@ func (w *WXX) Create(path string, showGridCenters bool) error {
 					tile := g.tiles[column][row]
 					points := coordsToPoints(gridColumnOffset+column, gridRowOffset+row)
 
+					if tile.Features.IsOrigin {
+						origin := points[0]
+						w.Printf(`<feature type="Three Dots" rotate="0.0" uuid="%s" mapLayer="Tribenet Origin" isFlipHorizontal="false" isFlipVertical="false" scale="-1.0" scaleHt="-1.0" tags="" color="0.800000011920929,0.800000011920929,0.800000011920929,1.0" ringcolor="null" isGMOnly="false" isPlaceFreely="false" labelPosition="6:00" labelDistance="0" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isFillHexBottom="false" isHideTerrainIcon="false">`, uuid.New().String())
+						w.Printf(`<location viewLevel="WORLD" x="%f" y="%f" />`, origin.X, origin.Y)
+						w.Printf(`<label  mapLayer="Tribenet Origin" style="null" fontFace="null" color="0.0,0.0,0.0,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags="">`)
+						w.Printf(`<location viewLevel="WORLD" x="%f" y="%f" scale="25.0" />`, origin.X, origin.Y)
+						w.Printf(`</label>`)
+						w.Printf("</feature>\n")
+					}
+
 					if tile.Features.Resources != domain.RNone {
 						origin := points[0]
 						w.Printf(`<feature type="Resource Mines" rotate="0.0" uuid="%s" mapLayer="Tribenet Resources" isFlipHorizontal="false" isFlipVertical="false" scale="35.0" scaleHt="-1.0" tags="" color="null" ringcolor="null" isGMOnly="false" isPlaceFreely="false" labelPosition="6:00" labelDistance="0" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isFillHexBottom="false" isHideTerrainIcon="false">`, uuid.New().String())
@@ -269,6 +289,14 @@ func (w *WXX) Create(path string, showGridCenters bool) error {
 							w.Printf("%d", column&1)
 						}
 						w.Printf("</label>\n")
+					}
+
+					if tile.Features.Created != "" && tile.Features.Visited == "" {
+						labelXY := points[0].Translate(Point{-1.851698, 91.814090})
+						w.Printf(`<label  mapLayer="Tribenet Unvisited" style="null" fontFace="null" color="0.7019608020782471,0.7019608020782471,0.7019608020782471,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags="">`)
+						w.Printf(`<location viewLevel="WORLD" x="%f" y="%f" scale="90.0" />`, labelXY.X, labelXY.Y)
+						w.Printf("X")
+						w.Printf("</label>/n")
 					}
 
 					if tile.Features.Coords != "" {

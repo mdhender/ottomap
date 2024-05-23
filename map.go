@@ -125,6 +125,9 @@ var cmdMap = &cobra.Command{
 		// create a map for every movement result we have
 		var allMovementResults []*lbmoves.MovementResults
 
+		// this hex is the clan's starting hex from the first turn report
+		var originHex *wxx.Hex
+
 		// parse the report files into a single map
 		for _, rpt := range cfg.Reports {
 			if rpt.Ignore {
@@ -238,11 +241,6 @@ var cmdMap = &cobra.Command{
 			log.Printf("map: warning: grid origin set to %q\n", allMovementResults[0].StartingGridCoordinates)
 		}
 
-		//// sort unit moves by turn then unit
-		//sort.Slice(unitMoves, func(i, j int) bool {
-		//	return unitMoves[i].SortKey() < unitMoves[j].SortKey()
-		//})
-
 		movementResultsMap := map[string]*lbmoves.MovementResults{}
 		for _, mrl := range allMovementResults {
 			movementResultsMap[fmt.Sprintf("%s.%s", mrl.TurnId, mrl.UnitId)] = mrl
@@ -305,34 +303,54 @@ var cmdMap = &cobra.Command{
 		}
 
 		// initialize the world hex map from the first unit's status line
-		for n, mrl := range allMovementResults {
+		if len(allMovementResults) == 0 {
+			log.Fatalf("map: error: no movement results\n")
+		}
+		originTurnId := ""
+		for _, mrl := range allMovementResults[:1] { // just the first result of the first turn
+			log.Printf("map: %s: %-6s: casting about for origin\n", mrl.TurnId, mrl.UnitId)
+
+			originTurnId = mrl.TurnId
 			statusLine := mrl.StatusLine
-			if statusLine == nil {
-				log.Fatalf("map: %s: %-6s: status line is missing\n", mrl.TurnId, mrl.UnitId)
+
+			start := mrl.StartingGridCoordinates
+			if start == "" {
+				log.Fatalf("map: %s: %-6s: origin is not defined for first unit's first turn\n", mrl.TurnId, mrl.UnitId)
 			}
 
-			if n == 0 {
-				start := mrl.StartingGridCoordinates
-				if start == "" {
-					log.Fatalf("map: %s: %-6s: origin is not defined for first unit's first turn\n", mrl.TurnId, mrl.UnitId)
-				}
+			originGridCoords, err := coords.StringToGridCoords(start)
+			if err != nil {
+				log.Fatalf("map: %s: %-6s: toGridCoords: error %v\n", mrl.TurnId, mrl.UnitId, err)
+			}
+			log.Printf("map: %s: %-6s: status line: grid %s\n", mrl.TurnId, mrl.UnitId, originGridCoords)
+			originMapCoords, err := originGridCoords.ToMapCoords()
+			if err != nil {
+				log.Fatalf("map: %s: %-6s: toMapCoords: error %v\n", mrl.TurnId, mrl.UnitId, err)
+			}
+			gridColumn, gridRow := originMapCoords.GridColumnRow()
+			originHex = &wxx.Hex{
+				Grid:    originMapCoords.GridId(),
+				Coords:  wxx.Offset{Column: gridColumn, Row: gridRow},
+				Terrain: statusLine.Terrain,
+			}
+			originHex.Features.IsOrigin = true
+			originHex.Features.Created = originTurnId
+			originHex.Features.Updated = originTurnId
+			originHex.Features.Visited = originTurnId
+			log.Printf("map: %s: %-6s: status line: %s\n", mrl.TurnId, mrl.UnitId, statusLine.Terrain)
 
-				originGridCoords, err := coords.StringToGridCoords(start)
-				if err != nil {
-					log.Fatalf("map: %s: %-6s: toGridCoords: error %v\n", mrl.TurnId, mrl.UnitId, err)
-				}
-				//log.Printf("map: %s: %-6s: status line: grid %s\n", mrl.TurnId, mrl.UnitId, originGridCoords)
-				originMapCoords, err := originGridCoords.ToMapCoords()
-				if err != nil {
-					log.Fatalf("map: %s: %-6s: toMapCoords: error %v\n", mrl.TurnId, mrl.UnitId, err)
-				}
-				gridColumn, gridRow := originMapCoords.GridColumnRow()
-				allHexes[originMapCoords.GridString()] = &wxx.Hex{
-					Grid:    originMapCoords.GridId(),
-					Coords:  wxx.Offset{Column: gridColumn, Row: gridRow},
-					Terrain: statusLine.Terrain,
-				}
-				//log.Printf("map: %s: %-6s: status line: %s\n", mrl.TurnId, mrl.UnitId, statusLine.Terrain)
+			// stuff the origin into our consolidated map because it may never show up again
+			allHexes[originMapCoords.GridString()] = originHex
+		}
+		if originHex == nil {
+			log.Printf("map: %s: origin is not defined\n", originTurnId)
+			panic("assert(originHex != nil")
+		}
+
+		// ensure that status line is present for all turns
+		for _, mrl := range allMovementResults {
+			if mrl.StatusLine == nil {
+				log.Fatalf("map: %s: %-6s: status line is missing\n", mrl.TurnId, mrl.UnitId)
 			}
 		}
 
@@ -455,9 +473,9 @@ var cmdMap = &cobra.Command{
 
 			var newHexes, updatedHexes []*wxx.Hex
 			for _, hex := range allHexes {
-				if hex.Created == turnId {
+				if hex.Features.Created == turnId {
 					newHexes = append(newHexes, hex)
-				} else if hex.Updated == turnId {
+				} else if hex.Features.Updated == turnId {
 					updatedHexes = append(updatedHexes, hex)
 				}
 			}
@@ -535,11 +553,11 @@ func walk(turnId, unitId string, worldHexMap map[string]*wxx.Hex, stepNo int, st
 		if !ok { // create a new hex with normalized map coordinates (to the grid's origin)
 			gridColumn, gridRow := mc.GridColumnRow()
 			daHex = &wxx.Hex{
-				Created: turnId,
 				Grid:    mc.GridId(),
 				Coords:  wxx.Offset{Column: gridColumn, Row: gridRow},
 				Terrain: defaultTerrain,
 			}
+			daHex.Features.Created = turnId
 			worldHexMap[mc.GridString()] = daHex
 		}
 		return daHex
@@ -547,10 +565,10 @@ func walk(turnId, unitId string, worldHexMap map[string]*wxx.Hex, stepNo int, st
 
 	daHex := fetchHex(curr, step.Terrain)
 	//log.Printf("map: %s: %-6s: step %2d: mapc %s: grid id %q\n", turnId, unitId, stepNo, curr, curr.GridId())
-	daHex.Updated = turnId
+	daHex.Features.Updated = turnId
 
 	if step.Result == lbmoves.Succeeded {
-		daHex.Visited = true
+		daHex.Features.Visited = turnId
 
 		if step.Settlement != nil {
 			//log.Printf(">>> %+v\n", *step.Settlement)
