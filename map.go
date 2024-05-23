@@ -64,6 +64,9 @@ var cmdMap = &cobra.Command{
 		if argsMap.show.gridCoords && argsMap.show.gridNumbers {
 			argsMap.show.gridNumbers = false
 		}
+		if argsMap.debug.sectionMaps {
+			panic("this needs to be fixed")
+		}
 
 		// if turn id is not on the command line, use the current turn from the configuration.
 		if argsMap.turnId == "" {
@@ -296,7 +299,8 @@ var cmdMap = &cobra.Command{
 		//	log.Printf("map: %s: %5d\n", id, turnIdCounter[id])
 		//}
 
-		worldHexMap := map[string]*wxx.Hex{}
+		allHexes := map[string]*wxx.Hex{}
+		consolidatedMap := &wxx.WXX{}
 
 		// unitNode is a unit that will be added to the map.
 		// it will contain all the unit's moves. the parent
@@ -330,7 +334,7 @@ var cmdMap = &cobra.Command{
 					log.Fatalf("map: %s: %-6s: toMapCoords: error %v\n", mrl.TurnId, mrl.UnitId, err)
 				}
 				gridColumn, gridRow := originMapCoords.GridColumnRow()
-				worldHexMap[originMapCoords.GridString()] = &wxx.Hex{
+				allHexes[originMapCoords.GridString()] = &wxx.Hex{
 					Grid:    originMapCoords.GridId(),
 					Coords:  wxx.Offset{Column: gridColumn, Row: gridRow},
 					Terrain: statusLine.Terrain,
@@ -380,7 +384,7 @@ var cmdMap = &cobra.Command{
 				debugStep := false
 				for stepNo, step := range mrl.MovementReports {
 					//log.Printf("map: %s: %-6s: step %2d: mapc %s\n", mrl.TurnId, mrl.UnitId, stepNo+1, currMapCoords)
-					nextCoords := walk(turnId, mrl.UnitId, worldHexMap, stepNo+1, step, currMapCoords, debugStep)
+					nextCoords := walk(turnId, mrl.UnitId, allHexes, stepNo+1, step, currMapCoords, debugStep)
 					//log.Printf("map: %s: %-6s: step %2d: mapc %s next %s\n", mrl.TurnId, mrl.UnitId, stepNo+1, currMapCoords, nextCoords)
 					currMapCoords = nextCoords
 				}
@@ -423,7 +427,7 @@ var cmdMap = &cobra.Command{
 					movementReports := scout
 					for stepNo, step := range movementReports {
 						//log.Printf("map: %s: %-6s: scout %d: step %2d: mapc %s\n", mrl.TurnId, mrl.UnitId, scoutNo+1, stepNo+1, currMapCoords)
-						nextCoords := walk(turnId, mrl.UnitId, worldHexMap, stepNo+1, step, currMapCoords, debugStep)
+						nextCoords := walk(turnId, mrl.UnitId, allHexes, stepNo+1, step, currMapCoords, debugStep)
 						//log.Printf("map: %s: %-6s: scout %d: step %2d: mapc %s next %s\n", mrl.TurnId, mrl.UnitId, scoutNo+1, stepNo+1, currMapCoords, nextCoords)
 						currMapCoords = nextCoords
 					}
@@ -459,54 +463,55 @@ var cmdMap = &cobra.Command{
 				}
 			}
 
+			var newHexes, updatedHexes []*wxx.Hex
+			for _, hex := range allHexes {
+				if hex.Created == turnId {
+					newHexes = append(newHexes, hex)
+				} else if hex.Updated == turnId {
+					updatedHexes = append(updatedHexes, hex)
+				}
+			}
+			if err := consolidatedMap.MergeHexes(turnId, newHexes); err != nil {
+				log.Printf("error: wxx: mergeHexes: newHexes: %v\n", err)
+				return err
+			} else if err = consolidatedMap.MergeHexes(turnId, updatedHexes); err != nil {
+				log.Printf("error: wxx: mergeHexes: updatedHexes: %v\n", err)
+				return err
+			}
+
+			if argsMap.show.gridCoords {
+				consolidatedMap.AddGridCoords()
+			} else if argsMap.show.gridNumbers {
+				consolidatedMap.AddGridNumbering()
+			}
+
 			if argsMap.debug.sectionMaps {
-				worldMap := map[string]*gridHexes{}
-				for _, hex := range worldHexMap {
-					gridId := hex.Grid
-					gh, ok := worldMap[gridId]
-					if !ok {
-						gh = &gridHexes{
-							Grid:  gridId,
-							Hexes: map[string]*wxx.Hex{},
-						}
-						worldMap[gridId] = gh
-					}
-					gh.Hexes[fmt.Sprintf("%s %02d%02d", hex.Grid, hex.Coords.Column, hex.Coords.Row)] = hex
-				}
-
-				//log.Printf("map: world: %d\n", len(worldMap))
-				for gridId, daMap := range worldMap {
-					//log.Printf("map: world: %s: %d\n", gridId, len(daMap.Hexes))
-					// now we can create the Worldographer map!
-					mapName := filepath.Join(cfg.OutputPath, fmt.Sprintf("%s.%s.%s.wxx", turnId, argsMap.clanId, gridId))
-					var daHexes []*wxx.Hex
-					for _, hex := range daMap.Hexes {
-						daHexes = append(daHexes, hex)
-					}
-					w := &wxx.WXX{}
-					if err := w.Create(mapName, daHexes, argsMap.show.gridNumbers, argsMap.show.gridCoords, argsMap.show.gridCenters); err != nil {
-						log.Printf("map: creating %s\n", mapName)
-						log.Fatal(err)
-					}
-					log.Printf("map: created  %s\n", mapName)
-				}
-			}
-			consolidatedMap := []*wxx.Hex{}
-			for _, hex := range worldHexMap {
-				consolidatedMap = append(consolidatedMap, hex)
+				panic("this needs to be fixed")
 			}
 
-			//log.Printf("map: world %6d: consolidated %6d\n", len(worldMap), len(consolidatedMap))
 			// now we can create the Worldographer map!
+			//log.Printf("map: world %6d: consolidated %6d\n", len(worldMap), len(consolidatedMap))
 			mapName := filepath.Join(cfg.OutputPath, fmt.Sprintf("%s.%s.wxx", turnId, argsMap.clanId))
-			w := &wxx.WXX{}
-			if err := w.Create(mapName, consolidatedMap, argsMap.show.gridNumbers, argsMap.show.gridCoords, argsMap.show.gridCenters); err != nil {
+			if err := consolidatedMap.Create(mapName, argsMap.show.gridCenters); err != nil {
 				log.Printf("map: creating %s\n", mapName)
 				log.Fatal(err)
 			}
 			log.Printf("map: created  %s\n", mapName)
-
 		}
+
+		if argsMap.show.gridCoords {
+			consolidatedMap.AddGridCoords()
+		} else if argsMap.show.gridNumbers {
+			consolidatedMap.AddGridNumbering()
+		}
+
+		// now we can create the Worldographer map!
+		mapName := filepath.Join(cfg.OutputPath, fmt.Sprintf("%s.wxx", argsMap.clanId))
+		if err := consolidatedMap.Create(mapName, argsMap.show.gridCenters); err != nil {
+			log.Printf("map: creating %s\n", mapName)
+			log.Fatal(err)
+		}
+		log.Printf("map: created  %s\n", mapName)
 
 		return nil
 	},
@@ -540,6 +545,7 @@ func walk(turnId, unitId string, worldHexMap map[string]*wxx.Hex, stepNo int, st
 		if !ok { // create a new hex with normalized map coordinates (to the grid's origin)
 			gridColumn, gridRow := mc.GridColumnRow()
 			daHex = &wxx.Hex{
+				Created: turnId,
 				Grid:    mc.GridId(),
 				Coords:  wxx.Offset{Column: gridColumn, Row: gridRow},
 				Terrain: defaultTerrain,
@@ -551,6 +557,7 @@ func walk(turnId, unitId string, worldHexMap map[string]*wxx.Hex, stepNo int, st
 
 	daHex := fetchHex(curr, step.Terrain)
 	log.Printf("map: %s: %-6s: step %2d: mapc %s: grid id %q\n", turnId, unitId, stepNo, curr, curr.GridId())
+	daHex.Updated = turnId
 
 	if step.Result == lbmoves.Succeeded {
 		daHex.Visited = true
