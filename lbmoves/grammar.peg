@@ -172,36 +172,87 @@ RESOURCE <- "Coal" {
     return domain.RSalt, nil
 }
 
-TERRAIN <- "CONIFER HILLS" {
+TERRAIN <- "ALPS" {
+    return domain.TAlps, nil
+} / "ARID TUNDRA" {
+    return domain.TAridTundra, nil
+} / "BRUSH HILLS" {
+    return domain.TBrushHills, nil
+} / "BRUSH" {
+    return domain.TBrush, nil
+} / "CONIFER HILLS" {
     return domain.TConiferHills, nil
+} / "DECIDUOUS FOREST" {
+    return domain.TDeciduousForest, nil
+} / "DECIDUOUS HILLS" {
+    return domain.TDeciduousHills, nil
+} / "DESERT" {
+    return domain.TDesert, nil
+} / "GRASSY HILLS PLATEAU" {
+    return domain.TGrassyHillsPlateau, nil
 } / "GRASSY HILLS" {
     return domain.TGrassyHills, nil
+} / "JUNGLE HILLS" {
+    return domain.TJungleHills, nil
+} / "JUNGLE" {
+    return domain.TJungle, nil
 } / "LAKE" {
     return domain.TLake, nil
+} / "LOW ARID MOUNTAINS" {
+    return domain.TLowAridMountains, nil
+} / "LOW CONIFER MOUNTAINS" {
+    return domain.TLowConiferMountains, nil
+} / "LOW JUNGLE MOUNTAINS" {
+    return domain.TLowJungleMountains, nil
+} / "LOW SNOWY MOUNTAINS" {
+    return domain.TLowSnowyMountains, nil
+} / "LOW VOLCANIC MOUNTAINS" {
+    return domain.TLowVolcanicMountains, nil
 } / "OCEAN" {
     return domain.TOcean, nil
+} / "POLAR ICE" {
+    return domain.TPolarIce, nil
+} / "PRAIRIE PLATEAU" {
+    return domain.TPrairiePlateau, nil
 } / "PRAIRIE" {
     return domain.TPrairie, nil
 } / "ROCKY HILLS" {
     return domain.TRockyHills, nil
+} / "SNOWY HILLS" {
+    return domain.TSnowyHills, nil
 } / "SWAMP" {
     return domain.TSwamp, nil
+} / "TUNDRA" {
+    return domain.TTundra, nil
 }
 
-TERRAIN_CODE <- "CH" {
-    return domain.TConiferHills, nil
-} / "GH" {
-    return domain.TGrassyHills, nil
-} / "PR" {
-    return domain.TPrairie, nil
-} / "RH" {
-    return domain.TRockyHills, nil
-} / "SW" {
-    return domain.TSwamp, nil
-} / "L" {
-    return domain.TLake, nil
-} / "O" {
-    return domain.TOcean, nil
+TERRAIN_CODE <- "ALPS" {    return domain.TAlps, nil
+} / "GHP" { return domain.TGrassyHillsPlateau, nil
+} / "HSM" { return domain.TAridTundra, nil
+} / "LAM" { return domain.TLowAridMountains, nil
+} / "LCM" { return domain.TLowConiferMountains, nil
+} / "LJM" { return domain.TLowJungleMountains, nil
+} / "LSM" { return domain.TLowSnowyMountains, nil
+} / "LVM" { return domain.TLowVolcanicMountains, nil
+} / "PPR" { return domain.TPrairiePlateau, nil
+} / "AR" { return domain.TAridTundra, nil
+} / "BH" { return domain.TBrushHills, nil
+} / "BR" { return domain.TBrush, nil
+} / "CH" { return domain.TConiferHills, nil
+} / "DE" { return domain.TDesert, nil
+} / "DH" { return domain.TDeciduousHills, nil
+} / "GH" { return domain.TGrassyHills, nil
+} / "JH" { return domain.TJungleHills, nil
+} / "PI" { return domain.TPolarIce, nil
+} / "PR" { return domain.TPrairie, nil
+} / "RH" { return domain.TRockyHills, nil
+} / "SH" { return domain.TSnowyHills, nil
+} / "SW" { return domain.TSwamp, nil
+} / "TU" { return domain.TTundra, nil
+} / "D" { return domain.TDeciduousForest, nil
+} / "J" { return domain.TJungle, nil
+} / "L" { return domain.TLake, nil
+} / "O" { return domain.TOcean, nil
 }
 
 UNIT_ID <- DIGIT DIGIT DIGIT DIGIT ([cefg] DIGIT)? {

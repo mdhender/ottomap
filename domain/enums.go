@@ -224,19 +224,37 @@ type Terrain int
 const (
 	// TBlank must be the first enum value or the map will not render
 	TBlank Terrain = iota
+	TAlps
+	TAridTundra
+	TBrush
 	TBrushHills
 	TConiferHills
+	TDeciduousForest
+	TDeciduousHills
+	TDesert
 	TGrassyHills
+	TGrassyHillsPlateau
+	THighSnowyMountains
+	TJungle
+	TJungleHills
 	TLake
 	TLowAridMountains
+	TLowConiferMountains
+	TLowJungleMountains
+	TLowSnowyMountains
+	TLowVolcanicMountains
 	TOcean
+	TPolarIce
 	TPrairie
+	TPrairiePlateau
 	TRockyHills
+	TSnowyHills
 	TSwamp
+	TTundra
 )
 
 // NumberOfTerrainTypes must be updated if we add new terrain types
-const NumberOfTerrainTypes = int(TSwamp + 1)
+const NumberOfTerrainTypes = int(TTundra + 1)
 
 // MarshalJSON implements the json.Marshaler interface.
 func (d Terrain) MarshalJSON() ([]byte, error) {
@@ -273,45 +291,99 @@ func StringToTerrain(s string) (Terrain, bool) {
 var (
 	// helper map for marshalling the enum
 	terrainEnumToString = map[Terrain]string{
-		TBlank:            "",
-		TBrushHills:       "BH",
-		TConiferHills:     "CH",
-		TGrassyHills:      "GH",
-		TLake:             "L",
-		TLowAridMountains: "LAM",
-		TOcean:            "O",
-		TPrairie:          "PR",
-		TRockyHills:       "RH",
-		TSwamp:            "SW",
+		TBlank:                "",
+		TAlps:                 "ALPS",
+		TAridTundra:           "AR",
+		TBrush:                "BR",
+		TBrushHills:           "BH",
+		TConiferHills:         "CH",
+		TDeciduousForest:      "D",
+		TDeciduousHills:       "DH",
+		TDesert:               "DE",
+		TGrassyHills:          "GH",
+		TGrassyHillsPlateau:   "GHP",
+		THighSnowyMountains:   "HSM",
+		TJungle:               "J",
+		TJungleHills:          "JH",
+		TLake:                 "L",
+		TLowAridMountains:     "LAM",
+		TLowConiferMountains:  "LCM",
+		TLowJungleMountains:   "LJM",
+		TLowSnowyMountains:    "LSM",
+		TLowVolcanicMountains: "LVM",
+		TOcean:                "O",
+		TPolarIce:             "PI",
+		TPrairie:              "PR",
+		TPrairiePlateau:       "PP",
+		TRockyHills:           "RH",
+		TSnowyHills:           "SH",
+		TSwamp:                "SW",
+		TTundra:               "TU",
 	}
 	// helper map for unmarshalling the enum
 	terrainStringToEnum = map[string]Terrain{
-		"":    TBlank,
-		"BH":  TBrushHills,
-		"CH":  TConiferHills,
-		"GH":  TGrassyHills,
-		"L":   TLake,
-		"LAM": TLowAridMountains,
-		"O":   TOcean,
-		"PR":  TPrairie,
-		"RH":  TRockyHills,
-		"SW":  TSwamp,
+		"":     TBlank,
+		"ALPS": TAlps,
+		"AR":   TAridTundra,
+		"BR":   TBrush,
+		"BH":   TBrushHills,
+		"CH":   TConiferHills,
+		"D":    TDeciduousForest,
+		"DH":   TDeciduousHills,
+		"DE":   TDesert,
+		"GH":   TGrassyHills,
+		"GHP":  TGrassyHillsPlateau,
+		"HSM":  THighSnowyMountains,
+		"J":    TJungle,
+		"JH":   TJungleHills,
+		"L":    TLake,
+		"LAM":  TLowAridMountains,
+		"LCM":  TLowConiferMountains,
+		"LJM":  TLowJungleMountains,
+		"LSM":  TLowSnowyMountains,
+		"LVM":  TLowVolcanicMountains,
+		"O":    TOcean,
+		"PI":   TPolarIce,
+		"PPR":  TPrairiePlateau,
+		"PR":   TPrairie,
+		"RH":   TRockyHills,
+		"SH":   TSnowyHills,
+		"SW":   TSwamp,
+		"TU":   TTundra,
 	}
 	// TileTerrainNames is the map for tile terrain name matching. the text values
 	// are extracted from the Worldographer tileset. they must match exactly.
 	// if you're adding to this list, the values are found by hovering over the
 	// terrain in the GUI.
 	TileTerrainNames = map[Terrain]string{
-		TBlank:            "Blank",
-		TBrushHills:       "Hills Shrubland",
-		TConiferHills:     "Hills Forest Evergreen",
-		TGrassyHills:      "Hills Grassland",
-		TLake:             "Water Shoals",
-		TLowAridMountains: "Mountains Dead Forest",
-		TOcean:            "Water Sea",
-		TPrairie:          "Flat Grazing Land",
-		TRockyHills:       "Underdark Broken Lands",
-		TSwamp:            "Flat Swamp",
+		TBlank:                "Blank",
+		TAlps:                 "Mountains",
+		TAridTundra:           "Flat Moss",
+		TBrush:                "Flat Shrubland",
+		TBrushHills:           "Hills Shrubland",
+		TConiferHills:         "Hills Forest Evergreen",
+		TDeciduousForest:      "Flat Forest Deciduous Heavy",
+		TDeciduousHills:       "Hills Deciduous Forest",
+		TDesert:               "Flat Desert Sandy",
+		TGrassyHills:          "Hills Grassland",
+		TGrassyHillsPlateau:   "Hills Grassy",
+		THighSnowyMountains:   "Mountain Snowcapped",
+		TJungle:               "Flat Forest Jungle Heavy",
+		TJungleHills:          "Hills Forest Jungle",
+		TLake:                 "Water Shoals",
+		TLowAridMountains:     "Mountains Dead Forest",
+		TLowConiferMountains:  "Mountains Forest Evergreen",
+		TLowJungleMountains:   "Mountain Forest Jungle",
+		TLowSnowyMountains:    "Mountains Snowcapped",
+		TLowVolcanicMountains: "Mountain Volcano Dormant",
+		TOcean:                "Water Sea",
+		TPolarIce:             "Mountains Glacier",
+		TPrairie:              "Flat Grazing Land",
+		TPrairiePlateau:       "Flat Grasslands Poor",
+		TRockyHills:           "Underdark Broken Lands",
+		TSnowyHills:           "Flat Snowfields",
+		TSwamp:                "Flat Swamp",
+		TTundra:               "Flat Steppe",
 	}
 )
 

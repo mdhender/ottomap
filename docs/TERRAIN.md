@@ -8,34 +8,38 @@
 
 | Short Code | Long Code              | Worldographer Terrain       | SitW | TC |
 |------------|------------------------|-----------------------------|:----:|:--:|
-| ALPS       | Alps                   |                             |      |    |
-| AR         | Arid Tundra            |                             |      |    |
+| ALPS       | Alps                   | Mountains                   |      |    |
+| AR         | Arid Tundra            | Flat Moss                   |      |    |
 | BH         | Brush Hills            | Hills Shrubland             |      |    |
 | BR         | Brush                  | Flat Shrubland              |      |    |
 | CH         | Conifer Hills          | Hills Forest Evergreen      |      |    |
 | D          | Deciduous Forest       | Flat Forest Deciduous Heavy |      |    |
-| DE         | Desert                 |                             |      |    |
+| DE         | Desert                 | Flat Desert Sandy           |      |    |
 | DH         | Deciduous Hills        | Hills Deciduous Forest      |      |    |
-| GH         | Grassy Hill            | Hills Grassland             |      |    |
-| GHP        | Grassy Hill Plateau    |                             |      |    |
+| GH         | Grassy Hill            | Hills Grassland             |  *   |    |
+| GHP        | Grassy Hill Plateau    | Hills Grassy                |      |    |
 | HSM        | High Snowy Mountains   | Mountain Snowcapped         |      |    |
 | JG         | Jungle                 | Flat Forest Jungle Heavy    |      |    |
-| JH         | Jungle Hill            |                             |      |    |
-| L          | Lake                   | Water Shoals                |      |    |
+| JH         | Jungle Hill            | Hills Forest Jungle         |      |    |
+| L          | Lake                   | Water Shoals                |  *   |    |
 | LCM        | Low Conifer Mountains  | Mountains Forest Evergreen  |      |    |
-| LJM        | Low Jungle Mountain    |                             |      |    |
+| LJM        | Low Jungle Mountain    | Mountain Forest Jungle      |      |    |
 | LSM        | Low Snowy Mountains    | Mountains Snowcapped        |      |    |
 | LVM        | Low Volcanic Mountains | Mountain Volcano Dormant    |      |    |
 | O          | Ocean                  | Water Sea                   |  *   |    |
-| PGH        | Plateau GH             |                             |      |    |
-| PI         | Polar Ice              |                             |      |    |
-| PP         | Plateau Prairie        |                             |      |    |
-| PPR        | Prairie Plateau        |                             |      |    |
+| PI         | Polar Ice              | Mountains Glacier           |      |    |
+| PPR        | Prairie Plateau        | Flat Grasslands Poor        |      |    |
 | PR         | Prairie                | Flat Grazing Land           |  *   |    |
-| RH         | Rocky Hill             | Underdark Broken Lands      |      |    |
-| SH         | Snow Hill              |                             |      |    |
-| SW         | Swamp                  | Flat Swamp                  |      |    |
-| TU         | Tundra                 |                             |      |    |
+| RH         | Rocky Hill             | Underdark Broken Lands      |  *   |    |
+| SH         | Snow Hill              | Flat Snowfields             |      |    |
+| SW         | Swamp                  | Flat Swamp                  |  *   |    |
+| TU         | Tundra                 | Flat Steppe                 |      |    |
+
+> Note:
+> Assuming that "PP (Plateau Prairie)" is a typo in The Manifest.
+
+> Note:
+> Assuming that "PGH (Plateau GH)" is a typo in The Manifest.
 
 ## Edges
 

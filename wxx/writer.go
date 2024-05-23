@@ -471,6 +471,27 @@ func (w *WXX) Create(path string, hexes []*Hex, showGridNumbering, showGridCoord
 		}
 	}
 
+	// example for creating scout tracks
+	//plot := []Point{
+	//	{21, 7},
+	//	{22, 6},
+	//	{23, 6},
+	//	{24, 5},
+	//	{25, 6},
+	//	{25, 7},
+	//	{26, 7},
+	//}
+	//for n := range plot {
+	//	if n+1 < len(plot) {
+	//		from := coordsToPoints(int(plot[n].X)-1, int(plot[n].Y)-1)
+	//		to := coordsToPoints(int(plot[n+1].X)-1, int(plot[n+1].Y)-1)
+	//		w.Printf(`<shape  type="Path" isCurve="false" isGMOnly="false" isSnapVertices="true" isMatchTileBorders="false" tags="" creationType="BASIC" isDropShadow="false" isInnerShadow="false" isBoxBlur="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" dsSpread="0.2" dsRadius="50.0" dsOffsetX="0.0" dsOffsetY="0.0" insChoke="0.2" insRadius="50.0" insOffsetX="0.0" insOffsetY="0.0" bbWidth="10.0" bbHeight="10.0" bbIterations="3" mapLayer="Above Terrain" fillTexture="" strokeTexture="" strokeType="SIMPLE" highestViewLevel="WORLD" currentShapeViewLevel="WORLD" lineCap="ROUND" lineJoin="ROUND" opacity="1.0" fillRule="NON_ZERO" strokeColor="0.0,0.0,0.0,1.0" strokeWidth="%f" dsColor="1.0,0.8941176533699036,0.7686274647712708,1.0" insColor="1.0,0.8941176533699036,0.7686274647712708,1.0">`, riverWidth)
+	//		w.Printf(` <p type="m" x="%f" y="%f"/>`, from[0].X, from[0].Y)
+	//		w.Printf(` <p x="%f" y="%f"/>`, to[0].X, to[0].Y)
+	//		w.Println(`</shape>`)
+	//	}
+	//}
+
 	w.Println(`</shapes>`)
 
 	w.Println(`<notes>`)
