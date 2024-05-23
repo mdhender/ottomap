@@ -31,8 +31,6 @@ func ParseMoveResults(turnId, unitId string, line []byte, showDebug bool) ([]*St
 		rxScoutLine = regexp.MustCompile(`^Scout [12345678]:Scout `)
 		rxStatusLine = regexp.MustCompile(`^[0-9][[0-9][0-9][0-9]([cefg][0-9])? Status: `)
 	}
-	//line = []byte(`Scout 5:Scout NE-RH, ,River N NE\,No Ford on River to NE of HEX , Find 3 French Hens,  2 Turtle Doves,  1 Partridge,`)
-	//line = []byte(`Scout 1:Scout SW-PR,  O SE, SW, NW, S, Chel世界sk-70,Find Salt, 2540g3, 3540g6\N-PR,  O SW, NW, N\ Not enough M.P's to move to NE into GRASSY HILLS, Nothing of interest found`)
 	if bytes.HasPrefix(line, []byte("Tribe Follows")) {
 		return parseTribeFollows(turnId, unitId, line)
 	} else if bytes.HasPrefix(line, []byte("Tribe Movement: Move ")) {
