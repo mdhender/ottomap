@@ -12,7 +12,7 @@ func (w *WXX) MergeHexes(turnId string, hexes []*Hex) error {
 			return err
 		}
 	}
-	log.Printf("wxx: %s: merge: hexes %d: grids %d\n", turnId, len(hexes), w.totalGrids)
+	log.Printf("wxx: %s: merge: hexes %6d: grids %6d\n", turnId, len(hexes), w.totalGrids)
 	return nil
 }
 
