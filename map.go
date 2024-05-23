@@ -458,10 +458,12 @@ var cmdMap = &cobra.Command{
 				if err != nil {
 					log.Fatalf("map: %s: %-6s: toMapCoords: error %v\n", mrl.TurnId, mrl.UnitId, err)
 				}
+
+				debugStep := false
 				for stepNo, step := range mrl.MovementReports {
-					log.Printf("map: %s: %-6s: step %2d: mapc %s\n", mrl.TurnId, mrl.UnitId, stepNo+1, currMapCoords)
-					nextCoords := walk(turnId, mrl.UnitId, worldHexMap, stepNo+1, step, currMapCoords)
-					log.Printf("map: %s: %-6s: step %2d: mapc %s next %s\n", mrl.TurnId, mrl.UnitId, stepNo+1, currMapCoords, nextCoords)
+					//log.Printf("map: %s: %-6s: step %2d: mapc %s\n", mrl.TurnId, mrl.UnitId, stepNo+1, currMapCoords)
+					nextCoords := walk(turnId, mrl.UnitId, worldHexMap, stepNo+1, step, currMapCoords, debugStep)
+					//log.Printf("map: %s: %-6s: step %2d: mapc %s next %s\n", mrl.TurnId, mrl.UnitId, stepNo+1, currMapCoords, nextCoords)
 					currMapCoords = nextCoords
 				}
 
@@ -499,11 +501,12 @@ var cmdMap = &cobra.Command{
 						log.Fatalf("map: %s: %-6s: scout %d: toMapCoords: error %v\n", mrl.TurnId, mrl.UnitId, scoutNo+1, err)
 					}
 
+					debugStep := false
 					movementReports := scout
 					for stepNo, step := range movementReports {
-						log.Printf("map: %s: %-6s: scout %d: step %2d: mapc %s\n", mrl.TurnId, mrl.UnitId, scoutNo+1, stepNo+1, currMapCoords)
-						nextCoords := walk(turnId, mrl.UnitId, worldHexMap, stepNo+1, step, currMapCoords)
-						log.Printf("map: %s: %-6s: scout %d: step %2d: mapc %s next %s\n", mrl.TurnId, mrl.UnitId, scoutNo+1, stepNo+1, currMapCoords, nextCoords)
+						//log.Printf("map: %s: %-6s: scout %d: step %2d: mapc %s\n", mrl.TurnId, mrl.UnitId, scoutNo+1, stepNo+1, currMapCoords)
+						nextCoords := walk(turnId, mrl.UnitId, worldHexMap, stepNo+1, step, currMapCoords, debugStep)
+						//log.Printf("map: %s: %-6s: scout %d: step %2d: mapc %s next %s\n", mrl.TurnId, mrl.UnitId, scoutNo+1, stepNo+1, currMapCoords, nextCoords)
 						currMapCoords = nextCoords
 					}
 				}
@@ -552,18 +555,18 @@ var cmdMap = &cobra.Command{
 				gh.Hexes[fmt.Sprintf("%s %02d%02d", hex.Grid, hex.Coords.Column, hex.Coords.Row)] = hex
 			}
 
-			log.Printf("map: world: %d\n", len(worldMap))
+			//log.Printf("map: world: %d\n", len(worldMap))
 			for gridId, daMap := range worldMap {
-				log.Printf("map: world: %s: %d\n", gridId, len(daMap.Hexes))
+				//log.Printf("map: world: %s: %d\n", gridId, len(daMap.Hexes))
 				// now we can create the Worldographer map!
 				mapName := filepath.Join(cfg.OutputPath, fmt.Sprintf("%s.%s.%s.wxx", turnId, argsMap.clanId, gridId))
-				log.Printf("map: creating %s\n", mapName)
 				var daHexes []*wxx.Hex
 				for _, hex := range daMap.Hexes {
 					daHexes = append(daHexes, hex)
 				}
 				w := &wxx.WXX{}
 				if err := w.Create(mapName, daHexes, argsMap.show.gridNumbers, argsMap.show.gridCoords, argsMap.show.gridCenters); err != nil {
+					log.Printf("map: creating %s\n", mapName)
 					log.Fatal(err)
 				}
 				log.Printf("map: created  %s\n", mapName)
@@ -574,12 +577,12 @@ var cmdMap = &cobra.Command{
 				consolidatedMap = append(consolidatedMap, hex)
 			}
 
-			log.Printf("map: world %6d: consolidated %6d\n", len(worldMap), len(consolidatedMap))
+			//log.Printf("map: world %6d: consolidated %6d\n", len(worldMap), len(consolidatedMap))
 			// now we can create the Worldographer map!
 			mapName := filepath.Join(cfg.OutputPath, fmt.Sprintf("%s.%s.wxx", turnId, argsMap.clanId))
-			log.Printf("map: creating %s\n", mapName)
 			w := &wxx.WXX{}
 			if err := w.Create(mapName, consolidatedMap, argsMap.show.gridNumbers, argsMap.show.gridCoords, argsMap.show.gridCenters); err != nil {
+				log.Printf("map: creating %s\n", mapName)
 				log.Fatal(err)
 			}
 			log.Printf("map: created  %s\n", mapName)
@@ -595,7 +598,12 @@ type gridHexes struct {
 	Hexes map[string]*wxx.Hex // key is hex coordinates
 }
 
-func walk(turnId, unitId string, worldHexMap map[string]*wxx.Hex, stepNo int, step *lbmoves.Step, start coords.Map) coords.Map {
+func walk(turnId, unitId string, worldHexMap map[string]*wxx.Hex, stepNo int, step *lbmoves.Step, start coords.Map, debugStep bool) coords.Map {
+	if debugStep {
+		if buf, err := json.MarshalIndent(step, "", "\t"); err == nil {
+			log.Printf("debugStep: step %s\n", string(buf))
+		}
+	}
 	log.Printf("map: %s: %-6s: step %2d: mapc %s\n", turnId, unitId, stepNo, start)
 
 	// advance a hex if the move succeeded
@@ -638,11 +646,11 @@ func walk(turnId, unitId string, worldHexMap map[string]*wxx.Hex, stepNo int, st
 	}
 
 	if step.Result == lbmoves.Blocked {
-		log.Printf("step: blocked: attempted %s\n", step.Attempted)
+		// log.Printf("step: blocked: attempted %s\n", step.Attempted)
 		if step.BlockedBy == nil {
 			panic("assert(blockedBy != nil")
 		}
-		log.Printf("step: blocked: edge: %+v\n", *step.BlockedBy)
+		// log.Printf("step: blocked: edge: %+v\n", *step.BlockedBy)
 	}
 
 	if step.Result == lbmoves.Prohibited {

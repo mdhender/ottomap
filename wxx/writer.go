@@ -10,7 +10,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/mdhender/ottomap/directions"
 	"github.com/mdhender/ottomap/domain"
-	"log"
 	"os"
 	"unicode/utf16"
 	"unicode/utf8"
@@ -71,9 +70,9 @@ func (w *WXX) Create(path string, hexes []*Hex, showGridNumbering, showGridCoord
 
 	// group the hexes by grid
 	grids := map[string][]*Hex{}
-	for gridId, grid := range grids {
-		log.Printf("map: grid %q: %4d hexes\n", gridId, len(grid))
-	}
+	//for gridId, grid := range grids {
+	//	log.Printf("map: grid %q: %4d hexes\n", gridId, len(grid))
+	//}
 	for _, hex := range hexes {
 		if hex.Grid == "" {
 			panic(fmt.Sprintf("assert(hex.Grid!= %q)", hex.Grid))
@@ -96,9 +95,9 @@ func (w *WXX) Create(path string, hexes []*Hex, showGridNumbering, showGridCoord
 			maxGridColumn = gridColumn
 		}
 	}
-	for gridId, grid := range grids {
-		log.Printf("map: grid %q: %4d hexes\n", gridId, len(grid))
-	}
+	//for gridId, grid := range grids {
+	//	log.Printf("map: grid %q: %4d hexes\n", gridId, len(grid))
+	//}
 
 	// create any missing grids
 	for gridRow := minGridRow; gridRow <= maxGridRow; gridRow++ {
@@ -109,10 +108,10 @@ func (w *WXX) Create(path string, hexes []*Hex, showGridNumbering, showGridCoord
 			}
 		}
 	}
-	for gridId, grid := range grids {
-		log.Printf("map: grid %q: %4d hexes\n", gridId, len(grid))
-	}
-	log.Printf("map: grid (%c%c %c%c) (%c%c %c%c)", minGridRow+'A', minGridColumn+'A', maxGridRow+'A', maxGridColumn+'A', minGridRow+'A', minGridColumn+'A', maxGridRow+'A', maxGridColumn+'A')
+	//for gridId, grid := range grids {
+	//	log.Printf("map: grid %q: %4d hexes\n", gridId, len(grid))
+	//}
+	//log.Printf("map: grid (%c%c %c%c) (%c%c %c%c)", minGridRow+'A', minGridColumn+'A', maxGridRow+'A', maxGridColumn+'A', minGridRow+'A', minGridColumn+'A', maxGridRow+'A', maxGridColumn+'A')
 
 	// one grid on the consolidated map is 30 columns wide by 21 rows high.
 	const columnsPerGrid, rowsPerGrid = 30, 21
@@ -120,8 +119,8 @@ func (w *WXX) Create(path string, hexes []*Hex, showGridNumbering, showGridCoord
 	// calculate the size of the consolidated map
 	gridsWide, gridsHigh := int(maxGridColumn-minGridColumn)+1, int(maxGridRow-minGridRow)+1
 	tilesWide, tilesHigh := columnsPerGrid*gridsWide, rowsPerGrid*gridsHigh
-	log.Printf("map: grid columns %4d rows %4d", gridsWide, gridsHigh)
-	log.Printf("map: tile columns %4d rows %4d", tilesWide, tilesHigh)
+	//log.Printf("map: grid columns %4d rows %4d", gridsWide, gridsHigh)
+	//log.Printf("map: tile columns %4d rows %4d", tilesWide, tilesHigh)
 
 	// create a consolidated map of tiles
 	var wmap [][]Tile
@@ -132,14 +131,14 @@ func (w *WXX) Create(path string, hexes []*Hex, showGridNumbering, showGridCoord
 	// convert the grids to tiles and then update the consolidated map.
 	// It is indexed by column then row.
 	for gridId, grid := range grids {
-		log.Printf("map: grid %q: %4d hexes\n", gridId, len(grid))
+		//log.Printf("map: grid %q: %4d hexes\n", gridId, len(grid))
 		// extract this grid's coordinates and determine where it fits in the consolidated map.
 		gridRow, gridColumn := int(gridId[0]-'A'), int(gridId[1]-'A')
-		log.Printf("map: grid %q: row %4d col %4d: minRow %4d minColum %4d\n", gridId, gridRow, gridColumn, minGridRow, minGridColumn)
+		//log.Printf("map: grid %q: row %4d col %4d: minRow %4d minColum %4d\n", gridId, gridRow, gridColumn, minGridRow, minGridColumn)
 		gridRow, gridColumn = gridRow-minGridRow, gridColumn-minGridColumn
-		log.Printf("map: grid %q: row %4d col %4d\n", gridId, gridRow, gridColumn)
+		//log.Printf("map: grid %q: row %4d col %4d\n", gridId, gridRow, gridColumn)
 		mapColumn, mapRow := gridColumn*columnsPerGrid, gridRow*rowsPerGrid
-		log.Printf("map: grid %q: row %4d col %4d: map (%4d, %4d)", gridId, gridRow, gridColumn, mapColumn, mapRow)
+		//log.Printf("map: grid %q: row %4d col %4d: map (%4d, %4d)", gridId, gridRow, gridColumn, mapColumn, mapRow)
 
 		gridTiles, err := w.CreateGrid(grid, showGridCoords, showGridNumbering)
 		if err != nil {
@@ -410,6 +409,9 @@ func (w *WXX) Create(path string, hexes []*Hex, showGridNumbering, showGridCoord
 			tile := wmap[column][row]
 			points := coordsToPoints(column, row)
 
+			// detect edges that are both Ford and River
+			fordEdges := map[directions.Direction]bool{}
+
 			var from, to Point
 
 			for _, dir := range tile.Features.Edges.Ford {
@@ -429,6 +431,7 @@ func (w *WXX) Create(path string, hexes []*Hex, showGridNumbering, showGridCoord
 				default:
 					panic(fmt.Sprintf("assert(direction != %d)", dir))
 				}
+				fordEdges[dir] = true
 
 				ford := edgeCenter(dir, points)
 				midpointFrom := midpoint(from, ford)
@@ -447,6 +450,10 @@ func (w *WXX) Create(path string, hexes []*Hex, showGridNumbering, showGridCoord
 			}
 
 			for _, dir := range tile.Features.Edges.River {
+				// if we have both a ford and a river, honor the ford
+				if fordEdges[dir] {
+					continue
+				}
 				switch dir {
 				case directions.DNorth:
 					from, to = points[2], points[3]
