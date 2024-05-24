@@ -51,8 +51,8 @@ var cmdIndexReports = &cobra.Command{
 		cfg.Reports = nil
 
 		// find all turn reports in the input path and add them to our configuration.
-		// the files have names that match the pattern YEAR-MONTH.CLAN_ID.input.txt.
-		rxTurnReportFile, err := regexp.Compile(`^(\d{3})-(\d{2})\.(0\d{3})\.input\.txt$`)
+		// the files have names that match the pattern YEAR-MONTH.CLAN_ID.report.txt.
+		rxTurnReportFile, err := regexp.Compile(`^(\d{3})-(\d{2})\.(0\d{3})\.report\.txt$`)
 		if err != nil {
 			log.Fatal(err)
 		}

@@ -17,23 +17,31 @@ import (
 
 // Hex is a hex on the Tribenet map.
 type Hex struct {
-	Grid     string // AA ... ZZ
-	Coords   Offset // coordinates in a grid hex are one-based
-	Terrain  domain.Terrain
-	Scouted  bool
-	Features Features
+	GridId     string // AA ... ZZ
+	GridCoords string // original grid coordinates
+	Offset     Offset // coordinates in a grid hex are one-based
+	Terrain    domain.Terrain
+	Scouted    bool
+	Features   Features
+}
+
+func (h *Hex) Grid() string {
+	return h.GridCoords[:2]
+	//id, column, row := h.Grid, h.Coords.Column, h.Coords.Row
+	//return fmt.Sprintf("%s %02d%02d", id, column, row)
 }
 
 // Tile is a hex on the Worldographer map.
 type Tile struct {
-	created   string // turn id when the tile was created
-	updated   string // turn id when the tile was updated
-	Terrain   domain.Terrain
-	Elevation int
-	IsIcy     bool
-	IsGMOnly  bool
-	Resources Resources
-	Features  Features
+	created    string // turn id when the tile was created
+	updated    string // turn id when the tile was updated
+	GridCoords string // original grid coordinates
+	Terrain    domain.Terrain
+	Elevation  int
+	IsIcy      bool
+	IsGMOnly   bool
+	Resources  Resources
+	Features   Features
 }
 
 // Features are things to display on the map
@@ -44,9 +52,9 @@ type Features struct {
 		River []directions.Direction
 	}
 
-	// set either Coords or Numbers, not both
-	Coords  string
-	Numbers string
+	// set label for either Coords or Numbers, not both
+	CoordsLabel  string
+	NumbersLabel string
 
 	IsOrigin   bool // true for the clan's origin hex
 	Label      *Label
@@ -299,17 +307,17 @@ func (w *WXX) Create(path string, showGridCenters bool) error {
 						w.Printf("</label>/n")
 					}
 
-					if tile.Features.Coords != "" {
+					if tile.Features.CoordsLabel != "" {
 						labelXY := bottomLeftCenter(points).Translate(Point{-9, -2.5})
 						w.Printf(`<label  mapLayer="Tribenet Coords" style="null" fontFace="null" color="0.0,0.0,0.0,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags="">`)
 						w.Printf(`<location viewLevel="WORLD" x="%g" y="%g" scale="6.25" />`, labelXY.X, labelXY.Y)
-						w.Printf("%s", tile.Features.Coords)
+						w.Printf("%s", tile.Features.CoordsLabel)
 						w.Printf("</label>\n")
-					} else if tile.Features.Numbers != "" {
+					} else if tile.Features.NumbersLabel != "" {
 						labelXY := bottomLeftCenter(points).Translate(Point{-15, -2.5})
 						w.Printf(`<label  mapLayer="Tribenet Coords" style="null" fontFace="null" color="0.0,0.0,0.0,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags="">`)
 						w.Printf(`<location viewLevel="WORLD" x="%g" y="%g" scale="6.25" />`, labelXY.X, labelXY.Y)
-						w.Printf("%s", tile.Features.Numbers)
+						w.Printf("%s", tile.Features.NumbersLabel)
 						w.Printf("</label>\n")
 					}
 

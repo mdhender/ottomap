@@ -329,14 +329,17 @@ var cmdMap = &cobra.Command{
 			}
 			gridColumn, gridRow := originMapCoords.GridColumnRow()
 			originHex = &wxx.Hex{
-				Grid:    originMapCoords.GridId(),
-				Coords:  wxx.Offset{Column: gridColumn, Row: gridRow},
-				Terrain: statusLine.Terrain,
+				GridId:     originMapCoords.GridId(),
+				GridCoords: originMapCoords.GridString(),
+				Offset:     wxx.Offset{Column: gridColumn, Row: gridRow},
+				Terrain:    statusLine.Terrain,
+				Features: wxx.Features{
+					IsOrigin: true,
+					Created:  originTurnId,
+					Updated:  originTurnId,
+					Visited:  originTurnId,
+				},
 			}
-			originHex.Features.IsOrigin = true
-			originHex.Features.Created = originTurnId
-			originHex.Features.Updated = originTurnId
-			originHex.Features.Visited = originTurnId
 			log.Printf("map: %s: %-6s: status line: %s\n", mrl.TurnId, mrl.UnitId, statusLine.Terrain)
 
 			// stuff the origin into our consolidated map because it may never show up again
@@ -478,6 +481,10 @@ var cmdMap = &cobra.Command{
 				} else if hex.Features.Updated == turnId {
 					updatedHexes = append(updatedHexes, hex)
 				}
+
+				if hex.GridCoords == "" {
+					panic("!")
+				}
 			}
 			if err := consolidatedMap.MergeHexes(turnId, newHexes); err != nil {
 				log.Printf("error: wxx: mergeHexes: newHexes: %v\n", err)
@@ -553,11 +560,14 @@ func walk(turnId, unitId string, worldHexMap map[string]*wxx.Hex, stepNo int, st
 		if !ok { // create a new hex with normalized map coordinates (to the grid's origin)
 			gridColumn, gridRow := mc.GridColumnRow()
 			daHex = &wxx.Hex{
-				Grid:    mc.GridId(),
-				Coords:  wxx.Offset{Column: gridColumn, Row: gridRow},
-				Terrain: defaultTerrain,
+				GridId:     mc.GridId(),
+				GridCoords: mc.GridString(),
+				Offset:     wxx.Offset{Column: gridColumn, Row: gridRow},
+				Terrain:    defaultTerrain,
+				Features: wxx.Features{
+					Created: turnId,
+				},
 			}
-			daHex.Features.Created = turnId
 			worldHexMap[mc.GridString()] = daHex
 		}
 		return daHex

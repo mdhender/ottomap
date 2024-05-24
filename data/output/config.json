@@ -1,0 +1,14 @@
+{
+	"path": "/Users/wraith/JetBrains/tribenet/ottomap/data/output/config.json",
+	"output": "/Users/wraith/JetBrains/tribenet/ottomap/data/output",
+	"reports": [
+		{
+			"id": "0899-12.0991",
+			"path": "/Users/wraith/JetBrains/tribenet/ottomap/data/input/899-12.0991.report.txt",
+			"turnId": "0899-12",
+			"year": 899,
+			"month": 12,
+			"clan": "0991"
+		}
+	]
+}

@@ -33,46 +33,46 @@ func (w *WXX) newGrid(id string) *Grid {
 	return grid
 }
 
-// createGrid creates the tiles for a single grid on the larger Tribenet map.
-// The caller is responsible for stitching the grids together in the final map.
-func (w *WXX) createGrid(id string, hexes []*Hex, showGridCoords, showGridNumbers bool) (*Grid, error) {
-	// create a new grid with blank tiles and a default elevation of 1.
-	grid := &Grid{id: id}
-	for column := 0; column < columnsPerGrid; column++ {
-		for row := 0; row < rowsPerGrid; row++ {
-			grid.tiles[column][row].Elevation = 1
-		}
-	}
-
-	// convert the grid hexes to tiles
-	for _, hex := range hexes {
-		col, row := hex.Coords.Column-1, hex.Coords.Row-1
-		grid.tiles[col][row].Terrain = hex.Terrain
-		// todo: add the missing terrain types here.
-		switch grid.tiles[col][row].Terrain {
-		case domain.TLake:
-			grid.tiles[col][row].Elevation = -1
-		case domain.TOcean:
-			grid.tiles[col][row].Elevation = -3
-		case domain.TPrairie:
-			grid.tiles[col][row].Elevation = 1_000
-		}
-		grid.tiles[col][row].Features = hex.Features
-		if showGridCoords {
-			grid.tiles[col][row].Features.Coords = fmt.Sprintf("%s %02d%02d", hex.Grid, hex.Coords.Column, hex.Coords.Row)
-		} else if showGridNumbers {
-			grid.tiles[col][row].Features.Coords = fmt.Sprintf("%02d%02d", hex.Coords.Column, hex.Coords.Row)
-		}
-	}
-
-	return grid, nil
-}
+//// createGrid creates the tiles for a single grid on the larger Tribenet map.
+//// The caller is responsible for stitching the grids together in the final map.
+//func (w *WXX) createGrid(id string, hexes []*Hex, showGridCoords, showGridNumbers bool) (*Grid, error) {
+//	// create a new grid with blank tiles and a default elevation of 1.
+//	grid := &Grid{id: id}
+//	for column := 0; column < columnsPerGrid; column++ {
+//		for row := 0; row < rowsPerGrid; row++ {
+//			grid.tiles[column][row].Elevation = 1
+//		}
+//	}
+//
+//	// convert the grid hexes to tiles
+//	for _, hex := range hexes {
+//		col, row := hex.Coords.Column-1, hex.Coords.Row-1
+//		grid.tiles[col][row].Terrain = hex.Terrain
+//		// todo: add the missing terrain types here.
+//		switch grid.tiles[col][row].Terrain {
+//		case domain.TLake:
+//			grid.tiles[col][row].Elevation = -1
+//		case domain.TOcean:
+//			grid.tiles[col][row].Elevation = -3
+//		case domain.TPrairie:
+//			grid.tiles[col][row].Elevation = 1_000
+//		}
+//		grid.tiles[col][row].Features = hex.Features
+//		if showGridCoords {
+//			grid.tiles[col][row].Features.Coords = fmt.Sprintf("%s %02d%02d", hex.Grid, hex.Coords.Column, hex.Coords.Row)
+//		} else if showGridNumbers {
+//			grid.tiles[col][row].Features.Coords = fmt.Sprintf("%02d%02d", hex.Coords.Column, hex.Coords.Row)
+//		}
+//	}
+//
+//	return grid, nil
+//}
 
 func (g *Grid) addCoords() {
 	for column := 0; column < columnsPerGrid; column++ {
 		for row := 0; row < rowsPerGrid; row++ {
 			if g.tiles[column][row].created != "" {
-				g.tiles[column][row].Features.Coords = fmt.Sprintf("%s %02d%02d", g.id, column+1, row+1)
+				g.tiles[column][row].Features.CoordsLabel = fmt.Sprintf("%s %02d%02d", g.id, column+1, row+1)
 			}
 		}
 	}
@@ -82,42 +82,54 @@ func (g *Grid) addNumbers() {
 	for column := 0; column < columnsPerGrid; column++ {
 		for row := 0; row < rowsPerGrid; row++ {
 			if g.tiles[column][row].created != "" {
-				g.tiles[column][row].Features.Numbers = fmt.Sprintf("%02d%02d", column+1, row+1)
+				g.tiles[column][row].Features.NumbersLabel = fmt.Sprintf("%02d%02d", column+1, row+1)
 			}
 		}
 	}
 }
 
 func (g *Grid) addTile(turnId string, hex *Hex) error {
-	column, row := hex.Coords.Column-1, hex.Coords.Row-1
+	column, row := hex.Offset.Column-1, hex.Offset.Row-1
+
+	tile := &g.tiles[column][row]
+	tile.updated = turnId
 
 	// does tile already exist in the grid?
-	if g.tiles[column][row].created == "" {
-		g.tiles[column][row].created = turnId
-	}
-	g.tiles[column][row].updated = turnId
+	alreadyExists := tile.created != ""
 
-	g.tiles[column][row].Terrain = hex.Terrain
-	switch g.tiles[column][row].Terrain {
-	case domain.TConiferHills:
-		g.tiles[column][row].Elevation = 6_250
-	case domain.TGrassyHills:
-		g.tiles[column][row].Elevation = 1_000
-	case domain.TLake:
-		g.tiles[column][row].Elevation = -1
-	case domain.TOcean:
-		g.tiles[column][row].Elevation = -3
-	case domain.TPrairie:
-		g.tiles[column][row].Elevation = 750
-	case domain.TRockyHills:
-		g.tiles[column][row].Elevation = 2_500
-	case domain.TSwamp:
-		g.tiles[column][row].Elevation = 1
-	default:
-		log.Printf("grid: addTile: unknown terrain type %d %q", hex.Terrain, hex.Terrain.String())
-		panic(fmt.Sprintf("assert(hex.Terrain != %d", hex.Terrain))
+	// if it does, verify that the terrain has not changed
+	if alreadyExists && tile.Terrain != hex.Terrain {
+		log.Printf("error: turn %q: tile %q\n", turnId, tile.GridCoords)
+		log.Printf("error: turn %q: hex  %q\n", turnId, hex.GridCoords)
+		panic("assert(tile.Terrain == hex.Terrain)")
 	}
-	g.tiles[column][row].Features = hex.Features
+
+	// if it doesn't, set up the terrain
+	if !alreadyExists {
+		tile.created = turnId
+		tile.Terrain = hex.Terrain
+		switch tile.Terrain {
+		case domain.TConiferHills:
+			tile.Elevation = 6_250
+		case domain.TGrassyHills:
+			tile.Elevation = 1_000
+		case domain.TLake:
+			tile.Elevation = -1
+		case domain.TOcean:
+			tile.Elevation = -3
+		case domain.TPrairie:
+			tile.Elevation = 750
+		case domain.TRockyHills:
+			tile.Elevation = 2_500
+		case domain.TSwamp:
+			tile.Elevation = 1
+		default:
+			log.Printf("grid: addTile: unknown terrain type %d %q", hex.Terrain, hex.Terrain.String())
+			panic(fmt.Sprintf("assert(hex.Terrain != %d)", hex.Terrain))
+		}
+	}
+
+	tile.Features = hex.Features
 
 	return nil
 }

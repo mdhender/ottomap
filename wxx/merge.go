@@ -19,7 +19,7 @@ func (w *WXX) MergeHexes(turnId string, hexes []*Hex) error {
 // mergeHex merges the hex into the consolidated map, creating new grids and tiles as necessary.
 // It returns the first error encountered merging the new hex.
 func (w *WXX) mergeHex(turnId string, hex *Hex) error {
-	gridId := hex.Grid
+	gridId := hex.GridId
 	gridRow, gridColumn := gridIdToRowColumn(gridId)
 
 	// create a new grid if necessary
