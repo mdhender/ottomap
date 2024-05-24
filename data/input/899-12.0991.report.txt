@@ -1,4 +1,4 @@
-Tribe 0991, , Current Hex = MH 0315, (Previous Hex = MH 0315)
+Tribe 0991, , Current Hex = MH 0714, (Previous Hex = MH 0714)
 Current Turn 899-12 (#0), Winter, FINE	Next Turn 900-01 (#1), 29/10/2023
 Received: $0, Cost: $ 0	Credit: $ 200
 Goods Tribe: No GT

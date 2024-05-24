@@ -110,15 +110,21 @@ func (g *Grid) addTile(turnId string, hex *Hex) error {
 		tile.Terrain = hex.Terrain
 		switch tile.Terrain {
 		case domain.TConiferHills:
-			tile.Elevation = 6_250
+			tile.Elevation = 2_250
+		case domain.TDesert:
+			tile.Elevation = 125
 		case domain.TGrassyHills:
 			tile.Elevation = 1_000
 		case domain.TLake:
 			tile.Elevation = -1
+		case domain.TLowConiferMountains:
+			tile.Elevation = 7_500
 		case domain.TOcean:
 			tile.Elevation = -3
 		case domain.TPrairie:
 			tile.Elevation = 750
+		case domain.TPrairiePlateau:
+			tile.Elevation = 1_250
 		case domain.TRockyHills:
 			tile.Elevation = 2_500
 		case domain.TSwamp:

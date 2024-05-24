@@ -360,9 +360,17 @@ var cmdMap = &cobra.Command{
 		// process the movement results one turn at a time
 		for n, turnId := range allTurnIds {
 			// process the movement results for this turn
+			unitId, unitOrigin, unitEnding := "", "", ""
 			for _, mrl := range allMovementResults {
 				if mrl.TurnId != turnId {
 					continue
+				}
+
+				if unitId == "" {
+					unitId, unitOrigin = mrl.UnitId, mrl.StartingGridCoordinates
+				} else if unitId != mrl.UnitId {
+					log.Printf("turn %-8s: unit %-8s: origin %-8s: ended %-8s\n", turnId, unitId, unitOrigin, unitEnding)
+					unitId = mrl.UnitId
 				}
 
 				start := mrl.StartingGridCoordinates
@@ -402,6 +410,10 @@ var cmdMap = &cobra.Command{
 
 				//log.Printf("map: %s: %-6s: steps %2d start %s: curr %s\n", mrl.TurnId, mrl.UnitId, len(mrl.MovementReports), start, currMapCoords.GridString())
 				mrl.EndingGridCoordinates = currMapCoords.GridString()
+				unitEnding = mrl.EndingGridCoordinates
+			}
+			if unitId != "" {
+				log.Printf("turn %-8s: unit %-8s: origin %-8s: ended %-8s\n", turnId, unitId, unitOrigin, unitEnding)
 			}
 
 			// resolve "follows" links for this turn
@@ -428,6 +440,7 @@ var cmdMap = &cobra.Command{
 					if err != nil {
 						log.Fatalf("map: %s: %-6s: toGridCoords: error %v\n", mrl.TurnId, mrl.UnitId, err)
 					}
+
 					//log.Printf("map: %s: %-6s: scout %d: grid %s\n", mrl.TurnId, mrl.UnitId, scoutNo+1, startGridCoords)
 					currMapCoords, err := startGridCoords.ToMapCoords()
 					if err != nil {
@@ -442,6 +455,8 @@ var cmdMap = &cobra.Command{
 						//log.Printf("map: %s: %-6s: scout %d: step %2d: mapc %s next %s\n", mrl.TurnId, mrl.UnitId, scoutNo+1, stepNo+1, currMapCoords, nextCoords)
 						currMapCoords = nextCoords
 					}
+
+					log.Printf("turn %-8s: unit %-8s: origin %-8s: ended %-8s\n", turnId, fmt.Sprintf("%ss%d", mrl.UnitId, scoutNo+1), startGridCoords.String(), currMapCoords.GridString())
 				}
 			}
 
