@@ -12,12 +12,6 @@ import (
 	"time"
 )
 
-type session struct {
-	Id        string     `json:"-"`
-	ExpiresAt time.Time  `json:"expiresAt"`
-	User      users.User `json:"user"`
-}
-
 // Manager manages the sessions for the application.
 type Manager struct {
 	sync.RWMutex
@@ -49,13 +43,26 @@ func (sm *Manager) CreateSession(userId string) (string, bool) {
 	user.IsAuthenticated = true
 
 	id := uuid.New().String()
-	sm.sessions.add(&session{
+	sm.sessions.add(&Session{
 		Id:        id,
 		ExpiresAt: time.Now().Add(2 * 7 * 24 * time.Hour), // 2 weeks,
 		User:      user,
 	})
 
 	return id, ok
+}
+
+func (sm *Manager) GetSession(sessionId string) (Session, bool) {
+	sess, ok := sm.sessions.get(sessionId)
+	if !ok {
+		return Session{}, false
+	}
+
+	return Session{
+		Id:        sess.Id,
+		ExpiresAt: sess.ExpiresAt,
+		User:      sess.User,
+	}, true
 }
 
 func (sm *Manager) DeleteSession(id string) {

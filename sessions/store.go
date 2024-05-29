@@ -13,13 +13,19 @@ import (
 // Store is a store for sessions.
 type Store struct {
 	sync.RWMutex
-	sessions map[string]*session
+	sessions map[string]*Session
+}
+
+type Session struct {
+	Id        string     `json:"-"`
+	ExpiresAt time.Time  `json:"expiresAt"`
+	User      users.User `json:"user"`
 }
 
 func NewStore(path string, us *users.Store) (*Store, error) {
-	s := &Store{sessions: map[string]*session{}}
+	s := &Store{sessions: map[string]*Session{}}
 
-	sessions := map[string]*session{}
+	sessions := map[string]*Session{}
 	if data, err := os.ReadFile(path); err != nil {
 		return nil, err
 	} else if err = json.Unmarshal(data, &sessions); err != nil {
@@ -34,7 +40,7 @@ func NewStore(path string, us *users.Store) (*Store, error) {
 			continue
 		}
 		user.IsAuthenticated = true
-		s.sessions[id] = &session{
+		s.sessions[id] = &Session{
 			Id:        id,
 			ExpiresAt: time.Now().Add(2 * 7 * 24 * time.Hour), // 2 weeks,
 			User:      user,
@@ -48,7 +54,7 @@ func (ss *Store) MergeFrom(path string, us *users.Store) error {
 	ss.Lock()
 	defer ss.Unlock()
 
-	sessions := map[string]*session{}
+	sessions := map[string]*Session{}
 	if data, err := os.ReadFile(path); err != nil {
 		return err
 	} else if err = json.Unmarshal(data, &sessions); err != nil {
@@ -64,7 +70,7 @@ func (ss *Store) MergeFrom(path string, us *users.Store) error {
 			continue
 		}
 		user.IsAuthenticated = true
-		ss.sessions[id] = &session{
+		ss.sessions[id] = &Session{
 			Id:        id,
 			ExpiresAt: time.Now().Add(2 * 7 * 24 * time.Hour), // 2 weeks,
 			User:      user,
@@ -74,7 +80,7 @@ func (ss *Store) MergeFrom(path string, us *users.Store) error {
 	return nil
 }
 
-func (ss *Store) add(sess *session) {
+func (ss *Store) add(sess *Session) {
 	ss.Lock()
 	defer ss.Unlock()
 
@@ -92,11 +98,16 @@ func (ss *Store) del(id string) {
 	delete(ss.sessions, id)
 }
 
-func (ss *Store) get(id string) (*session, bool) {
+func (ss *Store) get(id string) (*Session, bool) {
 	ss.RLock()
 	defer ss.RUnlock()
 
 	sess, ok := ss.sessions[id]
+	if !ok {
+		return nil, false
+	} else if !time.Now().Before(sess.ExpiresAt) {
+		delete(ss.sessions, id)
+	}
 
 	return sess, ok
 }

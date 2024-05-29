@@ -15,8 +15,10 @@ func (s *Server) Routes() http.Handler {
 	}{
 		{"/", "GET", s.getHero()},
 		{"/features", "GET", s.getFeatures()},
-		{"/logout", "GET", s.handleLogout()},
-		{"/logout", "POST", s.handleLogout()},
+		{"/login", "GET", s.getLogin()},
+		{"/login", "POST", s.postLogin()},
+		{"/logout", "GET", s.getLogout()},
+		{"/logout", "POST", s.postLogout()},
 		{"/api/version", "GET", s.handleVersion()},
 		{"/api/login/:name/:secret", "GET", s.apiGetLogin()},
 	} {
@@ -28,8 +30,10 @@ func (s *Server) Routes() http.Handler {
 		pattern string
 		method  string
 		handler http.HandlerFunc
-	}{} {
-		s.router.HandleFunc(route.method, route.pattern, s.mustAuthenticate(route.handler))
+	}{
+		{"/dashboard", "GET", s.getDashboard()},
+	} {
+		s.router.HandleFunc(route.method, route.pattern, s.addSession(s.mustAuthenticate(route.handler)))
 	}
 	// add our not found handler (it will serve public files if they exist)
 	s.router.NotFound = s.handleStaticFiles("/", s.app.paths.public, s.app.debug)

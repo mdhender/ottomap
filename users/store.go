@@ -4,17 +4,22 @@ package users
 
 import (
 	"encoding/json"
+	"github.com/google/uuid"
 	"os"
 	"sync"
 )
 
 type Store struct {
 	sync.RWMutex
-	users map[string]*User
+	users         map[string]*User
+	anonymousUser User
 }
 
 func New(path string) (*Store, error) {
 	s := &Store{users: map[string]*User{}}
+	s.anonymousUser.Id = uuid.New().String()
+	s.anonymousUser.Roles = NewRoles("anonymous")
+	s.users[s.anonymousUser.Id] = &s.anonymousUser
 
 	users := map[string]*User{}
 	if data, err := os.ReadFile(path); err != nil {
@@ -63,12 +68,12 @@ func (s *Store) MergeFrom(path string) error {
 	return nil
 }
 
-func (s *Store) Authenticate(handle, secret string) (User, bool) {
+func (s *Store) Authenticate(email, secret string) (User, bool) {
 	s.RLock()
 	defer s.RUnlock()
 
 	for _, user := range s.users {
-		if user.Handle == handle && user.Secret == secret {
+		if user.Email == email && user.Secret == secret {
 			cp := user.Clone()
 			cp.IsAuthenticated = true
 			return user.Clone(), true
@@ -87,6 +92,10 @@ func (s *Store) FetchById(id string) (User, bool) {
 	}
 
 	return User{}, false
+}
+
+func (s *Store) AnonymousUser() User {
+	return s.anonymousUser
 }
 
 func (s *Store) TheSecrets() [][2]string {
