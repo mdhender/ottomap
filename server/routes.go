@@ -15,7 +15,8 @@ func (s *Server) Routes() http.Handler {
 	}{
 		{"/", "GET", s.handleIndex()},
 		{"/api/version", "GET", s.handleVersion()},
-		{"/login/:name/:secret", "GET", s.handleLogin()},
+		{"/login", "GET", s.getLogin()},
+		{"/api/login/:name/:secret", "GET", s.apiGetLogin()},
 		{"/logout", "GET", s.handleLogout()},
 		{"/logout", "POST", s.handleLogout()},
 	} {
