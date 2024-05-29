@@ -20,11 +20,13 @@ func WithCookie(name string) Option {
 }
 
 func WithCSS(path string) Option {
-	return func(s *Server) error {
+	return func(s *Server) (err error) {
 		if s.app.paths.public == "" {
 			return fmt.Errorf("must set public before css")
 		}
-		s.app.paths.css = filepath.Join(s.app.paths.public, path)
+		if s.app.paths.css, err = filepath.Abs(filepath.Join(s.app.paths.public, path)); err != nil {
+			return err
+		}
 		return nil
 	}
 }
@@ -46,29 +48,46 @@ func WithPort(port string) Option {
 }
 
 func WithPublic(path string) Option {
-	return func(s *Server) error {
+	return func(s *Server) (err error) {
 		if s.app.paths.root == "" {
 			return fmt.Errorf("must set root before public")
 		}
-		s.app.paths.public = filepath.Join(s.app.paths.root, path)
-		s.app.paths.css = filepath.Join(s.app.paths.public, "css")
+		if s.app.paths.public, err = filepath.Abs(filepath.Join(s.app.paths.root, path)); err != nil {
+			return err
+		}
+		if s.app.paths.css, err = filepath.Abs(filepath.Join(s.app.paths.public, "css")); err != nil {
+			return err
+		}
 		return nil
 	}
 }
 
 func WithRoot(path string) Option {
-	return func(s *Server) error {
-		s.app.paths.root = path
-		s.app.paths.public = filepath.Join(s.app.paths.root, "public")
-		s.app.paths.css = filepath.Join(s.app.paths.public, "css")
-		s.app.paths.templates = filepath.Join(s.app.paths.root, "templates")
+	return func(s *Server) (err error) {
+		if s.app.paths.root, err = filepath.Abs(path); err != nil {
+			return err
+		}
+		if s.app.paths.public, err = filepath.Abs(filepath.Join(s.app.paths.root, "public")); err != nil {
+			return err
+		}
+		if s.app.paths.css, err = filepath.Abs(filepath.Join(s.app.paths.public, "css")); err != nil {
+			return err
+		}
+		if s.app.paths.templates, err = filepath.Abs(filepath.Join(s.app.paths.root, "templates")); err != nil {
+			return err
+		}
 		return nil
 	}
 }
 
 func WithSessions(path string) Option {
-	return func(s *Server) error {
-		s.sessions.path = path
+	return func(s *Server) (err error) {
+		if s.app.paths.root == "" {
+			return fmt.Errorf("must set root before sessions")
+		}
+		if s.sessions.path, err = filepath.Abs(filepath.Join(s.app.paths.root, path)); err != nil {
+			return err
+		}
 		return nil
 	}
 }
@@ -84,18 +103,25 @@ func WithSigningKey(secret string) Option {
 }
 
 func WithTemplates(path string) Option {
-	return func(s *Server) error {
+	return func(s *Server) (err error) {
 		if s.app.paths.root == "" {
 			return fmt.Errorf("must set root before templates")
 		}
-		s.app.paths.templates = filepath.Join(s.app.paths.root, path)
+		if s.app.paths.templates, err = filepath.Abs(filepath.Join(s.app.paths.root, path)); err != nil {
+			return err
+		}
 		return nil
 	}
 }
 
 func WithUsers(path string) Option {
-	return func(s *Server) error {
-		s.users.path = path
+	return func(s *Server) (err error) {
+		if s.app.paths.root == "" {
+			return fmt.Errorf("must set root before users")
+		}
+		if s.users.path, err = filepath.Abs(filepath.Join(s.app.paths.root, path)); err != nil {
+			return err
+		}
 		return nil
 	}
 }

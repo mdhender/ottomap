@@ -4,3 +4,6 @@
 .DS_Store
 .idea/
 follows.*.txt
+node_modules/
+package.json
+package-lock.json

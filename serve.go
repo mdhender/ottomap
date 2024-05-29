@@ -35,8 +35,8 @@ var cmdServe = &cobra.Command{
 			server.WithUsers("users.json"),
 			server.WithSessions("sessions.json"),
 			server.WithCookie("ottomap"),
-			server.WithTemplates("templates"),
-			server.WithPublic("public"),
+			server.WithTemplates("../templates"),
+			server.WithPublic("../public"),
 		)
 		if err != nil {
 			log.Fatal(err)
