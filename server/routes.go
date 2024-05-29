@@ -13,7 +13,7 @@ func (s *Server) Routes() http.Handler {
 		method  string
 		handler http.HandlerFunc
 	}{
-		{"/", "GET", s.handleIndex()},
+		{"/", "GET", s.getLanding()},
 		{"/api/version", "GET", s.handleVersion()},
 		{"/login", "GET", s.getLogin()},
 		{"/api/login/:name/:secret", "GET", s.apiGetLogin()},
