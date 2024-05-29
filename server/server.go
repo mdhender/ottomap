@@ -5,6 +5,7 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"github.com/mdhender/ottomap/authz"
 	"github.com/mdhender/ottomap/sessions"
 	"github.com/mdhender/ottomap/users"
@@ -19,10 +20,11 @@ import (
 type Server struct {
 	http.Server
 	app struct {
-		scheme string
-		host   string
-		port   string
-		paths  struct {
+		scheme  string
+		host    string
+		port    string
+		baseURL string
+		paths   struct {
 			root      string
 			public    string
 			css       string
@@ -69,15 +71,48 @@ func New(options ...Option) (*Server, error) {
 	s.app.host = "localhost"
 	s.app.port = "3000"
 	s.app.paths.root = "."
-	s.app.paths.public = filepath.Join(s.app.paths.root, "public")
+	s.app.paths.public = filepath.Join(s.app.paths.root, "..", "public")
 	s.app.paths.css = filepath.Join(s.app.paths.public, "css")
-	s.app.paths.templates = filepath.Join(s.app.paths.root, "templates")
+	s.app.paths.templates = filepath.Join(s.app.paths.root, "..", "templates")
 	s.app.dateFmt = "2006-01-02"
 
 	for _, opt := range options {
 		if err := opt(s); err != nil {
 			return nil, err
 		}
+	}
+
+	s.app.baseURL = fmt.Sprintf("%s://%s", s.app.scheme, s.Addr)
+
+	if err := isdir(s.app.paths.root); err != nil {
+		return nil, err
+	} else {
+		log.Printf("server: root      is %s\n", s.app.paths.root)
+	}
+	if err := isdir(s.app.paths.public); err != nil {
+		return nil, err
+	} else {
+		log.Printf("server: public    is %s\n", s.app.paths.public)
+	}
+	if err := isdir(s.app.paths.css); err != nil {
+		return nil, err
+	} else {
+		log.Printf("server: css       is %s\n", s.app.paths.css)
+	}
+	if err := isdir(s.app.paths.templates); err != nil {
+		return nil, err
+	} else {
+		log.Printf("server: templates is %s\n", s.app.paths.templates)
+	}
+	if err := isfile(s.users.path); err != nil {
+		return nil, err
+	} else {
+		log.Printf("server: user     store is %s\n", s.users.path)
+	}
+	if err := isfile(s.sessions.path); err != nil {
+		return nil, err
+	} else {
+		log.Printf("server: sessions store is %s\n", s.sessions.path)
 	}
 
 	var err error
@@ -108,11 +143,13 @@ func (s *Server) Router() http.Handler {
 }
 
 func (s *Server) ShowMeSomeRoutes() {
-	log.Printf("serve: %s://%s%s\n", s.app.scheme, s.Addr, "/api/version")
+	log.Printf("serve: %s%s\n", s.app.baseURL, "/")
+	log.Printf("serve: %s%s\n", s.app.baseURL, "/login")
 	for _, da := range s.users.store.TheSecrets() {
-		log.Printf("serve: %s://%s/login/%s/%s\n", s.app.scheme, s.Addr, da[0], da[1])
+		log.Printf("serve: %s/login/%s/%s\n", s.app.baseURL, da[0], da[1])
 	}
-	log.Printf("serve: %s://%s%s\n", s.app.scheme, s.Addr, "/logout")
+	log.Printf("serve: %s%s\n", s.app.baseURL, "/logout")
+	log.Printf("serve: %s%s\n", s.app.baseURL, "/api/version")
 }
 
 func (s *Server) currentUser(ctx context.Context) users.User {

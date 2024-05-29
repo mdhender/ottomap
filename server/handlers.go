@@ -61,6 +61,81 @@ func (s *Server) getLanding() http.HandlerFunc {
 	}
 }
 
+func (s *Server) getDashboard() http.HandlerFunc {
+	templateFiles := []string{
+		filepath.Join(s.app.paths.templates, "dashboard.gohtml"),
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("%s: %s: entered\n", r.Method, r.URL.Path)
+		//user := sessions.User(r.Context())
+		//if user.IsAuthenticated {
+		//	http.Redirect(w, r, "/", http.StatusFound)
+		//	return
+		//}
+
+		// Parse the template file
+		tmpl, err := template.ParseFiles(templateFiles...)
+		if err != nil {
+			log.Printf("%s: %s: template: %v", r.Method, r.URL.Path, err)
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		var payload struct{}
+
+		// create a buffer to write the response to. we need to do this to capture errors in a nice way.
+		buf := &bytes.Buffer{}
+
+		// execute the template with our payload
+		err = tmpl.Execute(buf, payload)
+		if err != nil {
+			log.Printf("%s: %s: template: %v", r.Method, r.URL.Path, err)
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(buf.Bytes())
+	}
+}
+
+func (s *Server) getHero() http.HandlerFunc {
+	templateFiles := []string{
+		filepath.Join(s.app.paths.templates, "hero.gohtml"),
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("%s: %s: entered\n", r.Method, r.URL.Path)
+
+		// Parse the template file
+		tmpl, err := template.ParseFiles(templateFiles...)
+		if err != nil {
+			log.Printf("%s: %s: template: %v", r.Method, r.URL.Path, err)
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		var payload struct{}
+
+		// create a buffer to write the response to. we need to do this to capture errors in a nice way.
+		buf := &bytes.Buffer{}
+
+		// execute the template with our payload
+		err = tmpl.Execute(buf, payload)
+		if err != nil {
+			log.Printf("%s: %s: template: %v", r.Method, r.URL.Path, err)
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(buf.Bytes())
+	}
+}
+
 func (s *Server) getLogin() http.HandlerFunc {
 	templateFiles := []string{
 		filepath.Join(s.app.paths.templates, "login.gohtml"),
@@ -98,7 +173,6 @@ func (s *Server) getLogin() http.HandlerFunc {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write(buf.Bytes())
-		_, _ = w.Write([]byte(``))
 	}
 }
 
@@ -126,11 +200,7 @@ func (s *Server) handleStaticFiles(prefix, root string, debug bool) http.Handler
 	log.Printf("[static]  root: %q\n", root)
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
-		if r.Method != "GET" || !sessions.User(ctx).IsAuthenticated {
-			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
-			return
-		}
+		log.Printf("%s: %s: entered\n", r.Method, r.URL.Path)
 
 		file := filepath.Join(root, filepath.Clean(strings.TrimPrefix(r.URL.Path, prefix)))
 		if debug {

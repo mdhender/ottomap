@@ -7,6 +7,15 @@ A future version of the tool will convert the JSON data into a map.
 > WARNING OttoMap is in early development. 
 > I am breaking things and changing types almost daily. 
  
+## License
+OttoMap is licensed under version 3 of the GNU Affero General Public License.
+
+OttoMap is built using packages that have different licenses.
+All of these packages must be used in accordance with their original licenses;
+including them in this application does not change their license terms to the AGPLv3.
+
+Please see the individual packages for their license terms.
+
 ## Overview
 I'm planning on translating a small subset of the turn report.
 See the files in the `domain` directory to get an idea of what we're looking at.
