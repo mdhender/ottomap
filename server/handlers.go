@@ -101,6 +101,41 @@ func (s *Server) getDashboard() http.HandlerFunc {
 	}
 }
 
+func (s *Server) getFeatures() http.HandlerFunc {
+	templateFiles := []string{
+		filepath.Join(s.app.paths.templates, "features.gohtml"),
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("%s: %s: entered\n", r.Method, r.URL.Path)
+
+		// Parse the template file
+		tmpl, err := template.ParseFiles(templateFiles...)
+		if err != nil {
+			log.Printf("%s: %s: template: %v", r.Method, r.URL.Path, err)
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		var payload struct{}
+
+		// create a buffer to write the response to. we need to do this to capture errors in a nice way.
+		buf := &bytes.Buffer{}
+
+		// execute the template with our payload
+		err = tmpl.Execute(buf, payload)
+		if err != nil {
+			log.Printf("%s: %s: template: %v", r.Method, r.URL.Path, err)
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(buf.Bytes())
+	}
+}
+
 func (s *Server) getHero() http.HandlerFunc {
 	templateFiles := []string{
 		filepath.Join(s.app.paths.templates, "hero.gohtml"),

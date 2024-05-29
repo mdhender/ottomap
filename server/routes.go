@@ -14,11 +14,11 @@ func (s *Server) Routes() http.Handler {
 		handler http.HandlerFunc
 	}{
 		{"/", "GET", s.getHero()},
-		{"/api/version", "GET", s.handleVersion()},
-		{"/login", "GET", s.getLogin()},
-		{"/api/login/:name/:secret", "GET", s.apiGetLogin()},
+		{"/features", "GET", s.getFeatures()},
 		{"/logout", "GET", s.handleLogout()},
 		{"/logout", "POST", s.handleLogout()},
+		{"/api/version", "GET", s.handleVersion()},
+		{"/api/login/:name/:secret", "GET", s.apiGetLogin()},
 	} {
 		s.router.HandleFunc(route.method, route.pattern, route.handler)
 	}
