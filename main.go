@@ -17,6 +17,8 @@ var (
 )
 
 func main() {
+	log.SetFlags(log.Lshortfile | log.Ltime)
+
 	log.Printf("todo: detect when a unit is created as an after-move action\n")
 
 	if err := Execute(); err != nil {
@@ -25,7 +27,7 @@ func main() {
 }
 
 func Execute() error {
-	cmdRoot.AddCommand(cmdIndex, cmdMap, cmdParse, cmdSetup, cmdVersion)
+	cmdRoot.AddCommand(cmdIndex, cmdMap, cmdParse, cmdServe, cmdSetup, cmdVersion)
 
 	cmdIndex.AddCommand(cmdIndexReports)
 	cmdIndexReports.Flags().StringVarP(&argsIndexReports.input, "input", "i", ".", "path to read input from")
@@ -58,7 +60,11 @@ func Execute() error {
 	cmdParseReports.Flags().StringVarP(&argsParseReports.gridOrigin, "grid-origin", "g", "OO", "initial grid value for '##'")
 	cmdParse.AddCommand(cmdParseReports, cmdParseUnits)
 
-	cmdSetup.Flags().BoolVar(&argsSetup.debug.showSlugs, "debug-slugs", false, "show slugs")
+	cmdServe.Flags().StringVar(&argsServe.signingKey, "signing-key", "", "jot signing key")
+	if err := cmdServe.MarkFlagRequired("signing-key"); err != nil {
+		log.Fatalf("serve: signing-key: mark required: %v\n", err)
+	}
+
 	cmdSetup.Flags().StringVar(&argsSetup.originTerrain, "origin-terrain", "PR", "origin terrain")
 	if err := cmdSetup.MarkFlagRequired("origin-terrain"); err != nil {
 		log.Fatalf("setup: origin-terrain: mark required: %v\n", err)
