@@ -10,7 +10,8 @@ type User struct {
 	Roles  Roles  `json:"roles,omitempty"`
 
 	// helper values that don't get saved to the store
-	IsAuthenticated bool `json:"-"`
+	Clan            string `json:"-"` // clan id
+	IsAuthenticated bool   `json:"-"`
 }
 
 func (u User) Clone() User {
