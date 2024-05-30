@@ -275,6 +275,47 @@ func (s *Server) postLogout() http.HandlerFunc {
 	}
 }
 
+func (s *Server) getReports() http.HandlerFunc {
+	templateFiles := []string{
+		filepath.Join(s.app.paths.templates, "reports.html"),
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("%s: %s: entered\n", r.Method, r.URL.Path)
+		user := sessions.User(r.Context())
+		if !user.IsAuthenticated {
+			log.Printf("%s: %s: user is not authenticated (missing middleware?)\n", r.Method, r.URL.Path)
+			http.Redirect(w, r, "/logout", http.StatusFound)
+			return
+		}
+
+		// Parse the template file
+		tmpl, err := template.ParseFiles(templateFiles...)
+		if err != nil {
+			log.Printf("%s: %s: template: %v", r.Method, r.URL.Path, err)
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		var payload struct{}
+
+		// create a buffer to write the response to. we need to do this to capture errors in a nice way.
+		buf := &bytes.Buffer{}
+
+		// execute the template with our payload
+		err = tmpl.Execute(buf, payload)
+		if err != nil {
+			log.Printf("%s: %s: template: %v", r.Method, r.URL.Path, err)
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(buf.Bytes())
+	}
+}
+
 // returns a handler that will serve a static file if one exists, otherwise return not found.
 func (s *Server) handleStaticFiles(prefix, root string, debug bool) http.Handler {
 	log.Println("[static] initializing")

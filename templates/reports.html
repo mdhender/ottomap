@@ -1,3 +1,5 @@
+<!-- Copyright (c) 2024 Michael D Henderson. All rights reserved. -->
+
 <!DOCTYPE html>
 <html lang="en" class="h-full bg-white">
 <head>
@@ -30,8 +32,8 @@
                     </div>
                     <div class="hidden sm:-my-px sm:ml-6 sm:flex sm:space-x-8">
                         <!-- Current: "border-indigo-500 text-gray-900", Default: "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700" -->
-                        <a href="/dashboard" class="border-indigo-500 text-gray-900 inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium" aria-current="page">Dashboard</a>
-                        <a href="/reports" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium">Reports</a>
+                        <a href="/dashboard" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium">Dashboard</a>
+                        <a href="/reports" class="border-indigo-500 text-gray-900 inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium" aria-current="page">Reports</a>
                         <a href="/team" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium">Team</a>
                         <a href="/calendar" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium">Calendar</a>
                     </div>
@@ -65,7 +67,8 @@
                             From: "transform opacity-100 scale-100"
                             To: "transform opacity-0 scale-95"
                         -->
-                        <div class="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none" role="menu" aria-orientation="vertical" aria-labelledby="user-menu-button" tabindex="-1">
+                        <!-- add hidden or sm:hidden ?-->
+                        <div class="hidden absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none" role="menu" aria-orientation="vertical" aria-labelledby="user-menu-button" tabindex="-1">
                             <!-- Active: "bg-gray-100", Not Active: "" -->
                             <a href="#" class="block px-4 py-2 text-sm text-gray-700" role="menuitem" tabindex="-1" id="user-menu-item-0">Your Profile</a>
                             <a href="#" class="block px-4 py-2 text-sm text-gray-700" role="menuitem" tabindex="-1" id="user-menu-item-1">Settings</a>
@@ -95,8 +98,8 @@
         <div class="sm:hidden" id="mobile-menu">
             <div class="space-y-1 pb-3 pt-2">
                 <!-- Current: "border-indigo-500 bg-indigo-50 text-indigo-700", Default: "border-transparent text-gray-600 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-800" -->
-                <a href="/dashboard" class="border-indigo-500 bg-indigo-50 text-indigo-700 block border-l-4 py-2 pl-3 pr-4 text-base font-medium" aria-current="page">Dashboard</a>
-                <a href="/reports" class="border-transparent text-gray-600 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-800 block border-l-4 py-2 pl-3 pr-4 text-base font-medium">Reports</a>
+                <a href="/dashboard" class="border-transparent text-gray-600 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-800 block border-l-4 py-2 pl-3 pr-4 text-base font-medium">Dashboard</a>
+                <a href="/reports" class="border-indigo-500 bg-indigo-50 text-indigo-700 block border-l-4 py-2 pl-3 pr-4 text-base font-medium" aria-current="page">Reports</a>
                 <a href="/team" class="border-transparent text-gray-600 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-800 block border-l-4 py-2 pl-3 pr-4 text-base font-medium">Team</a>
                 <a href="/calendar" class="border-transparent text-gray-600 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-800 block border-l-4 py-2 pl-3 pr-4 text-base font-medium">Calendar</a>
             </div>
@@ -129,7 +132,7 @@
     <div class="py-10">
         <header>
             <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                <h1 class="text-3xl font-bold leading-tight tracking-tight text-gray-900">Dashboard</h1>
+                <h1 class="text-3xl font-bold leading-tight tracking-tight text-gray-900">Reports</h1>
             </div>
         </header>
         <main>
@@ -139,11 +142,16 @@
                 <div class="px-4 sm:px-6 lg:px-8">
                     <div class="sm:flex sm:items-center">
                         <div class="sm:flex-auto">
-                            <h1 class="text-base font-semibold leading-6 text-gray-900">Reports</h1>
-                            <p class="mt-2 text-sm text-gray-700">A list of all the turn reports that you have uploaded or have been shared with you.</p>
+                            <h1 class="text-base font-semibold leading-6 text-gray-900">Report Listing</h1>
+                            <p class="mt-2 text-sm text-gray-700">
+                                A list of all the turn reports that you have uploaded or have been shared with you.
+                                You can download maps, upload new reports, or edit existing reports.
+                            </p>
                         </div>
                         <div class="mt-4 sm:ml-16 sm:mt-0 sm:flex-none">
-                            <button type="button" class="block rounded-md bg-indigo-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">Add user</button>
+                            <button type="button" class="block rounded-md bg-indigo-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
+                                Add report
+                            </button>
                         </div>
                     </div>
                     <div class="mt-8 flow-root">
@@ -155,7 +163,7 @@
                                         <th scope="col" class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-3">Turn</th>
                                         <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Clan</th>
                                         <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Status</th>
-                                        <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Map</th>
+                                        <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Download Map</th>
                                         <th scope="col" class="relative py-3.5 pl-3 pr-4 sm:pr-3">
                                             <span class="sr-only">Edit</span>
                                         </th>
@@ -163,66 +171,106 @@
                                     </thead>
                                     <tbody class="bg-white">
                                     <tr class="even:bg-gray-50">
-                                        <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-3">900-06</td>
-                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">0138</td>
+                                        <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-3">
+                                            <a href="/reports/900-06/0138" class="text-indigo-600 hover:text-indigo-900">900-06</a>
+                                        </td>
+                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                                            <a href="/clans/0138" class="text-indigo-600 hover:text-indigo-900">0138</a>
+                                        </td>
                                         <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">Uploaded</td>
                                         <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">N/A</td>
                                         <td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-3">
-                                            <a href="/turn/900-06/clan/0138" class="text-indigo-600 hover:text-indigo-900">Edit<span class="sr-only">, 900-06.0138</span></a>
+                                            <a href="/reports/900-06/0138" class="text-indigo-600 hover:text-indigo-900">Edit<span class="sr-only">, 900-06.0138</span></a>
                                         </td>
                                     </tr>
                                     <tr class="even:bg-gray-50">
-                                        <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-3">900-05</td>
-                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">0138</td>
+                                        <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-3">
+                                            <a href="/reports/900-05/0138" class="text-indigo-600 hover:text-indigo-900">900-05</a>
+                                        </td>
+                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                                            <a href="/clans/0138" class="text-indigo-600 hover:text-indigo-900">0138</a>
+                                        </td>
                                         <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">Processed, no errors</td>
-                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">Link Here</td>
+                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                                            <a href="/maps/900-05/0138" class="text-indigo-600 hover:text-indigo-900">Download</a>
+                                        </td>
                                         <td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-3">
-                                            <a href="/turn/900-05/clan/0138" class="text-indigo-600 hover:text-indigo-900">Edit<span class="sr-only">, 900-05.0138</span></a>
+                                            <a href="/reports/900-05/0138" class="text-indigo-600 hover:text-indigo-900">Edit<span class="sr-only">, 900-05.0138</span></a>
                                         </td>
                                     </tr>
                                     <tr class="even:bg-gray-50">
-                                        <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-3">900-04</td>
-                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">0138</td>
+                                        <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-3">
+                                            <a href="/reports/900-04/0138" class="text-indigo-600 hover:text-indigo-900">900-04</a>
+                                        </td>
+                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                                            <a href="/clans/0138" class="text-indigo-600 hover:text-indigo-900">0138</a>
+                                        </td>
                                         <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">Processed, no errors</td>
-                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">Link Here</td>
+                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                                            <a href="/maps/900-04/0138" class="text-indigo-600 hover:text-indigo-900">Download</a>
+                                        </td>
                                         <td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-3">
-                                            <a href="/turn/900-04/clan/0138" class="text-indigo-600 hover:text-indigo-900">Edit<span class="sr-only">, 900-04.0138</span></a>
+                                            <a href="/reports/900-04/0138" class="text-indigo-600 hover:text-indigo-900">Edit<span class="sr-only">, 900-04.0138</span></a>
                                         </td>
                                     </tr>
                                     <tr class="even:bg-gray-50">
-                                        <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-3">900-03</td>
-                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">0138</td>
+                                        <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-3">
+                                            <a href="/reports/900-03/0138" class="text-indigo-600 hover:text-indigo-900">900-03</a>
+                                        </td>
+                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                                            <a href="/clans/0138" class="text-indigo-600 hover:text-indigo-900">0138</a>
+                                        </td>
                                         <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">Processed, no errors</td>
-                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">Link Here</td>
+                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                                            <a href="/maps/900-03/0138" class="text-indigo-600 hover:text-indigo-900">Download</a>
+                                        </td>
                                         <td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-3">
-                                            <a href="/turn/900-03/clan/0138" class="text-indigo-600 hover:text-indigo-900">Edit<span class="sr-only">, 900-03.0138</span></a>
+                                            <a href="/reports/900-03/0138" class="text-indigo-600 hover:text-indigo-900">Edit<span class="sr-only">, 900-03.0138</span></a>
                                         </td>
                                     </tr>
                                     <tr class="even:bg-gray-50">
-                                        <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-3">900-02</td>
-                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">0138</td>
+                                        <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-3">
+                                            <a href="/reports/900-02/0138" class="text-indigo-600 hover:text-indigo-900">900-02</a>
+                                        </td>
+                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                                            <a href="/clans/0138" class="text-indigo-600 hover:text-indigo-900">0138</a>
+                                        </td>
                                         <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">Processed, no errors</td>
-                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">Link Here</td>
+                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                                            <a href="/maps/900-02/0138" class="text-indigo-600 hover:text-indigo-900">Download</a>
+                                        </td>
                                         <td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-3">
-                                            <a href="/turn/900-02/clan/0138" class="text-indigo-600 hover:text-indigo-900">Edit<span class="sr-only">, 900-02.0138</span></a>
+                                            <a href="/reports/900-02/0138" class="text-indigo-600 hover:text-indigo-900">Edit<span class="sr-only">, 900-02.0138</span></a>
                                         </td>
                                     </tr>
                                     <tr class="even:bg-gray-50">
-                                        <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-3">900-01</td>
-                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">0138</td>
+                                        <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-3">
+                                            <a href="/reports/900-01/0138" class="text-indigo-600 hover:text-indigo-900">900-01</a>
+                                        </td>
+                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                                            <a href="/clans/0138" class="text-indigo-600 hover:text-indigo-900">0138</a>
+                                        </td>
                                         <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">Processed, no errors</td>
-                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">Link Here</td>
+                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                                            <a href="/maps/900-01/0138" class="text-indigo-600 hover:text-indigo-900">Download</a>
+                                        </td>
                                         <td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-3">
-                                            <a href="/turn/900-01/clan/0138" class="text-indigo-600 hover:text-indigo-900">Edit<span class="sr-only">, 900-01.0138</span></a>
+                                            <a href="/reports/900-01/0138" class="text-indigo-600 hover:text-indigo-900">Edit<span class="sr-only">, 900-01.0138</span></a>
                                         </td>
                                     </tr>
                                     <tr class="even:bg-gray-50">
-                                        <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-3">899-12</td>
-                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">0138</td>
+                                        <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-3">
+                                            <a href="/reports/900-06/0138" class="text-indigo-600 hover:text-indigo-900">899-12</a>
+                                        </td>
+                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                                            <a href="/clans/0138" class="text-indigo-600 hover:text-indigo-900">0138</a>
+                                        </td>
                                         <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">Processed, no errors</td>
-                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">Link Here</td>
+                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                                            <a href="/maps/899-12/0138" class="text-indigo-600 hover:text-indigo-900">Download</a>
+                                        </td>
                                         <td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-3">
-                                            <a href="/turn/899-12/clan/0138" class="text-indigo-600 hover:text-indigo-900">Edit<span class="sr-only">, 899-12.0138</span></a>
+                                            <a href="/reports/899-12/0138" class="text-indigo-600 hover:text-indigo-900">Edit<span class="sr-only">, 899-12.0138</span></a>
                                         </td>
                                     </tr>
                                     </tbody>
