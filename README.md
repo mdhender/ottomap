@@ -23,6 +23,8 @@ See the files in the `domain` directory to get an idea of what we're looking at.
 I think that will be enough data to feed the map generator.
 Let me know if you think that there's something missing.
 
+See the `OTTOMAP.md` file for an overview of running from command line and `BUILDING.md` for instructions on building the project.
+
 ## Input Data
 OttoMap expects all turn reports to be in text files in a single directory.
 
