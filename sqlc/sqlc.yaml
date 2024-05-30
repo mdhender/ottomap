@@ -1,0 +1,9 @@
+version: "2"
+sql:
+  - engine: "sqlite"
+    queries: "dml.sql"
+    schema: "ddl.sql"
+    gen:
+      go:
+        package: "sqlc"
+        out: "."

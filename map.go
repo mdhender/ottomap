@@ -43,6 +43,21 @@ var cmdMap = &cobra.Command{
 	Use:   "map",
 	Short: "Create a map from a report",
 	Long:  `Load a parsed report and create a map.`,
+	PreRunE: func(cmd *cobra.Command, args []string) error {
+		if strings.TrimSpace(argsMap.config) != argsMap.config {
+			log.Fatalf("map: config: leading or trailing spaces are not allowed\n")
+		} else if path, err := filepath.Abs(argsMap.config); err != nil {
+			log.Printf("map: config: output: %q\n", argsMap.config)
+			log.Printf("map: config: %v\n", err)
+		} else if sb, err := os.Stat(path); err != nil {
+			log.Fatalf("map: config: %v\n", err)
+		} else if !sb.Mode().IsRegular() {
+			log.Fatalf("map: config: %v is not a file\n", path)
+		} else {
+			argsIndexReports.config = path
+		}
+		return nil
+	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		log.Printf("maps: todo: detect when a unit is created as an after-move action\n")
 

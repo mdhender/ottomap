@@ -2,12 +2,16 @@
 
 package users
 
-// Roles is a map of the permissions assigned to a user
-type Roles map[string]bool
+// Role is a permission assigned to a user.
+// If the user has the role, then the permission is granted.
+type Role string
+
+// Roles is a map of the permissions assigned to a user.
+type Roles map[Role]bool
 
 // NewRoles returns a new roles map with the assigned roles.
-func NewRoles(roles ...string) Roles {
-	r := map[string]bool{}
+func NewRoles(roles ...Role) Roles {
+	r := map[Role]bool{}
 	for _, role := range roles {
 		r[role] = true
 	}

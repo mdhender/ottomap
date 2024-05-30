@@ -43,11 +43,14 @@ func Load(path string) (*Config, error) {
 	cfg.Path = path
 
 	if strings.TrimSpace(cfg.OutputPath) != cfg.OutputPath {
+		log.Printf("config: output: %q\n", cfg.OutputPath)
 		return nil, errors.Join(cerrs.ErrInvalidPath, cerrs.ErrInvalidOutputPath, fmt.Errorf("leading or trailing spaces"))
 	} else if sb, err := os.Stat(cfg.OutputPath); err != nil {
+		log.Printf("config: output: %q\n", cfg.OutputPath)
 		return nil, errors.Join(cerrs.ErrInvalidPath, cerrs.ErrInvalidOutputPath, err)
 	} else if !sb.IsDir() {
-		return nil, errors.Join(cerrs.ErrInvalidPath, cerrs.ErrInvalidOutputPath, fmt.Errorf("not a directory"))
+		log.Printf("config: output: %q\n", cfg.OutputPath)
+		return nil, errors.Join(cerrs.ErrInvalidPath, cerrs.ErrInvalidOutputPath, fmt.Errorf("output path is not a directory"))
 	}
 
 	log.Printf("config: loaded %s\n", cfg.Path)

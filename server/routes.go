@@ -6,6 +6,8 @@ import (
 	"net/http"
 )
 
+// todo: implement https://go.dev/blog/routing-enhancements
+
 func (s *Server) Routes() http.Handler {
 	// add our public routes
 	for _, route := range []struct {

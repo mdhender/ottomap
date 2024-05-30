@@ -16,6 +16,7 @@ import (
 )
 
 var argsIndexReports struct {
+	config string // path to configuration file to use
 	input  string // path to read input files from
 	output string // path to create index file in
 }
@@ -24,11 +25,27 @@ var cmdIndexReports = &cobra.Command{
 	Use:   "reports",
 	Short: "Add all reports in the input path to the configuration file",
 	Long:  `Find all TribeNet turn reports in the input and add them to the configuration file.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	PreRun: func(cmd *cobra.Command, args []string) {
+		if strings.TrimSpace(argsIndexReports.config) != argsIndexReports.config {
+			log.Fatalf("index: reports: config: leading or trailing spaces are not allowed\n")
+		} else if path, err := abspath(argsIndexReports.config); err != nil {
+			log.Fatalf("index: reports: config: %v\n", err)
+		} else if sb, err := os.Stat(path); err != nil {
+			log.Fatalf("index: reports: config: %v\n", err)
+		} else if !sb.IsDir() {
+			log.Fatalf("index: reports: config: %v is not a directory\n", path)
+		} else {
+			argsIndexReports.config = path
+		}
+
 		if strings.TrimSpace(argsIndexReports.input) != argsIndexReports.input {
 			log.Fatalf("index: reports: input: leading or trailing spaces are not allowed\n")
 		} else if path, err := abspath(argsIndexReports.input); err != nil {
 			log.Fatalf("index: reports: input: %v\n", err)
+		} else if sb, err := os.Stat(path); err != nil {
+			log.Fatalf("index: reports: input: %v\n", err)
+		} else if !sb.IsDir() {
+			log.Fatalf("index: reports: input: %v is not a directory\n", path)
 		} else {
 			argsIndexReports.input = path
 		}
@@ -37,13 +54,18 @@ var cmdIndexReports = &cobra.Command{
 			log.Fatalf("index: reports: output: leading or trailing spaces are not allowed\n")
 		} else if path, err := abspath(argsIndexReports.output); err != nil {
 			log.Fatalf("index: reports: output: %v\n", err)
+		} else if sb, err := os.Stat(path); err != nil {
+			log.Fatalf("index: reports: output: %v\n", err)
+		} else if !sb.IsDir() {
+			log.Fatalf("index: reports: output: %v is not a directory\n", path)
 		} else {
 			argsIndexReports.output = path
 		}
-
+	},
+	Run: func(cmd *cobra.Command, args []string) {
 		// read any existing configuration file
 		cfg := &config.Config{
-			Path:       filepath.Join(argsIndexReports.output, "config.json"),
+			Path:       filepath.Join(argsIndexReports.config, "config.json"),
 			OutputPath: argsIndexReports.output,
 		}
 		cfg.Read()

@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	version = semver.Version{Major: 0, Minor: 1, Patch: 0}
+	version = semver.Version{Major: 0, Minor: 2, Patch: 1}
 )
 
 func main() {
@@ -30,13 +30,9 @@ func Execute() error {
 	cmdRoot.AddCommand(cmdIndex, cmdMap, cmdParse, cmdServe, cmdSetup, cmdVersion)
 
 	cmdIndex.AddCommand(cmdIndexReports)
-	cmdIndexReports.Flags().StringVarP(&argsIndexReports.input, "input", "i", ".", "path to read input from")
-	cmdIndexReports.Flags().StringVarP(&argsIndexReports.output, "output", "o", ".", "path to write output to")
-	if err := cmdIndexReports.MarkFlagRequired("input"); err != nil {
-		log.Fatalf("input: parse: input: mark required: %v\n", err)
-	} else if err = cmdIndexReports.MarkFlagRequired("output"); err != nil {
-		log.Fatalf("input: parse: output: mark required: %v\n", err)
-	}
+	cmdIndexReports.Flags().StringVarP(&argsIndexReports.config, "config", "c", "data", "path to create configuration file in")
+	cmdIndexReports.Flags().StringVarP(&argsIndexReports.input, "input", "i", "data/input", "path to read input from")
+	cmdIndexReports.Flags().StringVarP(&argsIndexReports.output, "output", "o", "data/output", "path to write output to")
 
 	cmdMap.Flags().BoolVar(&argsMap.debug.sectionMaps, "debug-section-maps", false, "save section maps for debugging")
 	cmdMap.Flags().BoolVar(&argsMap.debug.units, "debug-units", false, "enable unit debugging")
@@ -47,10 +43,7 @@ func Execute() error {
 	if err := cmdMap.MarkFlagRequired("clan"); err != nil {
 		log.Fatalf("map: clan: mark required: %v\n", err)
 	}
-	cmdMap.Flags().StringVar(&argsMap.config, "config", "config.json", "configuration file to use")
-	if err := cmdMap.MarkFlagRequired("config"); err != nil {
-		log.Fatalf("map: config: mark required: %v\n", err)
-	}
+	cmdMap.Flags().StringVar(&argsMap.config, "config", "data/config.json", "configuration file to use")
 	cmdMap.Flags().StringVar(&argsMap.turnId, "turn", "", "turn to process (yyyy-mm format)")
 
 	cmdParse.PersistentFlags().BoolVar(&argsParse.debug.units, "debug-units", false, "enable unit debugging")
