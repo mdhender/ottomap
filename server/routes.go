@@ -34,6 +34,7 @@ func (s *Server) Routes() http.Handler {
 		handler http.HandlerFunc
 	}{
 		{"/dashboard", "GET", s.getDashboard()},
+		{"/reports", "GET", s.getReports()},
 	} {
 		s.router.HandleFunc(route.method, route.pattern, s.addSession(s.mustAuthenticate(route.handler)))
 	}
