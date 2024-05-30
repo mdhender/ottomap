@@ -1,122 +1,104 @@
-# How to build OttoMap from scratch
 
-This project is written in Go, a statically typed, compiled programming language designed for simplicity and efficiency.
-Building the project is easy because Go is a cross-platform language, and the build process is straightforward.
+# How to Build OttoMap from Scratch
+
+OttoMap is a project written in Go, a statically typed, compiled programming language designed for simplicity and efficiency. Building the project is straightforward due to Go's cross-platform nature and simple build process.
 
 The basic steps are:
+1. Install the required tools (Git and Go).
+2. Clone the source code using Git.
+3. Build the executable using Go.
 
-1. Install the build tools (Git and Go)
-2. Use Git to clone the source code
-3. Use Go to build the executable
+This document provides step-by-step instructions for Windows, macOS, and Linux. If you encounter any issues or have questions, please join our Discord server for support.
 
-This document will walk you through the process for Windows, macOS, and Linux.
-Please use the Discord server if you have questions or run into issues.
+## Definitions
 
-Here are some helpful definitions if you're new to building Go programs:
-
-- **Go** is a programming language.
-- **Repository** is a TODO.
-- **Clone** is TODO.
-- **Build tool** is a program that automates the process of building a program.
+- **Go**: A programming language.
+- **Repository**: A storage location for software packages.
+- **Clone**: To make a copy of a repository from a remote server to your local machine.
+- **Build tool**: A program that automates the process of building software.
 
 ## Prerequisites
 
-Before you begin, ensure that you have the following tools installed:
+Ensure you have the following tools installed before starting:
 
-- Git (to download the source and keep it up to date)
+- **Git**: Used to download and update the source code.
+- **Go**: Used to build the project.
 
-- Go (to build the project)
+You can install these tools from their official websites or use a package manager for easier updates. Popular package managers include `winget` (Windows), `snap` (Linux), and `brew` (macOS).
 
-You can install these from their official websites, but I recommend using a package manager to install them.
-It will make it easier to keep them up to date.
+- For more information about `winget`, visit the [Windows Package Manager](https://learn.microsoft.com/en-us/windows/package-manager/) site.
+- For more information about `snap`, visit the [Snapcraft](https://snapcraft.io/docs/installing-snapd) site.
+- For more information about `brew`, visit the [Homebrew](https://brew.sh/) site.
 
-Popular package managers are `winget` (Windows), `snap` (Linux), and `brew` (macOS).
+## Installing Git
 
-* For more information about `winget`, visit the [Windows Package Manager](https://learn.microsoft.com/en-us/windows/package-manager/) site.
-* For more information about `snap`, visit the [Snapcraft](https://snapcraft.io/docs/installing-snapd) site.
-* For more information about `brew`, visit the [Homebrew](https://brew.sh/) site.
+Git is essential for downloading and updating the source code from GitHub. Follow the instructions on the [Install Git](https://github.com/git-guides/install-git) page for your operating system to install Git.
 
-## Git
+## Installing Go
 
-Git is used to download the source code and keep it up to date with the repository on GitHub.
-You can download a ZIP file from the GitHub repository, but that's not the easiest way to get the code and stay up to date with the latest changes.
+Go is necessary for building the OttoMap executable. The installation steps vary based on your operating system and package manager preference.
 
-I started writing the steps, but the instructions on GitHub are quite good.
-Please visit their [Install Git](https://github.com/git-guides/install-git) and follow the instructions for your operating system to install Git.
-
-## Go
-
-Go is used to build the OttoMap executable.
-The installation steps depend on your operating system and if you're using a Package Manager.
-
-### Winget (Windows)
-
-Using `winget` (Windows Package Manager):
+### Windows (Using winget)
 
 1. Open a command prompt.
 2. Run the following command:
 
-```
-winget install Go
-```
+   ```sh
+   winget install Go
+   ```
 
-### Snap (Linux)
-
-Using `snap` (Linux Package Manager):
+### Linux (Using snap)
 
 1. Open a terminal.
 2. Run the following command:
 
-```
-sudo snap install go --classic
-```
+   ```sh
+   sudo snap install go --classic
+   ```
 
-### Brew (macOS)
-
-Using `brew` (macOS Package Manager):
+### macOS (Using brew)
 
 1. Open a terminal.
 2. Run the following command:
 
-```
-brew install go
-```
+   ```sh
+   brew install go
+   ```
 
-### The Official Installer
+### Official Installer
 
-Visit the [Download and install](https://go.dev/doc/install) page and follow the instructions to download and install Go for your operating system.
+Alternatively, visit the [Download and install](https://go.dev/doc/install) page and follow the instructions for your operating system.
 
-## Clone the Repository
+## Cloning the Repository
 
-You need a copy of the source code before you can build the project.
-You can use Git to clone it (recommended) or download a ZIP file containing the source code.
+To build the project, you need a copy of the source code. You can clone the repository using Git (recommended) or download a ZIP file from GitHub.
 
-If you have Git installed, you can clone the repository using the following steps:
+### Using Git
 
 1. Open your terminal or command prompt.
 2. Navigate to the directory where you want to clone the repository.
-3. Run the following command to clone the repository:
+3. Run the following command:
 
-```bash
-git clone https://github.com/mdhender/ottomap.git
-```
+   ```sh
+   git clone https://github.com/mdhender/ottomap.git
+   ```
 
-If you prefer to work from a ZIP file, the official OttoMap repository is hosted on GitHub at https://github.com/mdhender/ottomap.
+### Using a ZIP File
 
-## Building
+Download the ZIP file from the official OttoMap repository at [https://github.com/mdhender/ottomap](https://github.com/mdhender/ottomap).
 
-The build process is the same on all the operating systems:
+## Building the Project
+
+The build process is consistent across all operating systems:
 
 1. Open your terminal or command prompt.
-2. Navigate to the directory with the source code.
-3. Run the following command to build:
+2. Navigate to the directory containing the source code.
+3. Run the following command to build the executable:
 
-```bash
-go build
-```
+   ```sh
+   go build
+   ```
 
-This creates an executable named `ottomap` (macOS and Linux) or `ottomap.exe` (Windows) in the current directory.
+This command creates an executable named `ottomap` (for macOS and Linux) or `ottomap.exe` (for Windows) in the current directory.
 
-Please use the Discord server if you have questions or issues building OttoMap.
-
-The Go team has great documentation; check out https://go.dev/doc/tutorial/compile-install.
+For additional help or if you encounter issues, please join our Discord server. The Go team also provides excellent documentation, which you can find at [https://go.dev/doc/tutorial/compile-install](https://go.dev/doc/tutorial/compile-install).
