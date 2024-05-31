@@ -5,7 +5,6 @@ package server
 import (
 	"bytes"
 	"github.com/mdhender/ottomap/sessions"
-	"github.com/mdhender/ottomap/way"
 	"html/template"
 	"io"
 	"log"
@@ -133,6 +132,28 @@ func (s *Server) getHero() http.HandlerFunc {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write(buf.Bytes())
+	}
+}
+
+// getIndex handles the index, static pages, and not found pages.
+// Because of that quirk of Go where "/" matches most routes but
+// not all routes, it gets called for the index and most pages that
+// don't have a route assigned to them. For the index page, we want
+// to serve our Hero page (getHero). For the other routes, we want
+// to see if the route matches a file name in the static directory.
+// If it does, we serve the file. If it doesn't, we serve the 404.
+// The handleStaticFile function is responsible for doing all of this.
+func (s *Server) getIndex() http.HandlerFunc {
+	handleGetHero := s.getHero()
+	handleGetStaticFiles := s.handleStaticFiles("/", s.app.paths.public, s.app.debug)
+	return func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("%s: %s: entered\n", r.Method, r.URL.Path)
+		if r.URL.Path != "/" { // let the static file handler deal with it
+			handleGetStaticFiles(w, r)
+			return
+		}
+		// serve the hero page
+		handleGetHero(w, r)
 	}
 }
 
@@ -317,14 +338,14 @@ func (s *Server) getReports() http.HandlerFunc {
 }
 
 // returns a handler that will serve a static file if one exists, otherwise return not found.
-func (s *Server) handleStaticFiles(prefix, root string, debug bool) http.Handler {
+func (s *Server) handleStaticFiles(prefix, root string, debug bool) http.HandlerFunc {
 	log.Println("[static] initializing")
 	defer log.Println("[static] initialized")
 
 	log.Printf("[static] strip: %q\n", prefix)
 	log.Printf("[static]  root: %q\n", root)
 
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("%s: %s: entered\n", r.Method, r.URL.Path)
 
 		file := filepath.Join(root, filepath.Clean(strings.TrimPrefix(r.URL.Path, prefix)))
@@ -356,7 +377,7 @@ func (s *Server) handleStaticFiles(prefix, root string, debug bool) http.Handler
 
 		// let Go serve the file. it does magic things like content-type, etc.
 		http.ServeContent(w, r, file, stat.ModTime(), rdr)
-	})
+	}
 }
 
 func (s *Server) handleVersion() http.HandlerFunc {
@@ -368,8 +389,8 @@ func (s *Server) handleVersion() http.HandlerFunc {
 
 func (s *Server) apiGetLogin() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		name := way.Param(r.Context(), "name")
-		secret := way.Param(r.Context(), "secret")
+		name := r.PathValue("name")
+		secret := r.PathValue("secret")
 
 		// authenticate the user or return an error
 		user, ok := s.users.store.Authenticate(name, secret)
