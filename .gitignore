@@ -1,9 +1,13 @@
 *~
 *.docx
+*.exe
 *.swp
+*.tar
+*.tgz
 .DS_Store
 .idea/
 follows.*.txt
 node_modules/
+ottomap
 package.json
 package-lock.json
