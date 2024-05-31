@@ -9,7 +9,6 @@ import (
 	"github.com/mdhender/ottomap/authz"
 	"github.com/mdhender/ottomap/sessions"
 	"github.com/mdhender/ottomap/users"
-	"github.com/mdhender/ottomap/way"
 	"github.com/mdhender/semver"
 	"log"
 	"net/http"
@@ -51,14 +50,14 @@ type Server struct {
 		manager *authz.Factory
 		ttl     time.Duration
 	}
-	router  *way.Router
+	mux     *http.ServeMux
 	version semver.Version
 }
 
 // New returns a Server with default settings that are overridden by the provided options.
 func New(options ...Option) (*Server, error) {
 	s := &Server{
-		router:  way.NewRouter(), // default router, no routes
+		mux:     http.NewServeMux(), // default mux, no routes
 		version: semver.Version{Major: 0, Minor: 1, Patch: 0},
 	}
 
@@ -139,7 +138,7 @@ func New(options ...Option) (*Server, error) {
 }
 
 func (s *Server) Router() http.Handler {
-	return s.router
+	return s.mux
 }
 
 func (s *Server) ShowMeSomeRoutes() {
