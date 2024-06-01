@@ -1,0 +1,84 @@
+= OttoMap User's Manual
+
+== Introduction
+
+OttoMap is a tool that translates TribeNet turn report files into JSON data and generates maps. This manual provides detailed instructions for using OttoMap from the command line.
+
+== Installation
+
+. Download OttoMap from the official repository.
+. Unzip the Downloaded File.
+. Open a Terminal or Command Prompt and navigate to the OttoMap directory.
+
+== Basic Commands
+
+=== version
+
+Displays the current version of OttoMap.
+
+----
+ottomap version
+----
+
+=== index reports
+
+Indexes the turn report files for processing. This command adds new reports to the `data/config.json` file.
+
+----
+ottomap index reports
+----
+
+=== map
+
+Generates maps based on the indexed turn report files.
+
+----
+ottomap map --turn 901-12 --clan 0991 --show-grid-coords
+----
+
+== File Naming Convention
+
+Turn report files must be named in the format `YYY-MM.CLAN.report.txt`:
+- `YYY` is the turn year (e.g., 901).
+- `MM` is the month (e.g., 02).
+- `CLAN` is the clan code (e.g., 0991).
+
+== Running OttoMap
+
+=== Preparation
+
+. Store Turn Report Files:
+* Save the text files in the `data/input` directory.
+. Index the Reports:
+* Run the `index reports` command to add the files to the configuration.
+
+=== Generating Maps
+
+. Run the `map` Command:
+* Specify the turn and clan for which you want to generate a map.
+
+----
+ottomap map --turn 901-12 --clan 0991 --show-grid-coords
+----
+
+=== Additional Options
+
+* `--output` or `-o`: Specify the output directory for the generated map files.
+* `--config` or `-c`: Specify the path to a configuration file for customizing the map generation.
+
+== Error Handling
+
+=== Common Errors
+
+* Parsing Errors: If the report files contain typos, they need to be updated. Refer to the `docs/ERRORS.md` file for examples.
+
+=== Troubleshooting
+
+* Ensure that the turn report files follow the correct naming convention.
+* Verify that the files are stored in the `data/input` directory.
+
+== Conclusion
+
+OttoMap is a powerful tool for generating maps from TribeNet turn reports. By following this manual, you can effectively utilize its capabilities to create detailed maps for your reports.
+
+For more information, visit the official documentation or contact support.

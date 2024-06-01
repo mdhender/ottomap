@@ -1,0 +1,41 @@
+= OttoMap Quick-Start Guide
+
+Welcome to OttoMap! This guide will help you get started with generating maps from TribeNet turn report files in a few simple steps.
+
+== Step 1: Prepare Your Environment
+
+. Open a Terminal or Command Prompt:
+* Windows: Press `Win + R`, type `cmd`, and press `Enter`.
+* macOS: Press `Cmd + Space`, type `Terminal`, and press `Enter`.
+* Linux: Press `Ctrl + Alt + T`.
+. 
+
+Navigate to the OttoMap Project Directory:
+
+----
+cd path/to/ottomap
+----
+
+== Step 2: Store Turn Report Files
+
+. Copy Your Turn Report into a Text File:
+* Save the file in the `data/input` folder.
+* Ensure the file is named in the format `YYY-MM.CLAN.report.txt` (e.g., `901-02.0991.report.txt`).
+
+== Step 3: Index the Reports
+
+. Run the `index reports` Command:
+
+----
+ottomap index reports
+----
+
+== Step 4: Generate Maps
+
+. Run the `map` Command:
+
+----
+ottomap map --turn 901-12 --clan 0991
+----
+
+That's it! Your maps will be generated in the `data/output` folder.
