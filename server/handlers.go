@@ -298,7 +298,7 @@ func (s *Server) postLogout() http.HandlerFunc {
 
 func (s *Server) getReports() http.HandlerFunc {
 	templateFiles := []string{
-		filepath.Join(s.app.paths.templates, "reports.html"),
+		filepath.Join(s.app.paths.templates, "reports.gohtml"),
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {

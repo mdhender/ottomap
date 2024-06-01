@@ -16,9 +16,10 @@ type Store struct {
 }
 
 func New(path string) (*Store, error) {
-	s := &Store{users: map[string]*User{}}
+	s := &Store{
+		users: map[string]*User{},
+	}
 	s.anonymousUser.Id = uuid.New().String()
-	s.anonymousUser.Roles = NewRoles("anonymous")
 	s.users[s.anonymousUser.Id] = &s.anonymousUser
 
 	users := map[string]*User{}
@@ -30,9 +31,6 @@ func New(path string) (*Store, error) {
 
 	for id, user := range users {
 		user.Id = id
-		if user.Roles == nil {
-			user.Roles = NewRoles()
-		}
 		user.IsAuthenticated = false
 		s.users[id] = user
 	}
@@ -58,9 +56,6 @@ func (s *Store) MergeFrom(path string) error {
 			delete(s.users, id)
 		}
 		user.Id = id
-		if user.Roles == nil {
-			user.Roles = NewRoles()
-		}
 		user.IsAuthenticated = false
 		s.users[id] = user
 	}
