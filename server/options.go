@@ -4,6 +4,7 @@ package server
 
 import (
 	"fmt"
+	"github.com/mdhender/ottomap/domains/rbac"
 	"net"
 	"path/filepath"
 )
@@ -58,6 +59,13 @@ func WithPublic(path string) Option {
 		if s.app.paths.css, err = filepath.Abs(filepath.Join(s.app.paths.public, "css")); err != nil {
 			return err
 		}
+		return nil
+	}
+}
+
+func WithRBAC(rs *rbac.Store) Option {
+	return func(s *Server) error {
+		s.auth.roles.store = rs
 		return nil
 	}
 }

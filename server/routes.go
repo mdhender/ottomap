@@ -25,6 +25,7 @@ func (s *Server) Routes() http.Handler {
 	} {
 		s.mux.HandleFunc(route.pattern, route.handler)
 	}
+	s.mux.Handle("GET /reports/0991", handleReportsListing(s.app.paths.templates, s.auth.roles.rls))
 
 	// add our protected routes
 	for _, route := range []struct {

@@ -1,12 +1,10 @@
-<!-- Copyright (c) 2024 Michael D Henderson. All rights reserved. -->
-
-<!DOCTYPE html>
+<!DOCTYPE html>{{- /*gotype:github.com/mdhender/ottomap/server.ReportListingPage*/ -}}
 <html lang="en" class="h-full bg-white">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width">
 
-    <title>ottomap</title>
+    <title>{{.Page.Title}}</title>
 
     <link rel="stylesheet" href="/css/tailwind.css">
     <script src="/js/htmx-1.9.12.min.js"></script>
@@ -170,109 +168,21 @@
                                     </tr>
                                     </thead>
                                     <tbody class="bg-white">
-                                    <tr class="even:bg-gray-50">
-                                        <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-3">
-                                            <a href="/reports/900-06/0138" class="text-indigo-600 hover:text-indigo-900">900-06</a>
-                                        </td>
-                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                                            <a href="/clans/0138" class="text-indigo-600 hover:text-indigo-900">0138</a>
-                                        </td>
-                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">Uploaded</td>
-                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">N/A</td>
-                                        <td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-3">
-                                            <a href="/reports/900-06/0138" class="text-indigo-600 hover:text-indigo-900">Edit<span class="sr-only">, 900-06.0138</span></a>
-                                        </td>
-                                    </tr>
-                                    <tr class="even:bg-gray-50">
-                                        <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-3">
-                                            <a href="/reports/900-05/0138" class="text-indigo-600 hover:text-indigo-900">900-05</a>
-                                        </td>
-                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                                            <a href="/clans/0138" class="text-indigo-600 hover:text-indigo-900">0138</a>
-                                        </td>
-                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">Processed, no errors</td>
-                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                                            <a href="/maps/900-05/0138" class="text-indigo-600 hover:text-indigo-900">Download</a>
-                                        </td>
-                                        <td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-3">
-                                            <a href="/reports/900-05/0138" class="text-indigo-600 hover:text-indigo-900">Edit<span class="sr-only">, 900-05.0138</span></a>
-                                        </td>
-                                    </tr>
-                                    <tr class="even:bg-gray-50">
-                                        <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-3">
-                                            <a href="/reports/900-04/0138" class="text-indigo-600 hover:text-indigo-900">900-04</a>
-                                        </td>
-                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                                            <a href="/clans/0138" class="text-indigo-600 hover:text-indigo-900">0138</a>
-                                        </td>
-                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">Processed, no errors</td>
-                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                                            <a href="/maps/900-04/0138" class="text-indigo-600 hover:text-indigo-900">Download</a>
-                                        </td>
-                                        <td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-3">
-                                            <a href="/reports/900-04/0138" class="text-indigo-600 hover:text-indigo-900">Edit<span class="sr-only">, 900-04.0138</span></a>
-                                        </td>
-                                    </tr>
-                                    <tr class="even:bg-gray-50">
-                                        <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-3">
-                                            <a href="/reports/900-03/0138" class="text-indigo-600 hover:text-indigo-900">900-03</a>
-                                        </td>
-                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                                            <a href="/clans/0138" class="text-indigo-600 hover:text-indigo-900">0138</a>
-                                        </td>
-                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">Processed, no errors</td>
-                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                                            <a href="/maps/900-03/0138" class="text-indigo-600 hover:text-indigo-900">Download</a>
-                                        </td>
-                                        <td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-3">
-                                            <a href="/reports/900-03/0138" class="text-indigo-600 hover:text-indigo-900">Edit<span class="sr-only">, 900-03.0138</span></a>
-                                        </td>
-                                    </tr>
-                                    <tr class="even:bg-gray-50">
-                                        <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-3">
-                                            <a href="/reports/900-02/0138" class="text-indigo-600 hover:text-indigo-900">900-02</a>
-                                        </td>
-                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                                            <a href="/clans/0138" class="text-indigo-600 hover:text-indigo-900">0138</a>
-                                        </td>
-                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">Processed, no errors</td>
-                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                                            <a href="/maps/900-02/0138" class="text-indigo-600 hover:text-indigo-900">Download</a>
-                                        </td>
-                                        <td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-3">
-                                            <a href="/reports/900-02/0138" class="text-indigo-600 hover:text-indigo-900">Edit<span class="sr-only">, 900-02.0138</span></a>
-                                        </td>
-                                    </tr>
-                                    <tr class="even:bg-gray-50">
-                                        <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-3">
-                                            <a href="/reports/900-01/0138" class="text-indigo-600 hover:text-indigo-900">900-01</a>
-                                        </td>
-                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                                            <a href="/clans/0138" class="text-indigo-600 hover:text-indigo-900">0138</a>
-                                        </td>
-                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">Processed, no errors</td>
-                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                                            <a href="/maps/900-01/0138" class="text-indigo-600 hover:text-indigo-900">Download</a>
-                                        </td>
-                                        <td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-3">
-                                            <a href="/reports/900-01/0138" class="text-indigo-600 hover:text-indigo-900">Edit<span class="sr-only">, 900-01.0138</span></a>
-                                        </td>
-                                    </tr>
-                                    <tr class="even:bg-gray-50">
-                                        <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-3">
-                                            <a href="/reports/900-06/0138" class="text-indigo-600 hover:text-indigo-900">899-12</a>
-                                        </td>
-                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                                            <a href="/clans/0138" class="text-indigo-600 hover:text-indigo-900">0138</a>
-                                        </td>
-                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">Processed, no errors</td>
-                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                                            <a href="/maps/899-12/0138" class="text-indigo-600 hover:text-indigo-900">Download</a>
-                                        </td>
-                                        <td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-3">
-                                            <a href="/reports/899-12/0138" class="text-indigo-600 hover:text-indigo-900">Edit<span class="sr-only">, 899-12.0138</span></a>
-                                        </td>
-                                    </tr>
+                                    {{range .ReportList}}{{- /*gotype:github.com/mdhender/ottomap/server.Report*/ -}}
+                                        <tr class="even:bg-gray-50">
+                                            <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-3">
+                                                <a href="/reports/{{.Turn}}/{{.Clan}}" class="text-indigo-600 hover:text-indigo-900">{{.Turn}}</a>
+                                            </td>
+                                            <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                                                <a href="/clans/{{.Clan}}" class="text-indigo-600 hover:text-indigo-900">{{.Clan}}</a>
+                                            </td>
+                                            <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{{.Status}}</td>
+                                            <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">N/A</td>
+                                            <td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-3">
+                                                <a href="/reports/{{.Turn}}/{{.Clan}}" class="text-indigo-600 hover:text-indigo-900">Edit<span class="sr-only">, {{.Id}}</span></a>
+                                            </td>
+                                        </tr>
+                                    {{end}}
                                     </tbody>
                                 </table>
                             </div>

@@ -1,6 +1,6 @@
 // Copyright (c) 2024 Michael D Henderson. All rights reserved.
 
-package roles
+package rbac
 
 import "sync"
 
@@ -39,11 +39,20 @@ type Store struct {
 	// the key to the roles is the user id.
 	// the value is the role assigned to the user.
 	roles map[string]Roles
+
+	anonymousUser Roles
 }
 
 // NewStore returns a new store.
 func NewStore() *Store {
-	return &Store{roles: map[string]Roles{}}
+	return &Store{
+		roles:         map[string]Roles{},
+		anonymousUser: NewRoles("anonymous"),
+	}
+}
+
+func (s *Store) AnonymousUser() Roles {
+	return s.anonymousUser
 }
 
 // FetchRolesByUserId returns the roles assigned to the user with the given id.
@@ -56,6 +65,14 @@ func (s *Store) FetchRolesByUserId(id string) (Roles, bool) {
 		return map[Role]bool{}, false
 	}
 	return roles, ok
+}
+
+func (s *Store) UserRoles(id string) Roles {
+	roles, ok := s.FetchRolesByUserId(id)
+	if !ok {
+		return s.AnonymousUser()
+	}
+	return roles
 }
 
 // UserHasRole returns true if the user has the given role.

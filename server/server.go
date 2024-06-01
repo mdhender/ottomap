@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/mdhender/ottomap/authz"
+	"github.com/mdhender/ottomap/domains/rbac"
 	"github.com/mdhender/ottomap/sessions"
 	"github.com/mdhender/ottomap/users"
 	"github.com/mdhender/semver"
@@ -49,6 +50,11 @@ type Server struct {
 		secret  string
 		manager *authz.Factory
 		ttl     time.Duration
+		roles   struct {
+			path  string
+			store *rbac.Store
+			rls   ReportListingRepository
+		}
 	}
 	mux     *http.ServeMux
 	version semver.Version
@@ -115,6 +121,9 @@ func New(options ...Option) (*Server, error) {
 	}
 
 	var err error
+
+	s.auth.roles.rls = NewAquaReportListingRepository()
+
 	s.users.store, err = users.New(s.users.path)
 	if err != nil {
 		return nil, err
@@ -145,9 +154,14 @@ func (s *Server) ShowMeSomeRoutes() {
 	log.Printf("serve: %s%s\n", s.app.baseURL, "/")
 	log.Printf("serve: %s%s\n", s.app.baseURL, "/login")
 	for _, da := range s.users.store.TheSecrets() {
-		log.Printf("serve: %s/login/%s/%s\n", s.app.baseURL, da[0], da[1])
+		if da[0] != "" && da[1] != "" {
+			log.Printf("serve: %s/login/%s/%s\n", s.app.baseURL, da[0], da[1])
+		}
 	}
 	log.Printf("serve: %s%s\n", s.app.baseURL, "/logout")
+	log.Printf("serve: %s%s\n", s.app.baseURL, "/dashboard")
+	log.Printf("serve: %s%s\n", s.app.baseURL, "/reports")
+	log.Printf("serve: %s%s\n", s.app.baseURL, "/reports/0991")
 	log.Printf("serve: %s%s\n", s.app.baseURL, "/api/version")
 }
 
