@@ -5,6 +5,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/mdhender/ottomap/app"
 	"github.com/mdhender/ottomap/pkg/reports/dao"
 	"github.com/mdhender/ottomap/pkg/simba"
 	"github.com/mdhender/ottomap/server"
@@ -33,20 +34,27 @@ var cmdServe = &cobra.Command{
 			log.Fatal(err)
 		}
 
-		s, err := server.New(
-			server.WithHost("localhost"),
-			server.WithPort("3030"),
-			server.WithRoot("."),
-			server.WithTemplates("../templates"),
-			server.WithPublic("../public"),
-			server.WithPolicyAgent(agent),
-			server.WithReportsStore(reports.NewStore()),
+		a, err := app.New(
+			app.WithVersion(version),
+			app.WithRoot("."),
+			app.WithTemplates("../templates"),
+			app.WithPolicyAgent(agent),
+			app.WithReportsStore(reports.NewStore()),
 		)
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		s.Routes()
+		s, err := server.New(
+			server.WithHost("localhost"),
+			server.WithPort("3030"),
+			server.WithPublic("../public"),
+			server.WithApp(a),
+		)
+		if err != nil {
+			log.Fatal(err)
+		}
+
 		s.ShowMeSomeRoutes()
 
 		log.Printf("serve: listening on %s\n", s.BaseURL())
