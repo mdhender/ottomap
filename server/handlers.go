@@ -4,7 +4,7 @@ package server
 
 import (
 	"bytes"
-	"github.com/mdhender/ottomap/sessions"
+	reports "github.com/mdhender/ottomap/pkg/reports/domain"
 	"html/template"
 	"io"
 	"log"
@@ -31,10 +31,15 @@ func (s *Server) getDashboard() http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("%s: %s: entered\n", r.Method, r.URL.Path)
-		user := sessions.User(r.Context())
-		if !user.IsAuthenticated {
-			log.Printf("%s: %s: user is not authenticated (missing middleware?)\n", r.Method, r.URL.Path)
-			http.Redirect(w, r, "/logout", http.StatusFound)
+
+		user, ok := s.app.policies.CurrentUser(r)
+		if !ok {
+			log.Printf("%s: %s: currentUser: not ok\n", r.Method, r.URL.Path)
+			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+			return
+		} else if !user.IsAuthenticated {
+			log.Printf("%s: %s: currentUser: not authenticated\n", r.Method, r.URL.Path)
+			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 			return
 		}
 
@@ -200,11 +205,13 @@ func (s *Server) getLogin() http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("%s: %s: entered\n", r.Method, r.URL.Path)
-		user := sessions.User(r.Context())
-		if user.IsAuthenticated {
-			http.Redirect(w, r, "/", http.StatusFound)
+		user, ok := s.app.policies.CurrentUser(r)
+		if ok && user.IsAuthenticated {
+			log.Printf("%s: %s: user %q: ok && authenticate\n", r.Method, r.URL.Path, user.Id)
+			http.Redirect(w, r, "/dashboard", http.StatusFound)
 			return
 		}
+		log.Printf("%s: %s: no active session, serving login form\n", r.Method, r.URL.Path)
 
 		// Parse the template file
 		tmpl, err := template.ParseFiles(templateFiles...)
@@ -235,44 +242,30 @@ func (s *Server) getLogin() http.HandlerFunc {
 
 func (s *Server) postLogin() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// if there's a session cookie, delete it and the session
-		if id, ok := s.sessions.manager.GetCookie(r); ok {
-			// delete the session
-			s.sessions.manager.DeleteSession(id)
-			// delete the session cookie
-			s.sessions.manager.DeleteCookie(w)
-		}
+		log.Printf("%s: %s: entered\n", r.Method, r.URL.Path)
 
-		email := "ottomap@example.com" // todo: post from form
-		secret := "password"           // todo: post from form
+		// delete session and cookie (ignore errors if they don't exist)
+		s.app.policies.DeleteSession(r)
+		s.app.policies.DeleteCookie(w)
+
+		handle := "ottomap"  // todo: post from form
+		secret := "password" // todo: post from form
 
 		// authenticate the user or return an error
-		user, ok := s.users.store.Authenticate(email, secret)
+		uid, ok := s.app.policies.Authenticate(handle, secret)
 		if !ok {
+			log.Printf("%s: %s: handle %q: secret %q: authenticate failed\n", r.Method, r.URL.Path, handle, secret)
 			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 			return
 		}
 
 		// create a new session or return an error
-		sessionId, ok := s.sessions.manager.CreateSession(user.Id)
-		if !ok {
+		if _, ok := s.app.policies.CreateSession(w, uid); !ok {
+			log.Printf("%s: %s: handle %q: secret %q: create session failed\n", r.Method, r.URL.Path, handle, secret)
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
 		}
-
-		// create the session cookie or return an error
-		ok = s.sessions.manager.AddCookie(w, sessionId)
-		if !ok {
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-			return
-		}
-
-		// add the user to the request context or return an error
-		ctx := s.sessions.manager.AddUser(r.Context(), user)
-		if ctx == nil {
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-			return
-		}
+		log.Printf("%s: %s: handle %q: secret %q: create session worked\n", r.Method, r.URL.Path, handle, secret)
 
 		http.Redirect(w, r, "/dashboard", http.StatusFound)
 	}
@@ -284,13 +277,9 @@ func (s *Server) getLogout() http.HandlerFunc {
 
 func (s *Server) postLogout() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// if there's a session cookie, delete it and the session
-		if id, ok := s.sessions.manager.GetCookie(r); ok {
-			// delete the session
-			s.sessions.manager.DeleteSession(id)
-			// delete the session cookie
-			s.sessions.manager.DeleteCookie(w)
-		}
+		// delete session and cookie (ignore errors if they don't exist)
+		s.app.policies.DeleteSession(r)
+		s.app.policies.DeleteCookie(w)
 
 		http.Redirect(w, r, "/", http.StatusFound)
 	}
@@ -303,10 +292,14 @@ func (s *Server) getReports() http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("%s: %s: entered\n", r.Method, r.URL.Path)
-		user := sessions.User(r.Context())
-		if !user.IsAuthenticated {
-			log.Printf("%s: %s: user is not authenticated (missing middleware?)\n", r.Method, r.URL.Path)
-			http.Redirect(w, r, "/logout", http.StatusFound)
+		user, ok := s.app.policies.CurrentUser(r)
+		if !ok {
+			log.Printf("%s: %s: currentUser: not ok\n", r.Method, r.URL.Path)
+			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+			return
+		} else if !user.IsAuthenticated {
+			log.Printf("%s: %s: currentUser: not authenticated\n", r.Method, r.URL.Path)
+			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 			return
 		}
 
@@ -318,7 +311,13 @@ func (s *Server) getReports() http.HandlerFunc {
 			return
 		}
 
-		var payload struct{}
+		var payload struct {
+			Page struct {
+				Title string
+			}
+			ReportList reports.ReportListing
+		}
+		payload.Page.Title = "Reports"
 
 		// create a buffer to write the response to. we need to do this to capture errors in a nice way.
 		buf := &bytes.Buffer{}
@@ -383,43 +382,14 @@ func (s *Server) handleStaticFiles(prefix, root string, debug bool) http.Handler
 func (s *Server) handleVersion() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain")
-		_, _ = w.Write([]byte(s.version.String()))
+		_, _ = w.Write([]byte(s.app.version.String()))
 	}
 }
 
 func (s *Server) apiGetLogin() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		name := r.PathValue("name")
-		secret := r.PathValue("secret")
-
-		// authenticate the user or return an error
-		user, ok := s.users.store.Authenticate(name, secret)
-		if !ok {
-			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
-			return
-		}
-
-		// create a new session or return an error
-		sessionId, ok := s.sessions.manager.CreateSession(user.Id)
-		if !ok {
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-			return
-		}
-
-		// create the session cookie or return an error
-		ok = s.sessions.manager.AddCookie(w, sessionId)
-		if !ok {
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-			return
-		}
-
-		// add the user to the request context or return an error
-		ctx := s.sessions.manager.AddUser(r.Context(), user)
-		if ctx == nil {
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-			return
-		}
-
-		http.Redirect(w, r.WithContext(ctx), "/", http.StatusFound)
+		//name := r.PathValue("name")
+		//secret := r.PathValue("secret")
+		http.Error(w, http.StatusText(http.StatusNotImplemented), http.StatusNotImplemented)
 	}
 }

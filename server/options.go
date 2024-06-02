@@ -4,21 +4,14 @@ package server
 
 import (
 	"fmt"
-	"github.com/mdhender/ottomap/domains/rbac"
+	reports "github.com/mdhender/ottomap/pkg/reports/dao"
+	"github.com/mdhender/ottomap/pkg/simba"
 	"net"
 	"path/filepath"
 )
 
 type Options []Option
 type Option func(*Server) error
-
-func WithCookie(name string) Option {
-	return func(s *Server) error {
-		s.sessions.cookies.name = name
-		s.sessions.cookies.secure = true
-		return nil
-	}
-}
 
 func WithCSS(path string) Option {
 	return func(s *Server) (err error) {
@@ -34,16 +27,23 @@ func WithCSS(path string) Option {
 
 func WithHost(host string) Option {
 	return func(s *Server) error {
-		s.app.host = host
-		s.Addr = net.JoinHostPort(s.app.host, s.app.port)
+		s.host = host
+		s.Addr = net.JoinHostPort(s.host, s.port)
+		return nil
+	}
+}
+
+func WithPolicyAgent(a *simba.Agent) Option {
+	return func(s *Server) error {
+		s.app.policies = a
 		return nil
 	}
 }
 
 func WithPort(port string) Option {
 	return func(s *Server) error {
-		s.app.port = port
-		s.Addr = net.JoinHostPort(s.app.host, s.app.port)
+		s.port = port
+		s.Addr = net.JoinHostPort(s.host, s.port)
 		return nil
 	}
 }
@@ -63,9 +63,9 @@ func WithPublic(path string) Option {
 	}
 }
 
-func WithRBAC(rs *rbac.Store) Option {
+func WithReportsStore(rs *reports.Store) Option {
 	return func(s *Server) error {
-		s.auth.roles.store = rs
+		s.app.stores.reports = rs
 		return nil
 	}
 }
@@ -88,46 +88,12 @@ func WithRoot(path string) Option {
 	}
 }
 
-func WithSessions(path string) Option {
-	return func(s *Server) (err error) {
-		if s.app.paths.root == "" {
-			return fmt.Errorf("must set root before sessions")
-		}
-		if s.sessions.path, err = filepath.Abs(filepath.Join(s.app.paths.root, path)); err != nil {
-			return err
-		}
-		return nil
-	}
-}
-
-func WithSigningKey(secret string) Option {
-	return func(s *Server) (err error) {
-		if len(secret) == 0 {
-			return fmt.Errorf("signing key is empty")
-		}
-		s.auth.secret = hashit(secret + hashit(secret+"ottomap"))
-		return err
-	}
-}
-
 func WithTemplates(path string) Option {
 	return func(s *Server) (err error) {
 		if s.app.paths.root == "" {
 			return fmt.Errorf("must set root before templates")
 		}
 		if s.app.paths.templates, err = filepath.Abs(filepath.Join(s.app.paths.root, path)); err != nil {
-			return err
-		}
-		return nil
-	}
-}
-
-func WithUsers(path string) Option {
-	return func(s *Server) (err error) {
-		if s.app.paths.root == "" {
-			return fmt.Errorf("must set root before users")
-		}
-		if s.users.path, err = filepath.Abs(filepath.Join(s.app.paths.root, path)); err != nil {
 			return err
 		}
 		return nil
