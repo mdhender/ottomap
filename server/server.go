@@ -5,49 +5,33 @@ package server
 
 import (
 	"fmt"
-	"github.com/mdhender/ottomap/pkg/reports/dao"
-	"github.com/mdhender/ottomap/pkg/simba"
-	"github.com/mdhender/semver"
+	"github.com/mdhender/ottomap/app"
 	"log"
 	"net/http"
+	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
 type Server struct {
 	http.Server
-	app struct {
-		baseURL string
-		paths   struct {
-			root      string
-			public    string
-			css       string
-			templates string
-		}
-		debug    bool
-		dateFmt  string
-		policies *simba.Agent
-		stores   struct {
-			// todo: maybe might should be the interfaces
-			reports *reports.Store
-		}
-		version semver.Version
-	}
-	scheme  string
-	host    string
-	port    string
-	mux     *http.ServeMux
-	version semver.Version
+	app    *app.App
+	scheme string
+	host   string
+	port   string
+	mux    *http.ServeMux
+	public string // path to serve public (static) files from
 }
 
 // New returns a Server with default settings that are overridden by the provided options.
 func New(options ...Option) (*Server, error) {
 	s := &Server{
-		scheme:  "http",
-		host:    "localhost",
-		port:    "3000",
-		mux:     http.NewServeMux(), // default mux, no routes
-		version: semver.Version{Major: 0, Minor: 1, Patch: 0},
+		scheme: "http",
+		host:   "localhost",
+		port:   "3000",
+		mux:    http.NewServeMux(), // default mux, no routes
+		public: "public",
 	}
 
 	s.IdleTimeout = 10 * time.Second
@@ -55,45 +39,49 @@ func New(options ...Option) (*Server, error) {
 	s.WriteTimeout = 10 * time.Second
 	s.MaxHeaderBytes = 1 << 20
 
-	s.app.paths.root = "."
-	s.app.paths.public = filepath.Join(s.app.paths.root, "..", "public")
-	s.app.paths.css = filepath.Join(s.app.paths.public, "css")
-	s.app.paths.templates = filepath.Join(s.app.paths.root, "..", "templates")
-	s.app.dateFmt = "2006-01-02"
-
 	for _, opt := range options {
 		if err := opt(s); err != nil {
 			return nil, err
 		}
 	}
 
-	s.app.baseURL = s.BaseURL()
+	if err := isdir(s.public); err != nil {
+		return nil, err
+	}
+	log.Printf("server: public    is %s\n", s.public)
 
-	if err := isdir(s.app.paths.root); err != nil {
-		return nil, err
-	} else {
-		log.Printf("server: root      is %s\n", s.app.paths.root)
-	}
-	if err := isdir(s.app.paths.public); err != nil {
-		return nil, err
-	} else {
-		log.Printf("server: public    is %s\n", s.app.paths.public)
-	}
-	if err := isdir(s.app.paths.css); err != nil {
-		return nil, err
-	} else {
-		log.Printf("server: css       is %s\n", s.app.paths.css)
-	}
-	if err := isdir(s.app.paths.templates); err != nil {
-		return nil, err
-	} else {
-		log.Printf("server: templates is %s\n", s.app.paths.templates)
-	}
+	// the above and beyond public file handler finds all the files in the public directory,
+	// and adds routes to serve them as static files.
+	//
 
-	if s.app.policies == nil {
-		return nil, fmt.Errorf("missing policies agent")
-	} else if s.app.stores.reports == nil {
-		return nil, fmt.Errorf("missing reports store")
+	// walk the public directory and add routes to serve files
+	validExtensions := map[string]bool{
+		".css":  true,
+		".html": true,
+		".ico":  true,
+		".jpg":  true, ".js": true,
+		".png":    true,
+		".robots": true,
+		".svg":    true,
+	}
+	if err := filepath.WalkDir(s.public, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		} else if d.IsDir() {
+			return nil
+		} else if !validExtensions[filepath.Ext(path)] {
+			return nil
+		} else if strings.HasPrefix(filepath.Base(path), ".") { // avoid serving .dotfiles
+			return nil
+		}
+		route := "GET " + strings.TrimPrefix(path, s.public)
+		log.Printf("server: public    adding route for %s\n", path)
+		log.Printf("server: path  %q\n", path)
+		log.Printf("server: route %q\n", route)
+		s.mux.Handle(route, s.handleStaticFiles("", s.public, false))
+		return nil
+	}); err != nil {
+		return nil, err
 	}
 
 	return s, nil
@@ -108,11 +96,11 @@ func (s *Server) Router() http.Handler {
 }
 
 func (s *Server) ShowMeSomeRoutes() {
-	log.Printf("serve: %s%s\n", s.app.baseURL, "/")
-	log.Printf("serve: %s%s\n", s.app.baseURL, "/login")
-	log.Printf("serve: %s%s\n", s.app.baseURL, "/logout")
-	log.Printf("serve: %s%s\n", s.app.baseURL, "/dashboard")
-	log.Printf("serve: %s%s\n", s.app.baseURL, "/reports")
-	log.Printf("serve: %s%s\n", s.app.baseURL, "/reports/0991")
-	log.Printf("serve: %s%s\n", s.app.baseURL, "/api/version")
+	log.Printf("serve: %s%s\n", s.BaseURL(), "/")
+	log.Printf("serve: %s%s\n", s.BaseURL(), "/login")
+	log.Printf("serve: %s%s\n", s.BaseURL(), "/logout")
+	log.Printf("serve: %s%s\n", s.BaseURL(), "/dashboard")
+	log.Printf("serve: %s%s\n", s.BaseURL(), "/reports")
+	log.Printf("serve: %s%s\n", s.BaseURL(), "/reports/0991")
+	log.Printf("serve: %s%s\n", s.BaseURL(), "/api/version")
 }
