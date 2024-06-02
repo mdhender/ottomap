@@ -2,7 +2,9 @@
 
 package users
 
-import "github.com/mdhender/ottomap/domains/rbac"
+import (
+	rbac "github.com/mdhender/ottomap/pkg/rbac/domain"
+)
 
 type User struct {
 	Id     string     `json:"id"`               // unique identifier for the user

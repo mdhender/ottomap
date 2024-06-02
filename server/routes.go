@@ -9,34 +9,18 @@ import (
 // todo: implement https://go.dev/blog/routing-enhancements
 
 func (s *Server) Routes() http.Handler {
-	// add our public routes
-	for _, route := range []struct {
-		pattern string
-		handler http.HandlerFunc
-	}{
-		{"GET /", s.getIndex()},
-		{"GET /features", s.getFeatures()},
-		{"GET /login", s.getLogin()},
-		{"POST /login", s.postLogin()},
-		{"GET /logout", s.getLogout()},
-		{"POST /logout", s.postLogout()},
-		{"GET /api/version", s.handleVersion()},
-		{"GET /api/login/{name}/{secret}", s.apiGetLogin()},
-	} {
-		s.mux.HandleFunc(route.pattern, route.handler)
-	}
-	s.mux.Handle("GET /reports/0991", handleReportsListing(s.app.paths.templates, s.auth.roles.rls))
+	s.mux.HandleFunc("GET /", s.getIndex())
+	s.mux.HandleFunc("GET /dashboard", s.getDashboard())
+	s.mux.HandleFunc("GET /features", s.getFeatures())
+	s.mux.HandleFunc("GET /login", s.getLogin())
+	s.mux.HandleFunc("POST /login", s.postLogin())
+	s.mux.HandleFunc("GET /logout", s.getLogout())
+	s.mux.HandleFunc("POST /logout", s.postLogout())
+	s.mux.HandleFunc("GET /reports", s.getReports())
+	s.mux.Handle("GET /reports/0991", handleReportsListing(s.app.paths.templates, s.app.policies, s.app.stores.reports))
 
-	// add our protected routes
-	for _, route := range []struct {
-		pattern string
-		handler http.HandlerFunc
-	}{
-		{"GET /dashboard", s.getDashboard()},
-		{"GET /reports", s.getReports()},
-	} {
-		s.mux.HandleFunc(route.pattern, s.addSession(s.mustAuthenticate(route.handler)))
-	}
+	s.mux.HandleFunc("GET /api/version", s.handleVersion())
+	s.mux.HandleFunc("GET /api/login/{name}/{secret}", s.apiGetLogin())
 
 	// add our not found handler (it will serve public files if they exist)
 	s.mux.Handle("/", s.handleStaticFiles("/", s.app.paths.public, s.app.debug))

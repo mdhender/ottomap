@@ -3,7 +3,10 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"github.com/mdhender/ottomap/pkg/reports/dao"
+	"github.com/mdhender/ottomap/pkg/simba"
 	"github.com/mdhender/ottomap/server"
 	"github.com/spf13/cobra"
 	"log"
@@ -25,18 +28,19 @@ var cmdServe = &cobra.Command{
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		log.Printf("serve: sigkey %q\n", argsServe.signingKey)
+		agent, err := simba.NewAgent("data/simba.mdb", context.Background())
+		if err != nil {
+			log.Fatal(err)
+		}
 
 		s, err := server.New(
 			server.WithHost("localhost"),
 			server.WithPort("3030"),
-			server.WithSigningKey(argsServe.signingKey),
 			server.WithRoot("."),
-			server.WithUsers("users.json"),
-			server.WithSessions("sessions.json"),
-			server.WithCookie("ottomap"),
 			server.WithTemplates("../templates"),
 			server.WithPublic("../public"),
+			server.WithPolicyAgent(agent),
+			server.WithReportsStore(reports.NewStore()),
 		)
 		if err != nil {
 			log.Fatal(err)
@@ -45,7 +49,7 @@ var cmdServe = &cobra.Command{
 		s.Routes()
 		s.ShowMeSomeRoutes()
 
-		log.Printf("serve: listening on http://%s\n", s.Addr)
+		log.Printf("serve: listening on %s\n", s.BaseURL())
 		return http.ListenAndServe(s.Addr, s.Router())
 	},
 }

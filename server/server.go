@@ -4,12 +4,9 @@
 package server
 
 import (
-	"context"
 	"fmt"
-	"github.com/mdhender/ottomap/authz"
-	"github.com/mdhender/ottomap/domains/rbac"
-	"github.com/mdhender/ottomap/sessions"
-	"github.com/mdhender/ottomap/users"
+	"github.com/mdhender/ottomap/pkg/reports/dao"
+	"github.com/mdhender/ottomap/pkg/simba"
 	"github.com/mdhender/semver"
 	"log"
 	"net/http"
@@ -20,9 +17,6 @@ import (
 type Server struct {
 	http.Server
 	app struct {
-		scheme  string
-		host    string
-		port    string
 		baseURL string
 		paths   struct {
 			root      string
@@ -30,32 +24,18 @@ type Server struct {
 			css       string
 			templates string
 		}
-		debug   bool
-		dateFmt string
-	}
-	sessions struct {
-		path    string
-		store   *sessions.Store
-		manager *sessions.Manager
-		cookies struct {
-			name   string
-			secure bool
+		debug    bool
+		dateFmt  string
+		policies *simba.Agent
+		stores   struct {
+			// todo: maybe might should be the interfaces
+			reports *reports.Store
 		}
+		version semver.Version
 	}
-	users struct {
-		path  string
-		store *users.Store
-	}
-	auth struct {
-		secret  string
-		manager *authz.Factory
-		ttl     time.Duration
-		roles   struct {
-			path  string
-			store *rbac.Store
-			rls   ReportListingRepository
-		}
-	}
+	scheme  string
+	host    string
+	port    string
 	mux     *http.ServeMux
 	version semver.Version
 }
@@ -63,6 +43,9 @@ type Server struct {
 // New returns a Server with default settings that are overridden by the provided options.
 func New(options ...Option) (*Server, error) {
 	s := &Server{
+		scheme:  "http",
+		host:    "localhost",
+		port:    "3000",
 		mux:     http.NewServeMux(), // default mux, no routes
 		version: semver.Version{Major: 0, Minor: 1, Patch: 0},
 	}
@@ -72,9 +55,6 @@ func New(options ...Option) (*Server, error) {
 	s.WriteTimeout = 10 * time.Second
 	s.MaxHeaderBytes = 1 << 20
 
-	s.app.scheme = "http"
-	s.app.host = "localhost"
-	s.app.port = "3000"
 	s.app.paths.root = "."
 	s.app.paths.public = filepath.Join(s.app.paths.root, "..", "public")
 	s.app.paths.css = filepath.Join(s.app.paths.public, "css")
@@ -87,7 +67,7 @@ func New(options ...Option) (*Server, error) {
 		}
 	}
 
-	s.app.baseURL = fmt.Sprintf("%s://%s", s.app.scheme, s.Addr)
+	s.app.baseURL = s.BaseURL()
 
 	if err := isdir(s.app.paths.root); err != nil {
 		return nil, err
@@ -109,41 +89,18 @@ func New(options ...Option) (*Server, error) {
 	} else {
 		log.Printf("server: templates is %s\n", s.app.paths.templates)
 	}
-	if err := isfile(s.users.path); err != nil {
-		return nil, err
-	} else {
-		log.Printf("server: user     store is %s\n", s.users.path)
-	}
-	if err := isfile(s.sessions.path); err != nil {
-		return nil, err
-	} else {
-		log.Printf("server: sessions store is %s\n", s.sessions.path)
-	}
 
-	var err error
-
-	s.auth.roles.rls = NewAquaReportListingRepository()
-
-	s.users.store, err = users.New(s.users.path)
-	if err != nil {
-		return nil, err
-	}
-
-	s.sessions.store, err = sessions.NewStore(s.sessions.path, s.users.store)
-	if err != nil {
-		return nil, err
-	}
-	s.sessions.manager, err = sessions.NewManager(s.sessions.cookies.name, s.sessions.store, s.users.store)
-	if err != nil {
-		return nil, err
-	}
-
-	s.auth.manager, err = authz.New("ottomap", s.auth.secret, 2*7*24*time.Hour)
-	if err != nil {
-		return nil, err
+	if s.app.policies == nil {
+		return nil, fmt.Errorf("missing policies agent")
+	} else if s.app.stores.reports == nil {
+		return nil, fmt.Errorf("missing reports store")
 	}
 
 	return s, nil
+}
+
+func (s *Server) BaseURL() string {
+	return fmt.Sprintf("%s://%s", s.scheme, s.Addr)
 }
 
 func (s *Server) Router() http.Handler {
@@ -153,18 +110,9 @@ func (s *Server) Router() http.Handler {
 func (s *Server) ShowMeSomeRoutes() {
 	log.Printf("serve: %s%s\n", s.app.baseURL, "/")
 	log.Printf("serve: %s%s\n", s.app.baseURL, "/login")
-	for _, da := range s.users.store.TheSecrets() {
-		if da[0] != "" && da[1] != "" {
-			log.Printf("serve: %s/login/%s/%s\n", s.app.baseURL, da[0], da[1])
-		}
-	}
 	log.Printf("serve: %s%s\n", s.app.baseURL, "/logout")
 	log.Printf("serve: %s%s\n", s.app.baseURL, "/dashboard")
 	log.Printf("serve: %s%s\n", s.app.baseURL, "/reports")
 	log.Printf("serve: %s%s\n", s.app.baseURL, "/reports/0991")
 	log.Printf("serve: %s%s\n", s.app.baseURL, "/api/version")
-}
-
-func (s *Server) currentUser(ctx context.Context) users.User {
-	return sessions.User(ctx)
 }
