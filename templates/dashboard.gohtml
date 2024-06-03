@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!DOCTYPE html>{{- /*gotype:github.com/mdhender/ottomap/app.DashboardPage*/ -}}
 <html lang="en" class="h-full bg-white">
 <head>
     <meta charset="utf-8">
@@ -65,11 +65,12 @@
                             From: "transform opacity-100 scale-100"
                             To: "transform opacity-0 scale-95"
                         -->
-                        <div class="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none" role="menu" aria-orientation="vertical" aria-labelledby="user-menu-button" tabindex="-1">
+                        <!-- add hidden or sm:hidden ?-->
+                        <div class="hidden absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none" role="menu" aria-orientation="vertical" aria-labelledby="user-menu-button" tabindex="-1">
                             <!-- Active: "bg-gray-100", Not Active: "" -->
                             <a href="#" class="block px-4 py-2 text-sm text-gray-700" role="menuitem" tabindex="-1" id="user-menu-item-0">Your Profile</a>
                             <a href="#" class="block px-4 py-2 text-sm text-gray-700" role="menuitem" tabindex="-1" id="user-menu-item-1">Settings</a>
-                            <a href="#" class="block px-4 py-2 text-sm text-gray-700" role="menuitem" tabindex="-1" id="user-menu-item-2">Sign out</a>
+                            <a href="/logout" class="block px-4 py-2 text-sm text-gray-700" role="menuitem" tabindex="-1" id="user-menu-item-2">Sign out</a>
                         </div>
                     </div>
                 </div>
@@ -118,9 +119,15 @@
                     </button>
                 </div>
                 <div class="mt-3 space-y-1">
-                    <a href="#" class="block px-4 py-2 text-base font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-800">Your Profile</a>
-                    <a href="#" class="block px-4 py-2 text-base font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-800">Settings</a>
-                    <a href="#" class="block px-4 py-2 text-base font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-800">Sign out</a>
+                    <a href="#" class="block px-4 py-2 text-base font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-800">
+                        Your Profile
+                    </a>
+                    <a href="#" class="block px-4 py-2 text-base font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-800">
+                        Settings
+                    </a>
+                    <a href="/logout" class="block px-4 py-2 text-base font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-800">
+                        Sign out
+                    </a>
                 </div>
             </div>
         </div>
@@ -134,18 +141,17 @@
         </header>
         <main>
             <div class="mx-auto max-w-7xl sm:px-6 lg:px-8">
-                <!-- Your content -->
+                <div class="border-b border-gray-200 pb-5 sm:flex sm:items-center sm:justify-between">
+                    <h3 class="text-base font-semibold leading-6 text-gray-900">Your Turn Reports</h3>
+                    <div class="mt-3 sm:ml-4 sm:mt-0">
+                        <button type="button" class="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
+                            Upload Turn Report
+                        </button>
+                    </div>
+                </div>
+
                 <!-- https://tailwindui.com/components/application-ui/lists/tables#component-b9407334ee0ee7eacb27cfbb5c08bb46 -->
                 <div class="px-4 sm:px-6 lg:px-8">
-                    <div class="sm:flex sm:items-center">
-                        <div class="sm:flex-auto">
-                            <h1 class="text-base font-semibold leading-6 text-gray-900">Reports</h1>
-                            <p class="mt-2 text-sm text-gray-700">A list of all the turn reports that you have uploaded or have been shared with you.</p>
-                        </div>
-                        <div class="mt-4 sm:ml-16 sm:mt-0 sm:flex-none">
-                            <button type="button" class="block rounded-md bg-indigo-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">Add user</button>
-                        </div>
-                    </div>
                     <div class="mt-8 flow-root">
                         <div class="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
                             <div class="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
@@ -153,78 +159,22 @@
                                     <thead>
                                     <tr>
                                         <th scope="col" class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-3">Turn</th>
-                                        <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Clan</th>
-                                        <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Status</th>
-                                        <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Map</th>
-                                        <th scope="col" class="relative py-3.5 pl-3 pr-4 sm:pr-3">
-                                            <span class="sr-only">Edit</span>
-                                        </th>
+                                        <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Reports</th>
                                     </tr>
                                     </thead>
                                     <tbody class="bg-white">
+                                    {{range .Reports}}{{- /*gotype:github.com/mdhender/ottomap/app.DashboardTurnLine*/ -}}
                                     <tr class="even:bg-gray-50">
-                                        <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-3">900-06</td>
-                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">0138</td>
-                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">Uploaded</td>
-                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">N/A</td>
-                                        <td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-3">
-                                            <a href="/turn/900-06/clan/0138" class="text-indigo-600 hover:text-indigo-900">Edit<span class="sr-only">, 900-06.0138</span></a>
+                                        <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-3">
+                                            <a href="/turns/{{.Turn}}" class="text-indigo-600 hover:text-indigo-900">{{.Turn}}</a>
+                                        </td>
+                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                                            {{range .Reports}}{{- /*gotype:github.com/mdhender/ottomap/app.DashboardReportLine*/ -}}
+                                            <a href="/reports/{{.URL}}" class="text-indigo-600 hover:text-indigo-900">{{.Id}}</a>
+                                            {{end}}
                                         </td>
                                     </tr>
-                                    <tr class="even:bg-gray-50">
-                                        <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-3">900-05</td>
-                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">0138</td>
-                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">Processed, no errors</td>
-                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">Link Here</td>
-                                        <td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-3">
-                                            <a href="/turn/900-05/clan/0138" class="text-indigo-600 hover:text-indigo-900">Edit<span class="sr-only">, 900-05.0138</span></a>
-                                        </td>
-                                    </tr>
-                                    <tr class="even:bg-gray-50">
-                                        <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-3">900-04</td>
-                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">0138</td>
-                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">Processed, no errors</td>
-                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">Link Here</td>
-                                        <td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-3">
-                                            <a href="/turn/900-04/clan/0138" class="text-indigo-600 hover:text-indigo-900">Edit<span class="sr-only">, 900-04.0138</span></a>
-                                        </td>
-                                    </tr>
-                                    <tr class="even:bg-gray-50">
-                                        <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-3">900-03</td>
-                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">0138</td>
-                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">Processed, no errors</td>
-                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">Link Here</td>
-                                        <td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-3">
-                                            <a href="/turn/900-03/clan/0138" class="text-indigo-600 hover:text-indigo-900">Edit<span class="sr-only">, 900-03.0138</span></a>
-                                        </td>
-                                    </tr>
-                                    <tr class="even:bg-gray-50">
-                                        <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-3">900-02</td>
-                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">0138</td>
-                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">Processed, no errors</td>
-                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">Link Here</td>
-                                        <td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-3">
-                                            <a href="/turn/900-02/clan/0138" class="text-indigo-600 hover:text-indigo-900">Edit<span class="sr-only">, 900-02.0138</span></a>
-                                        </td>
-                                    </tr>
-                                    <tr class="even:bg-gray-50">
-                                        <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-3">900-01</td>
-                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">0138</td>
-                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">Processed, no errors</td>
-                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">Link Here</td>
-                                        <td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-3">
-                                            <a href="/turn/900-01/clan/0138" class="text-indigo-600 hover:text-indigo-900">Edit<span class="sr-only">, 900-01.0138</span></a>
-                                        </td>
-                                    </tr>
-                                    <tr class="even:bg-gray-50">
-                                        <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-3">899-12</td>
-                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">0138</td>
-                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">Processed, no errors</td>
-                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">Link Here</td>
-                                        <td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-3">
-                                            <a href="/turn/899-12/clan/0138" class="text-indigo-600 hover:text-indigo-900">Edit<span class="sr-only">, 899-12.0138</span></a>
-                                        </td>
-                                    </tr>
+                                    {{end}}
                                     </tbody>
                                 </table>
                             </div>

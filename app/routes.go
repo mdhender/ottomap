@@ -9,8 +9,8 @@ import "net/http"
 func (a *App) Routes() *http.ServeMux {
 	mux := http.NewServeMux() // default mux, no routes
 
-	mux.HandleFunc("GET /", a.getHero())
-	mux.HandleFunc("GET /dashboard", a.getDashboard())
+	mux.HandleFunc("GET /", a.getHero("02"))
+	mux.HandleFunc("GET /dashboard", handleGetDashboard(a.paths.templates, a.policies, a.stores.reports))
 	mux.HandleFunc("GET /features", a.getFeatures())
 	mux.HandleFunc("GET /login", a.getLogin())
 	mux.HandleFunc("POST /login", a.postLogin())

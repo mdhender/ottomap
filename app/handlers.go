@@ -4,12 +4,14 @@ package app
 
 import (
 	"bytes"
+	"fmt"
 	reports "github.com/mdhender/ottomap/pkg/reports/domain"
 	"github.com/mdhender/ottomap/pkg/simba"
 	"html/template"
 	"log"
 	"net/http"
 	"path/filepath"
+	"sort"
 )
 
 func (a *App) handleIndex() http.HandlerFunc {
@@ -19,52 +21,6 @@ func (a *App) handleIndex() http.HandlerFunc {
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 
 		_, _ = w.Write([]byte(`index`))
-	}
-}
-
-func (a *App) getDashboard() http.HandlerFunc {
-	templateFiles := []string{
-		filepath.Join(a.paths.templates, "dashboard.gohtml"),
-	}
-
-	return func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("%s: %s: entered\n", r.Method, r.URL.Path)
-
-		user, ok := a.policies.CurrentUser(r)
-		if !ok {
-			log.Printf("%s: %s: currentUser: not ok\n", r.Method, r.URL.Path)
-			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
-			return
-		} else if !user.IsAuthenticated {
-			log.Printf("%s: %s: currentUser: not authenticated\n", r.Method, r.URL.Path)
-			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
-			return
-		}
-
-		// Parse the template file
-		tmpl, err := template.ParseFiles(templateFiles...)
-		if err != nil {
-			log.Printf("%s: %s: template: %v", r.Method, r.URL.Path, err)
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-			return
-		}
-
-		var payload struct{}
-
-		// create a buffer to write the response to. we need to do this to capture errors in a nice way.
-		buf := &bytes.Buffer{}
-
-		// execute the template with our payload
-		err = tmpl.Execute(buf, payload)
-		if err != nil {
-			log.Printf("%s: %s: template: %v", r.Method, r.URL.Path, err)
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-			return
-		}
-
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write(buf.Bytes())
 	}
 }
 
@@ -103,9 +59,14 @@ func (a *App) getFeatures() http.HandlerFunc {
 	}
 }
 
-func (a *App) getHero() http.HandlerFunc {
+func (a *App) getHero(version string) http.HandlerFunc {
 	templateFiles := []string{
 		filepath.Join(a.paths.templates, "hero.gohtml"),
+	}
+	if version == "02" {
+		templateFiles = []string{
+			filepath.Join(a.paths.templates, "hero02.gohtml"),
+		}
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -326,6 +287,89 @@ func (a *App) apiGetLogin() http.HandlerFunc {
 		//name := r.PathValue("name")
 		//secret := r.PathValue("secret")
 		http.Error(w, http.StatusText(http.StatusNotImplemented), http.StatusNotImplemented)
+	}
+}
+
+type DashboardPage struct {
+	Page struct {
+		Title string
+	}
+	Reports []DashboardTurnLine
+}
+type DashboardTurnLine struct {
+	Turn    string
+	Reports []DashboardReportLine
+}
+type DashboardReportLine struct {
+	Id  string // report id
+	URL string // link to report details
+}
+
+func handleGetDashboard(templatesPath string, a *simba.Agent, rlr ReportListingRepository) http.HandlerFunc {
+	templateFiles := []string{
+		filepath.Join(templatesPath, "dashboard.gohtml"),
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("%s: %s: entered\n", r.Method, r.URL.Path)
+
+		user, ok := a.CurrentUser(r)
+		if !ok {
+			log.Printf("%s: %s: currentUser: not ok\n", r.Method, r.URL.Path)
+			http.Redirect(w, r, "/logout", http.StatusFound)
+			return
+		} else if !user.IsAuthenticated {
+			log.Printf("%s: %s: currentUser: not authenticated\n", r.Method, r.URL.Path)
+			http.Redirect(w, r, "/logout", http.StatusFound)
+			return
+		}
+
+		// Parse the template file
+		tmpl, err := template.ParseFiles(templateFiles...)
+		if err != nil {
+			log.Printf("%s: %s: template: %v", r.Method, r.URL.Path, err)
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		// the logic for the "service" should be a bunch of simple calls to the repository.
+		var result DashboardPage
+		rpts, err := rlr.AllReports(a.UserReportsFilter(user.Id))
+		if err != nil {
+			log.Printf("%s: %s: allReports: %v", r.Method, r.URL.Path, err)
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+		for _, rpt := range rpts {
+			tl := DashboardTurnLine{
+				Turn: rpt.Turn,
+				Reports: []DashboardReportLine{
+					DashboardReportLine{
+						Id:  rpt.Id,
+						URL: fmt.Sprintf("/reports/%s", rpt.Id),
+					},
+				},
+			}
+			result.Reports = append(result.Reports, tl)
+		}
+		sort.Slice(result.Reports, func(i, j int) bool {
+			return result.Reports[i].Turn > result.Reports[j].Turn
+		})
+
+		// create a buffer to write the response to. we need to do this to capture errors in a nice way.
+		buf := &bytes.Buffer{}
+
+		// execute the template with our payload
+		err = tmpl.Execute(buf, result)
+		if err != nil {
+			log.Printf("%s: %s: template: %v", r.Method, r.URL.Path, err)
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(buf.Bytes())
 	}
 }
 
