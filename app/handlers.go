@@ -8,21 +8,14 @@ import (
 	reports "github.com/mdhender/ottomap/pkg/reports/domain"
 	"github.com/mdhender/ottomap/pkg/simba"
 	"html/template"
+	"io"
 	"log"
 	"net/http"
+	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 )
-
-func (a *App) handleIndex() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("%s: %s: entered\n", r.Method, r.URL.Path)
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.Header().Set("X-Content-Type-Options", "nosniff")
-
-		_, _ = w.Write([]byte(`index`))
-	}
-}
 
 func (a *App) getFeatures() http.HandlerFunc {
 	templateFiles := []string{
@@ -71,8 +64,14 @@ func (a *App) getHero(version string) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("%s: %s: entered\n", r.Method, r.URL.Path)
-		log.Printf("%s: %s: root      %q\n", r.Method, r.URL.Path, a.paths.root)
-		log.Printf("%s: %s: templates %q\n", r.Method, r.URL.Path, a.paths.templates)
+
+		if r.URL.Path != "/" {
+			log.Printf("%s: %s: get /... hack\n", r.Method, r.URL.Path)
+			// this is stupid, but Go treats "GET /" as a wild-card not-found match.
+			// we already have a handler for static files, so we'll just return a 404.
+			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+			return
+		}
 
 		// Parse the template file
 		tmpl, err := template.ParseFiles(templateFiles...)
@@ -429,4 +428,47 @@ func handleReportsListing(templatesPath string, a *simba.Agent, rlr ReportListin
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write(buf.Bytes())
 	})
+}
+
+// returns a handler that will serve a static file if one exists, otherwise return not found.
+func handleStaticFiles(prefix, root string, debug bool) http.HandlerFunc {
+	log.Println("[static] initializing")
+	defer log.Println("[static] initialized")
+
+	log.Printf("[static] strip: %q\n", prefix)
+	log.Printf("[static]  root: %q\n", root)
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("%s: %s: entered\n", r.Method, r.URL.Path)
+
+		file := filepath.Join(root, filepath.Clean(strings.TrimPrefix(r.URL.Path, prefix)))
+		if debug {
+			log.Printf("[static] %q\n", file)
+		}
+
+		stat, err := os.Stat(file)
+		if err != nil {
+			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+			return
+		}
+
+		// only serve regular files, never directories or directory listings.
+		if stat.IsDir() || !stat.Mode().IsRegular() {
+			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+			return
+		}
+
+		// pretty sure that we have a regular file at this point.
+		rdr, err := os.Open(file)
+		if err != nil {
+			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+			return
+		}
+		defer func(r io.ReadCloser) {
+			_ = r.Close()
+		}(rdr)
+
+		// let Go serve the file. it does magic things like content-type, etc.
+		http.ServeContent(w, r, file, stat.ModTime(), rdr)
+	}
 }

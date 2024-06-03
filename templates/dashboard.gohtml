@@ -170,7 +170,7 @@
                                         </td>
                                         <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                                             {{range .Reports}}{{- /*gotype:github.com/mdhender/ottomap/app.DashboardReportLine*/ -}}
-                                            <a href="/reports/{{.URL}}" class="text-indigo-600 hover:text-indigo-900">{{.Id}}</a>
+                                            <a href="{{.URL}}" class="text-indigo-600 hover:text-indigo-900">{{.Id}}</a>
                                             {{end}}
                                         </td>
                                     </tr>

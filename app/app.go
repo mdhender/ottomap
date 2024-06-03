@@ -17,6 +17,7 @@ type App struct {
 	baseURL string
 	paths   struct {
 		root      string
+		public    string
 		templates string
 	}
 	debug    bool
@@ -32,6 +33,7 @@ type App struct {
 func New(options ...Option) (*App, error) {
 	a := &App{}
 	a.paths.root = "."
+	a.paths.public = "public"
 	a.paths.templates = "templates"
 
 	for _, opt := range options {
@@ -42,10 +44,13 @@ func New(options ...Option) (*App, error) {
 
 	if err := isdir(a.paths.root); err != nil {
 		return nil, err
+	} else if err = isdir(a.paths.public); err != nil {
+		return nil, err
 	} else if err = isdir(a.paths.templates); err != nil {
 		return nil, err
 	}
 	log.Printf("app: root      is %s\n", a.paths.root)
+	log.Printf("app: public    is %s\n", a.paths.public)
 	log.Printf("app: templates is %s\n", a.paths.templates)
 
 	return a, nil
@@ -70,6 +75,17 @@ func WithPolicyAgent(agent *simba.Agent) Option {
 	}
 }
 
+func WithPublic(path string) Option {
+	return func(a *App) (err error) {
+		if a.paths.root == "" {
+			return fmt.Errorf("must set root before public")
+		} else if a.paths.public, err = filepath.Abs(filepath.Join(a.paths.root, path)); err != nil {
+			return err
+		}
+		return nil
+	}
+}
+
 func WithReportsStore(rs *reports.Store) Option {
 	return func(a *App) error {
 		a.stores.reports = rs
@@ -81,8 +97,9 @@ func WithRoot(path string) Option {
 	return func(a *App) (err error) {
 		if a.paths.root, err = filepath.Abs(path); err != nil {
 			return err
-		}
-		if a.paths.templates, err = filepath.Abs(filepath.Join(a.paths.root, "templates")); err != nil {
+		} else if a.paths.public, err = filepath.Abs(filepath.Join(a.paths.root, "public")); err != nil {
+			return err
+		} else if a.paths.templates, err = filepath.Abs(filepath.Join(a.paths.root, "templates")); err != nil {
 			return err
 		}
 		return nil
@@ -93,8 +110,7 @@ func WithTemplates(path string) Option {
 	return func(a *App) (err error) {
 		if a.paths.root == "" {
 			return fmt.Errorf("must set root before templates")
-		}
-		if a.paths.templates, err = filepath.Abs(filepath.Join(a.paths.root, path)); err != nil {
+		} else if a.paths.templates, err = filepath.Abs(filepath.Join(a.paths.root, path)); err != nil {
 			return err
 		}
 		return nil

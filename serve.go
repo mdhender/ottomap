@@ -37,6 +37,7 @@ var cmdServe = &cobra.Command{
 		a, err := app.New(
 			app.WithVersion(version),
 			app.WithRoot("."),
+			app.WithPublic("../public"),
 			app.WithTemplates("../templates"),
 			app.WithPolicyAgent(agent),
 			app.WithReportsStore(reports.NewStore()),
@@ -48,7 +49,6 @@ var cmdServe = &cobra.Command{
 		s, err := server.New(
 			server.WithHost("localhost"),
 			server.WithPort("3030"),
-			server.WithPublic("../public"),
 			server.WithApp(a),
 		)
 		if err != nil {
