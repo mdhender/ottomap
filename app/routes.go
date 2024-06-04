@@ -26,7 +26,7 @@ func (a *App) Routes() (*http.ServeMux, error) {
 	mux.Handle("GET /reports", handleReportsListing(a.paths.templates, a.policies, a.stores.reports))
 	mux.Handle("GET /reports/900-01.0991", handleReportsListing(a.paths.templates, a.policies, a.stores.reports))
 	mux.Handle("GET /turns", turns.HandleGetListing(a.paths.templates, a.policies, a.stores.turns))
-	mux.Handle("GET /turns/{turnId}", turns.HandleGetDetail(a.paths.templates, a.policies, a.stores.turns))
+	mux.Handle("GET /turns/{turnId}", turns.HandleGetDetail(a.paths.templates, a.policies, nil))
 
 	mux.HandleFunc("GET /api/version", a.handleVersion())
 	mux.HandleFunc("GET /api/login/{name}/{secret}", a.apiGetLogin())
