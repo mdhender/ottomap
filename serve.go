@@ -8,6 +8,7 @@ import (
 	"github.com/mdhender/ottomap/app"
 	"github.com/mdhender/ottomap/pkg/reports/dao"
 	"github.com/mdhender/ottomap/pkg/simba"
+	turns "github.com/mdhender/ottomap/pkg/turns/dao"
 	"github.com/mdhender/ottomap/server"
 	"github.com/spf13/cobra"
 	"log"
@@ -41,6 +42,7 @@ var cmdServe = &cobra.Command{
 			app.WithTemplates("../templates"),
 			app.WithPolicyAgent(agent),
 			app.WithReportsStore(reports.NewStore()),
+			app.WithTurnsStore(turns.NewStore()),
 		)
 		if err != nil {
 			log.Fatal(err)

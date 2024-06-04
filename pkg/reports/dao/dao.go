@@ -4,7 +4,6 @@ package reports
 
 import (
 	domain "github.com/mdhender/ottomap/pkg/reports/domain"
-	"sort"
 )
 
 // Store is a mock implementation of ReportListingRepository.
@@ -26,13 +25,12 @@ func NewStore() *Store {
 	}
 }
 
-func (s *Store) AllReports(authorized func(r domain.Report) bool) (domain.ReportListing, error) {
-	var rl domain.ReportListing
-	for _, rpt := range s.reports {
-		if authorized(rpt) {
-			rl = append(rl, rpt)
+func (s *Store) AllReports(authorized func(r domain.Report) bool) (domain.Listing, error) {
+	var list domain.Listing
+	for _, report := range s.reports {
+		if authorized(report) {
+			list = append(list, report)
 		}
 	}
-	sort.Sort(rl)
-	return rl, nil
+	return list, nil
 }

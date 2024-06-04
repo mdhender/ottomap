@@ -7,6 +7,7 @@ import (
 	"fmt"
 	reports "github.com/mdhender/ottomap/pkg/reports/dao"
 	"github.com/mdhender/ottomap/pkg/simba"
+	turns "github.com/mdhender/ottomap/pkg/turns/dao"
 	"github.com/mdhender/semver"
 	"log"
 	"os"
@@ -26,6 +27,7 @@ type App struct {
 	stores   struct {
 		// todo: maybe might should be the interfaces
 		reports *reports.Store
+		turns   *turns.Store
 	}
 	version semver.Version
 }
@@ -86,9 +88,9 @@ func WithPublic(path string) Option {
 	}
 }
 
-func WithReportsStore(rs *reports.Store) Option {
+func WithReportsStore(store *reports.Store) Option {
 	return func(a *App) error {
-		a.stores.reports = rs
+		a.stores.reports = store
 		return nil
 	}
 }
@@ -113,6 +115,13 @@ func WithTemplates(path string) Option {
 		} else if a.paths.templates, err = filepath.Abs(filepath.Join(a.paths.root, path)); err != nil {
 			return err
 		}
+		return nil
+	}
+}
+
+func WithTurnsStore(store *turns.Store) Option {
+	return func(a *App) error {
+		a.stores.turns = store
 		return nil
 	}
 }

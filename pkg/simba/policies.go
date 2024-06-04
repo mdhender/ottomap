@@ -7,6 +7,7 @@ import (
 	"errors"
 	"github.com/mdhender/ottomap/pkg/reports/domain"
 	"github.com/mdhender/ottomap/pkg/simba/sqlc"
+	turns "github.com/mdhender/ottomap/pkg/turns/domain"
 	"log"
 	"net/http"
 	"strings"
@@ -117,4 +118,16 @@ func (a *Agent) UserReportsFilter(uid string) func(reports.Report) bool {
 		}
 		return false
 	}
+}
+
+func (a *Agent) UserTurnsFilter(uid string) func(turns.Turn) bool {
+	_, err := a.q.ReadUser(a.ctx, uid)
+	if err != nil {
+		if !errors.Is(err, sql.ErrNoRows) {
+			log.Printf("agent: userIsAuthenticated: %v\n", err)
+		}
+		return func(turns.Turn) bool { return false }
+	}
+
+	return func(turns.Turn) bool { return true }
 }
