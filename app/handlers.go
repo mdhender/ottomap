@@ -52,90 +52,6 @@ func (a *App) getFeatures() http.HandlerFunc {
 	}
 }
 
-func (a *App) getHero(version string) http.HandlerFunc {
-	templateFiles := []string{
-		filepath.Join(a.paths.templates, "hero.gohtml"),
-	}
-	if version == "02" {
-		templateFiles = []string{
-			filepath.Join(a.paths.templates, "hero02.gohtml"),
-		}
-	}
-
-	return func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("%s: %s: entered\n", r.Method, r.URL.Path)
-
-		if r.URL.Path != "/" {
-			log.Printf("%s: %s: get /... hack\n", r.Method, r.URL.Path)
-			// this is stupid, but Go treats "GET /" as a wild-card not-found match.
-			// we already have a handler for static files, so we'll just return a 404.
-			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
-			return
-		}
-
-		// Parse the template file
-		tmpl, err := template.ParseFiles(templateFiles...)
-		if err != nil {
-			log.Printf("%s: %s: template: %v", r.Method, r.URL.Path, err)
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-			return
-		}
-
-		var payload struct{}
-
-		// create a buffer to write the response to. we need to do this to capture errors in a nice way.
-		buf := &bytes.Buffer{}
-
-		// execute the template with our payload
-		err = tmpl.Execute(buf, payload)
-		if err != nil {
-			log.Printf("%s: %s: template: %v", r.Method, r.URL.Path, err)
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-			return
-		}
-
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write(buf.Bytes())
-	}
-}
-
-func (a *App) getLanding() http.HandlerFunc {
-	templateFiles := []string{
-		filepath.Join(a.paths.templates, "landing.gohtml"),
-	}
-
-	return func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("%s: %s: entered\n", r.Method, r.URL.Path)
-
-		// Parse the template file
-		tmpl, err := template.ParseFiles(templateFiles...)
-		if err != nil {
-			log.Printf("%s: %s: template: %v", r.Method, r.URL.Path, err)
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-			return
-		}
-
-		var payload struct{}
-
-		// create a buffer to write the response to. we need to do this to capture errors in a nice way.
-		buf := &bytes.Buffer{}
-
-		// execute the template with our payload
-		err = tmpl.Execute(buf, payload)
-		if err != nil {
-			log.Printf("%s: %s: template: %v", r.Method, r.URL.Path, err)
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-			return
-		}
-
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write(buf.Bytes())
-		_, _ = w.Write([]byte(``))
-	}
-}
-
 func (a *App) getLogin() http.HandlerFunc {
 	templateFiles := []string{
 		filepath.Join(a.paths.templates, "login.gohtml"),
@@ -360,6 +276,57 @@ func handleGetDashboard(templatesPath string, a *simba.Agent, rlr ReportListingR
 
 		// execute the template with our payload
 		err = tmpl.Execute(buf, result)
+		if err != nil {
+			log.Printf("%s: %s: template: %v", r.Method, r.URL.Path, err)
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(buf.Bytes())
+	}
+}
+
+func handleGetHero02(templatesPath string, a *simba.Agent) http.HandlerFunc {
+	templateFiles := []string{
+		filepath.Join(templatesPath, "hero02.gohtml"),
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("%s: %s: entered\n", r.Method, r.URL.Path)
+
+		if r.URL.Path != "/" {
+			log.Printf("%s: %s: get /... hack\n", r.Method, r.URL.Path)
+			// this is stupid, but Go treats "GET /" as a wild-card not-found match.
+			// we already have a handler for static files, so we'll just return a 404.
+			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+			return
+		}
+
+		user, ok := a.CurrentUser(r)
+		if ok && user.IsAuthenticated {
+			log.Printf("%s: %s: user %q: ok && authenticate\n", r.Method, r.URL.Path, user.Id)
+			http.Redirect(w, r, "/dashboard", http.StatusFound)
+			return
+		}
+		log.Printf("%s: %s: !(ok && authenticated)\n", r.Method, r.URL.Path)
+
+		// Parse the template file
+		tmpl, err := template.ParseFiles(templateFiles...)
+		if err != nil {
+			log.Printf("%s: %s: template: %v", r.Method, r.URL.Path, err)
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		var payload struct{}
+
+		// create a buffer to write the response to. we need to do this to capture errors in a nice way.
+		buf := &bytes.Buffer{}
+
+		// execute the template with our payload
+		err = tmpl.Execute(buf, payload)
 		if err != nil {
 			log.Printf("%s: %s: template: %v", r.Method, r.URL.Path, err)
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)

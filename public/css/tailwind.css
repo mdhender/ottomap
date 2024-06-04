@@ -1076,10 +1076,6 @@ select {
   max-width: 42rem;
 }
 
-.max-w-3xl {
-  max-width: 48rem;
-}
-
 .max-w-7xl {
   max-width: 80rem;
 }
@@ -1552,11 +1548,6 @@ select {
   line-height: 1.25rem;
 }
 
-.text-xl {
-  font-size: 1.25rem;
-  line-height: 1.75rem;
-}
-
 .font-bold {
   font-weight: 700;
 }
@@ -1985,11 +1976,6 @@ select {
 
   .sm\:pt-80 {
     padding-top: 20rem;
-  }
-
-  .sm\:text-4xl {
-    font-size: 2.25rem;
-    line-height: 2.5rem;
   }
 
   .sm\:text-6xl {

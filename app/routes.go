@@ -15,7 +15,7 @@ import (
 func (a *App) Routes() (*http.ServeMux, error) {
 	mux := http.NewServeMux() // default mux, no routes
 
-	mux.HandleFunc("GET /", a.getHero("02"))
+	mux.HandleFunc("GET /", handleGetHero02(a.paths.templates, a.policies))
 	mux.HandleFunc("GET /dashboard", handleGetDashboard(a.paths.templates, a.policies, a.stores.reports))
 	mux.HandleFunc("GET /features", a.getFeatures())
 	mux.HandleFunc("GET /login", a.getLogin())
@@ -23,7 +23,7 @@ func (a *App) Routes() (*http.ServeMux, error) {
 	mux.HandleFunc("GET /logout", a.getLogout())
 	mux.HandleFunc("POST /logout", a.postLogout())
 	mux.Handle("GET /reports", handleReportsListing(a.paths.templates, a.policies, a.stores.reports))
-	mux.Handle("GET /reports/0991", handleReportsListing(a.paths.templates, a.policies, a.stores.reports))
+	mux.Handle("GET /reports/900-01.0991", handleReportsListing(a.paths.templates, a.policies, a.stores.reports))
 
 	mux.HandleFunc("GET /api/version", a.handleVersion())
 	mux.HandleFunc("GET /api/login/{name}/{secret}", a.apiGetLogin())
