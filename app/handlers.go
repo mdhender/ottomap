@@ -7,7 +7,6 @@ import (
 	"fmt"
 	reports "github.com/mdhender/ottomap/pkg/reports/domain"
 	"github.com/mdhender/ottomap/pkg/simba"
-	turns "github.com/mdhender/ottomap/pkg/turns/domain"
 	"html/template"
 	"io"
 	"log"
@@ -439,65 +438,4 @@ func handleStaticFiles(prefix, root string, debug bool) http.HandlerFunc {
 		// let Go serve the file. it does magic things like content-type, etc.
 		http.ServeContent(w, r, file, stat.ModTime(), rdr)
 	}
-}
-
-type TurnsListingPage struct {
-	Page struct {
-		Title string
-	}
-	Turns turns.Listing
-}
-
-type TurnsListingRepository interface {
-	AllTurns(authorize func(turn turns.Turn) bool) (turns.Listing, error)
-}
-
-func handleTurnsListing(templatesPath string, a *simba.Agent, tlr TurnsListingRepository) http.Handler {
-	templateFiles := []string{
-		filepath.Join(templatesPath, "turns_listing.gohtml"),
-	}
-
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("%s: %s: entered\n", r.Method, r.URL.Path)
-
-		user, ok := a.CurrentUser(r)
-		if !ok {
-			log.Printf("%s: %s: currentUser: not ok\n", r.Method, r.URL.Path)
-			http.Redirect(w, r, "/", http.StatusFound)
-			return
-		} else if !user.IsAuthenticated {
-			log.Printf("%s: %s: currentUser: not authenticated\n", r.Method, r.URL.Path)
-			http.Redirect(w, r, "/logout", http.StatusFound)
-			return
-		}
-
-		// Parse the template file
-		tmpl, err := template.ParseFiles(templateFiles...)
-		if err != nil {
-			log.Printf("%s: %s: template: %v", r.Method, r.URL.Path, err)
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-			return
-		}
-
-		var result TurnsListingPage
-		result.Turns, err = tlr.AllTurns(a.UserTurnsFilter(user.Id))
-		sort.Slice(result.Turns, func(i, j int) bool {
-			return result.Turns[i].Id > result.Turns[j].Id
-		})
-
-		// create a buffer to write the response to. we need to do this to capture errors in a nice way.
-		buf := &bytes.Buffer{}
-
-		// execute the template with our payload
-		err = tmpl.Execute(buf, result)
-		if err != nil {
-			log.Printf("%s: %s: template: %v", r.Method, r.URL.Path, err)
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-			return
-		}
-
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write(buf.Bytes())
-	})
 }

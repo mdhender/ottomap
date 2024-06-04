@@ -3,6 +3,7 @@
 package app
 
 import (
+	turns "github.com/mdhender/ottomap/pkg/turns/handlers"
 	"log"
 	"net/http"
 	"os"
@@ -24,7 +25,8 @@ func (a *App) Routes() (*http.ServeMux, error) {
 	mux.HandleFunc("POST /logout", a.postLogout())
 	mux.Handle("GET /reports", handleReportsListing(a.paths.templates, a.policies, a.stores.reports))
 	mux.Handle("GET /reports/900-01.0991", handleReportsListing(a.paths.templates, a.policies, a.stores.reports))
-	mux.Handle("GET /turns", handleTurnsListing(a.paths.templates, a.policies, a.stores.turns))
+	mux.Handle("GET /turns", turns.HandleGetListing(a.paths.templates, a.policies, a.stores.turns))
+	mux.Handle("GET /turns/{turnId}", turns.HandleGetDetail(a.paths.templates, a.policies, a.stores.turns))
 
 	mux.HandleFunc("GET /api/version", a.handleVersion())
 	mux.HandleFunc("GET /api/login/{name}/{secret}", a.apiGetLogin())

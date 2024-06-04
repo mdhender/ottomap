@@ -7,7 +7,7 @@ import (
 	"errors"
 	"github.com/mdhender/ottomap/pkg/reports/domain"
 	"github.com/mdhender/ottomap/pkg/simba/sqlc"
-	turns "github.com/mdhender/ottomap/pkg/turns/domain"
+	"github.com/mdhender/ottomap/pkg/turns/domain"
 	"log"
 	"net/http"
 	"strings"

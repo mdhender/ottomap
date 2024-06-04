@@ -1,4 +1,4 @@
-<!DOCTYPE html>{{- /*gotype:github.com/mdhender/ottomap/app.TurnsListingPage*/ -}}
+<!DOCTYPE html>{{- /*gotype:github.com/mdhender/ottomap/pkg/turns/handlers.ListingPage*/ -}}
 <html lang="en" class="h-full bg-white">
 <head>
     <meta charset="utf-8">
@@ -152,7 +152,7 @@
                                     </tr>
                                     </thead>
                                     <tbody class="bg-white">
-                                    {{range .Turns}}{{- /*gotype:github.com/mdhender/ottomap/pkg/turns/domain.Turn*/ -}}
+                                    {{range .Turns}}{{- /*gotype:github.com/mdhender/ottomap/pkg/turns/handlers.Listing*/ -}}
                                     <tr class="even:bg-gray-50">
                                         <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-3">
                                             <a href="{{.URL}}" class="text-indigo-600 hover:text-indigo-900">{{.Turn}}</a>

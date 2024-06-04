@@ -25,8 +25,8 @@ func NewStore() *Store {
 	}
 }
 
-func (s *Store) AllTurns(authorized func(t domain.Turn) bool) (domain.Listing, error) {
-	var list domain.Listing
+func (s *Store) AllTurns(authorized func(t domain.Turn) bool) ([]domain.Turn, error) {
+	var list []domain.Turn
 	for _, turn := range s.turns {
 		if authorized(turn) {
 			list = append(list, turn)
