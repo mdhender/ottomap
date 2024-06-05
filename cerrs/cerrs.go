@@ -10,7 +10,11 @@ type Error string
 func (e Error) Error() string { return string(e) }
 
 const (
+	ErrCreateMeta              = Error("create metadata")
+	ErrCreateSchema            = Error("create schema")
+	ErrDatabaseExists          = Error("database exists")
 	ErrEmptyReport             = Error("empty report")
+	ErrForeignKeysDisabled     = Error("foreign keys disabled")
 	ErrInvalidGridCoordinates  = Error("invalid grid coordinates")
 	ErrInvalidIndexFile        = Error("invalid index file")
 	ErrInvalidInputPath        = Error("invalid input path")
@@ -31,6 +35,7 @@ const (
 	ErrNotImplemented          = Error("not implemented")
 	ErrNotMovementResults      = Error("not movement results")
 	ErrParseFailed             = Error("parse failed")
+	ErrPragmaReturnedNil       = Error("pragma returned nil")
 	ErrSetupExists             = Error("setup.json exists")
 	ErrTooManyScoutLines       = Error("too many scout lines")
 	ErrTrackingGarrison        = Error("tracking garrison")

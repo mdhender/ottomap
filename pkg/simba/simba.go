@@ -7,48 +7,23 @@ package simba
 
 import (
 	"context"
-	"database/sql"
-	"errors"
-	"github.com/google/uuid"
-	"github.com/mdhender/ottomap/pkg/simba/sqlc"
-	"golang.org/x/crypto/bcrypt"
+	"github.com/mdhender/ottomap/pkg/sqlc"
 	"log"
 	_ "modernc.org/sqlite"
 	"net/http"
-	"os"
 	"time"
 )
 
 // Agent is the policy agent.
 type Agent struct {
-	db  *sql.DB
-	q   *sqlc.Queries
-	ctx context.Context
+	db *sqlc.DB
 }
 
 // NewAgent returns a new policy agent that uses the supplied database as input
 // when answering policy questions.
-func NewAgent(path string, ctx context.Context) (*Agent, error) {
-	// verify that the repository exists
-	// todo: provide a way to create the repository!
-	if sb, err := os.Stat(path); err != nil {
-		return nil, err
-	} else if sb.IsDir() {
-		return nil, os.ErrInvalid
-	} else if !sb.Mode().IsRegular() {
-		return nil, os.ErrInvalid
-	}
-
-	// open the path as a sqlite database
-	db, err := sql.Open("sqlite", path)
-	if err != nil {
-		return nil, err
-	}
-
+func NewAgent(db *sqlc.DB, ctx context.Context) (*Agent, error) {
 	a := &Agent{
-		db:  db,
-		ctx: ctx,
-		q:   sqlc.New(db),
+		db: db,
 	}
 
 	return a, nil
@@ -56,27 +31,13 @@ func NewAgent(path string, ctx context.Context) (*Agent, error) {
 
 // Authenticate returns the user ID if the credentials are valid.
 // Returns false if not.
-func (a *Agent) Authenticate(name, secret string) (string, bool) {
-	user, err := a.q.ReadUserAuthenticationData(a.ctx, name)
+func (a *Agent) Authenticate(handle, plaintextSecret string) (uid string, ok bool) {
+	uid, err := a.db.AuthenticateUserHandle(handle, plaintextSecret)
 	if err != nil {
-		if !errors.Is(err, sql.ErrNoRows) {
-			log.Printf("agent: userIsAuthenticated: %v\n", err)
-		}
-		return "", false
-	} else if user.HashedPassword == "$$" {
-		log.Printf("agent: authenticate: $$ bypass!\n")
-		return user.Uid, true
-	}
-
-	// check if two passwords match using bcrypt's CompareHashAndPassword
-	// which return nil on success and an error on failure.
-	// (from gregorygaines.com)
-	hashedSecretBytes, err := bcrypt.GenerateFromPassword([]byte(secret), bcrypt.MinCost)
-	if err = bcrypt.CompareHashAndPassword(hashedSecretBytes, []byte(user.HashedPassword)); err != nil {
+		log.Printf("agent: authenticate: %v\n", err)
 		return "", false
 	}
-
-	return user.Uid, true
+	return uid, true
 }
 
 // CreateCookie is not really policy, either.
@@ -96,17 +57,13 @@ func (a *Agent) CreateCookie(w http.ResponseWriter, sid string) bool {
 // CreateSession is not really policy, either.
 // Side effect of creating a session is setting a cookie.
 func (a *Agent) CreateSession(w http.ResponseWriter, uid string) (string, bool) {
-	sid := uuid.New().String()
-	if err := a.q.CreateSession(a.ctx, sqlc.CreateSessionParams{
-		Sid:       sid,
-		Uid:       uid,
-		ExpiresAt: time.Now().UTC().Add(2 * 7 * 24 * time.Hour),
-	}); err != nil {
+	sid, err := a.db.CreateSession(uid)
+	if err != nil {
 		log.Printf("agent: createSession: uid %q: %v\n", uid, err)
 		return "", false
 	} else if !a.CreateCookie(w, sid) {
 		log.Printf("agent: createSession: uid %q: createCookie failed\n", uid)
-		_ = a.q.DeleteSession(a.ctx, sid)
+		_ = a.db.DeleteSession(sid)
 		return "", false
 	}
 	return sid, true
@@ -121,34 +78,38 @@ func (a *Agent) CurrentUser(r *http.Request) (User, bool) {
 	}
 	sid := cookie.Value
 	log.Printf("agent: currentUser: sid %q\n", sid)
-	row, err := a.q.GetSession(a.ctx, cookie.Value)
+	uid, exp, err := a.db.ReadSession(cookie.Value)
 	if err != nil {
-		if !errors.Is(err, sql.ErrNoRows) {
-			log.Printf("agent: currentUser: sid %q: %v\n", sid, err)
-			return User{}, false
-		}
+		log.Printf("agent: currentUser: sid %q: %v\n", sid, err)
+		return User{}, false
+	} else if uid == "" {
 		log.Printf("agent: currentUser: sid %q: not found\n", sid)
 		return User{}, false
-	}
-	if !time.Now().Before(row.ExpiresAt) {
+	} else if !time.Now().Before(exp) {
 		log.Printf("agent: currentUser: sid %q: expired\n", sid)
 		return User{}, false
 	}
-	uid := row.Uid
-	u, err := a.q.ReadUser(a.ctx, uid)
+	handle, email, err := a.db.ReadUser(uid)
 	if err != nil {
-		if !errors.Is(err, sql.ErrNoRows) {
-			log.Printf("agent: currentUser: sid %q: uid %q: read %v\n", sid, uid, err)
-			return User{}, false
-		}
-		log.Printf("agent: currentUser: sid %q: uid %q: not found\n", sid, uid)
+		log.Printf("agent: currentUser: sid %q: uid %q: user: %v\n", sid, uid, err)
+		return User{}, false
+	} else if handle == "" {
+		log.Printf("agent: currentUser: sid %q: uid %q: user: not found\n", sid, uid)
+		return User{}, false
+	}
+	clan, err := a.db.ReadUserClan(uid)
+	if err != nil {
+		log.Printf("agent: currentUser: sid %q: uid %q: clan: %v\n", sid, uid, err)
+		return User{}, false
+	} else if clan == "" {
+		log.Printf("agent: currentUser: sid %q: uid %q: clan: not found\n", sid, uid)
 		return User{}, false
 	}
 	user := User{
-		Id:              row.Uid,
-		Handle:          u.Username,
-		Email:           u.Email,
-		Clan:            u.Clan,
+		Id:              uid,
+		Handle:          handle,
+		Email:           email,
+		Clan:            clan,
 		IsAuthenticated: true,
 	}
 	log.Printf("agent: currentUser: sid %q: uid %q: found\n", sid, uid)
@@ -172,7 +133,7 @@ func (a *Agent) DeleteSession(r *http.Request) {
 	if err != nil || cookie.Value == "" {
 		return
 	}
-	if err := a.q.DeleteSession(a.ctx, cookie.Value); err != nil {
+	if err := a.db.DeleteSession(cookie.Value); err != nil {
 		log.Printf("agent: deleteSession: %v\n", err)
 	}
 }
@@ -184,28 +145,16 @@ func (a *Agent) SessionUserFromRequest(r *http.Request) (string, bool) {
 		log.Printf("agent: sessionUserFromRequest: no cookie\n")
 		return "", false
 	}
-	row, err := a.q.GetSession(a.ctx, cookie.Value)
+	uid, exp, err := a.db.ReadSession(cookie.Value)
 	if err != nil {
-		if !errors.Is(err, sql.ErrNoRows) {
-			log.Printf("agent: sessionUserFromRequest: %v\n", err)
-		}
+		log.Printf("agent: sessionUserFromRequest: %v\n", err)
+		return "", false
+	} else if uid == "" {
 		log.Printf("agent: sessionUserFromRequest: session: id not found\n")
 		return "", false
-	}
-	if !time.Now().Before(row.ExpiresAt) {
+	} else if !time.Now().Before(exp) {
 		log.Printf("agent: sessionUserFromRequest: session: expired\n")
 		return "", false
 	}
-	return row.Uid, true
-}
-
-// Close closes the physical database connection.
-// Please call it to avoid leaking memory or file handles.
-func (a *Agent) Close() error {
-	if a.db == nil {
-		return nil
-	}
-	err := a.db.Close()
-	a.db = nil
-	return err
+	return uid, true
 }

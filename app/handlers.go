@@ -4,6 +4,8 @@ package app
 
 import (
 	"bytes"
+	"database/sql"
+	"errors"
 	"fmt"
 	reports "github.com/mdhender/ottomap/pkg/reports/domain"
 	"github.com/mdhender/ottomap/pkg/simba"
@@ -102,24 +104,59 @@ func (a *App) postLogin() http.HandlerFunc {
 		a.policies.DeleteSession(r)
 		a.policies.DeleteCookie(w)
 
-		handle := "ottomap"  // todo: post from form
-		secret := "password" // todo: post from form
-
-		// authenticate the user or return an error
-		uid, ok := a.policies.Authenticate(handle, secret)
-		if !ok {
-			log.Printf("%s: %s: handle %q: secret %q: authenticate failed\n", r.Method, r.URL.Path, handle, secret)
-			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		// get the form values
+		handle := strings.ToLower(strings.TrimSpace(r.FormValue("handle")))
+		email := strings.ToLower(strings.TrimSpace(r.FormValue("email")))
+		if handle == "" && email == "" {
+			log.Printf("%s: %s: handle %q: email %q: empty form\n", r.Method, r.URL.Path, handle, email)
+			http.Redirect(w, r, "/login", http.StatusFound)
 			return
+		} else if handle != "" && email != "" {
+			log.Printf("%s: %s: handle %q: email %q: both filled\n", r.Method, r.URL.Path, handle, email)
+			http.Redirect(w, r, "/login", http.StatusFound)
+			return
+		}
+
+		secret := r.FormValue("password")
+		if secret == "" {
+			log.Printf("%s: %s: handle %q: email %q: empty secret\n", r.Method, r.URL.Path, handle, email)
+			http.Redirect(w, r, "/login", http.StatusFound)
+			return
+		}
+
+		var uid string
+		var err error
+		if handle != "" {
+			uid, err = a.db.AuthenticateUserHandle(handle, secret)
+			if err != nil {
+				log.Printf("%s: %s: handle %q: secret %q: %v\n", r.Method, r.URL.Path, handle, secret, err)
+				http.Redirect(w, r, "/login", http.StatusFound)
+				return
+			} else if uid == "" {
+				log.Printf("%s: %s: handle %q: secret %q: not found\n", r.Method, r.URL.Path, handle, secret)
+				http.Redirect(w, r, "/login", http.StatusFound)
+				return
+			}
+		} else {
+			uid, err = a.db.AuthenticateUserEmail(email, secret)
+			if err != nil {
+				log.Printf("%s: %s: email %q: secret %q: %v\n", r.Method, r.URL.Path, email, secret, err)
+				http.Redirect(w, r, "/login", http.StatusFound)
+				return
+			} else if uid == "" {
+				log.Printf("%s: %s: email %q: secret %q: not found\n", r.Method, r.URL.Path, email, secret)
+				http.Redirect(w, r, "/login", http.StatusFound)
+				return
+			}
 		}
 
 		// create a new session or return an error
 		if _, ok := a.policies.CreateSession(w, uid); !ok {
-			log.Printf("%s: %s: handle %q: secret %q: create session failed\n", r.Method, r.URL.Path, handle, secret)
+			log.Printf("%s: %s: uid %q: create session failed\n", r.Method, r.URL.Path, uid)
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
 		}
-		log.Printf("%s: %s: handle %q: secret %q: create session worked\n", r.Method, r.URL.Path, handle, secret)
+		log.Printf("%s: %s: uid %q: create session worked\n", r.Method, r.URL.Path, uid)
 
 		http.Redirect(w, r, "/dashboard", http.StatusFound)
 	}
@@ -220,7 +257,9 @@ type DashboardReportLine struct {
 	URL string // link to report details
 }
 
-func handleGetDashboard(templatesPath string, a *simba.Agent, rlr ReportListingRepository) http.HandlerFunc {
+func handleGetDashboard(templatesPath string, a *simba.Agent, repo interface {
+	AllClanReports(cid string) ([]reports.Report, error)
+}) http.HandlerFunc {
 	templateFiles := []string{
 		filepath.Join(templatesPath, "dashboard.gohtml"),
 	}
@@ -249,13 +288,20 @@ func handleGetDashboard(templatesPath string, a *simba.Agent, rlr ReportListingR
 
 		// the logic for the "service" should be a bunch of simple calls to the repository.
 		var result DashboardPage
-		rpts, err := rlr.AllReports(a.UserReportsFilter(user.Id))
+		allClanReports, err := repo.AllClanReports(user.Clan)
 		if err != nil {
-			log.Printf("%s: %s: allReports: %v", r.Method, r.URL.Path, err)
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-			return
+			if !errors.Is(err, sql.ErrNoRows) {
+				log.Printf("%s: %s: clan %q: allClanReports: %v", r.Method, r.URL.Path, user.Clan, err)
+				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+				return
+			}
+			log.Printf("%s: %s: clan %q: allReports: no rows", r.Method, r.URL.Path, user.Clan)
 		}
-		for _, rpt := range rpts {
+		sort.Slice(allClanReports, func(i, j int) bool {
+			return allClanReports[i].Id > allClanReports[j].Id
+		})
+
+		for _, rpt := range allClanReports {
 			tl := DashboardTurnLine{
 				Turn: rpt.Turn,
 				Reports: []DashboardReportLine{
@@ -267,9 +313,6 @@ func handleGetDashboard(templatesPath string, a *simba.Agent, rlr ReportListingR
 			}
 			result.Reports = append(result.Reports, tl)
 		}
-		sort.Slice(result.Reports, func(i, j int) bool {
-			return result.Reports[i].Turn > result.Reports[j].Turn
-		})
 
 		// create a buffer to write the response to. we need to do this to capture errors in a nice way.
 		buf := &bytes.Buffer{}
@@ -337,64 +380,6 @@ func handleGetHero02(templatesPath string, a *simba.Agent) http.HandlerFunc {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write(buf.Bytes())
 	}
-}
-
-type ReportListingPage struct {
-	Page struct {
-		Title string
-	}
-	ReportList reports.Listing
-}
-
-type ReportListingRepository interface {
-	AllReports(authorize func(reports.Report) bool) (reports.Listing, error)
-}
-
-func handleReportsListing(templatesPath string, a *simba.Agent, rlr ReportListingRepository) http.Handler {
-	templateFiles := []string{
-		filepath.Join(templatesPath, "reports.gohtml"),
-	}
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("%s: %s: entered\n", r.Method, r.URL.Path)
-
-		user, ok := a.CurrentUser(r)
-		if !ok {
-			log.Printf("%s: %s: currentUser: not ok\n", r.Method, r.URL.Path)
-			http.Redirect(w, r, "/logout", http.StatusFound)
-			return
-		} else if !user.IsAuthenticated {
-			log.Printf("%s: %s: currentUser: not authenticated\n", r.Method, r.URL.Path)
-			http.Redirect(w, r, "/logout", http.StatusFound)
-			return
-		}
-
-		// Parse the template file
-		tmpl, err := template.ParseFiles(templateFiles...)
-		if err != nil {
-			log.Printf("%s: %s: template: %v", r.Method, r.URL.Path, err)
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-			return
-		}
-
-		// the logic for the "service" should be a bunch of simple calls to the repository.
-		var result ReportListingPage
-		result.ReportList, err = rlr.AllReports(a.UserReportsFilter(user.Id))
-
-		// create a buffer to write the response to. we need to do this to capture errors in a nice way.
-		buf := &bytes.Buffer{}
-
-		// execute the template with our payload
-		err = tmpl.Execute(buf, result)
-		if err != nil {
-			log.Printf("%s: %s: template: %v", r.Method, r.URL.Path, err)
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-			return
-		}
-
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write(buf.Bytes())
-	})
 }
 
 // returns a handler that will serve a static file if one exists, otherwise return not found.

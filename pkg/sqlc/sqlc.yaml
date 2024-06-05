@@ -1,0 +1,15 @@
+version: "2"
+sql:
+  - engine: "sqlite"
+    queries:
+      - "clans.sql"
+      - "metadata.sql"
+      - "roles.sql"
+      - "sessions.sql"
+      - "users.sql"
+      - "users_roles.sql"
+    schema: "schema.sql"
+    gen:
+      go:
+        package: "sqlc"
+        out: "."
