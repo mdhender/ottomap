@@ -1,24 +1,16 @@
-<!DOCTYPE html>{{- /*gotype:github.com/mdhender/ottomap/app.DashboardPage*/ -}}
+<!DOCTYPE html>{{- /*gotype:github.com/mdhender/ottomap/pkg/clans/handlers.DetailPage*/ -}}
 <html lang="en" class="h-full bg-white">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width">
 
-    <title>ottomap</title>
+    <title>{{.Page.Title}}</title>
 
     <link rel="stylesheet" href="/css/tailwind.css">
     <script src="/js/htmx-1.9.12.min.js"></script>
     <script src="/js/alpinejs-3.14.0.min.js" defer></script>
 </head>
 <body class="h-full">
-<!--
-  This example requires updating your template:
-
-  ```
-  <html class="h-full">
-  <body class="h-full">
-  ```
--->
 <div class="min-h-full">
     <nav class="border-b border-gray-200 bg-white">
         <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -30,7 +22,7 @@
                     </div>
                     <div class="hidden sm:-my-px sm:ml-6 sm:flex sm:space-x-8">
                         <!-- Current: "border-indigo-500 text-gray-900", Default: "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700" -->
-                        <a href="/dashboard" class="border-indigo-500 text-gray-900 inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium" aria-current="page">Dashboard</a>
+                        <a href="/clan" class="border-indigo-500 text-gray-900 inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium" aria-current="page">Clan</a>
                         <a href="/turns" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium">Turns</a>
                         <a href="/reports" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium">Reports</a>
                     </div>
@@ -95,7 +87,7 @@
         <div class="sm:hidden" id="mobile-menu">
             <div class="space-y-1 pb-3 pt-2">
                 <!-- Current: "border-indigo-500 bg-indigo-50 text-indigo-700", Default: "border-transparent text-gray-600 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-800" -->
-                <a href="/dashboard" class="border-indigo-500 bg-indigo-50 text-indigo-700 block border-l-4 py-2 pl-3 pr-4 text-base font-medium" aria-current="page">Dashboard</a>
+                <a href="/clan" class="border-indigo-500 bg-indigo-50 text-indigo-700 block border-l-4 py-2 pl-3 pr-4 text-base font-medium" aria-current="page">Clan</a>
                 <a href="/turns" class="border-transparent text-gray-600 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-800 block border-l-4 py-2 pl-3 pr-4 text-base font-medium">Turns</a>
                 <a href="/reports" class="border-transparent text-gray-600 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-800 block border-l-4 py-2 pl-3 pr-4 text-base font-medium">Reports</a>
             </div>
@@ -133,55 +125,77 @@
         </header>
         <main>
             <div class="mx-auto max-w-7xl sm:px-6 lg:px-8">
-                <div class="border-b border-gray-200 pb-5 sm:flex sm:items-center sm:justify-between">
-                    <h3 class="text-base font-semibold leading-6 text-gray-900">Your Turn Reports</h3>
-                    <div class="mt-3 sm:ml-4 sm:mt-0">
-                        <button type="button" class="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">Upload Turn Report</button>
+                {{if .NoReports}}
+                    <div class="text-center">
+                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                            <path vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+                        </svg>
+                        <h3 class="mt-2 text-sm font-semibold text-gray-900">No reports</h3>
+                        <p class="mt-1 text-sm text-gray-500">Upload your first turn report to get started!</p>
+
+                        <form method="post" action="/turns/upload" enctype="multipart/form-data" u>
+                            <div class="space-y-12">
+                                <div class="border-b border-gray-900/10 pb-12">
+                                    <div class="mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
+                                        <div class="col-span-full">
+                                            <label for="turn-report" class="block text-sm font-medium leading-6 text-gray-900">Turn Report</label>
+                                            <div class="mt-2 flex justify-center rounded-lg border border-dashed border-gray-900/25 px-6 py-10">
+                                                <div class="text-center">
+                                                    <svg class="mx-auto h-12 w-12 text-gray-300" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                                        <path fill-rule="evenodd" d="M1.5 6a2.25 2.25 0 012.25-2.25h16.5A2.25 2.25 0 0122.5 6v12a2.25 2.25 0 01-2.25 2.25H3.75A2.25 2.25 0 011.5 18V6zM3 16.06V18c0 .414.336.75.75.75h16.5A.75.75 0 0021 18v-1.94l-2.69-2.689a1.5 1.5 0 00-2.12 0l-.88.879.97.97a.75.75 0 11-1.06 1.06l-5.16-5.159a1.5 1.5 0 00-2.12 0L3 16.061zm10.125-7.81a1.125 1.125 0 112.25 0 1.125 1.125 0 01-2.25 0z" clip-rule="evenodd" />
+                                                    </svg>
+                                                    <div class="mt-4 flex text-sm leading-6 text-gray-600">
+                                                        <label for="file-upload" class="relative cursor-pointer rounded-md bg-white font-semibold text-indigo-600 focus-within:outline-none focus-within:ring-2 focus-within:ring-indigo-600 focus-within:ring-offset-2 hover:text-indigo-500">
+                                                            <span>Upload a turn report</span>
+                                                            <input id="file-upload" name="file-upload" type="file" class="sr-only">
+                                                        </label>
+                                                        <p class="pl-1">or drag and drop</p>
+                                                    </div>
+                                                    <p class="text-xs leading-5 text-gray-600">TXT, up to 10MB</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-6 flex items-center justify-end gap-x-6">
+                                <button type="button" class="text-sm font-semibold leading-6 text-gray-900">Cancel</button>
+                                <button type="submit" class="rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">Save</button>
+                            </div>
+                        </form>
                     </div>
-                </div>
-{{if .Reports}}
-                <div class="px-4 sm:px-6 lg:px-8">
-                    <div class="mt-8 flow-root">
-                        <div class="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
-                            <div class="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
-                                <table class="min-w-full divide-y divide-gray-300">
-                                    <thead>
-                                    <tr>
-                                        <th scope="col" class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-3">Turn</th>
-                                        <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Reports</th>
-                                    </tr>
-                                    </thead>
-                                    <tbody class="bg-white">
-                                    {{range .Reports}}{{- /*gotype:github.com/mdhender/ottomap/app.DashboardTurnLine*/ -}}
-                                    <tr class="even:bg-gray-50">
-                                        <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-3">
-                                            <a href="/turns/{{.Turn}}" class="text-indigo-600 hover:text-indigo-900">{{.Turn}}</a>
-                                        </td>
-                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                                            {{range .Reports}}{{- /*gotype:github.com/mdhender/ottomap/app.DashboardReportLine*/ -}}
-                                            <a href="{{.URL}}" class="text-indigo-600 hover:text-indigo-900">{{.Id}}</a>
-                                            {{end}}
-                                        </td>
-                                    </tr>
-                                    {{end}}
-                                    </tbody>
-                                </table>
+                {{else}}
+                    <div class="px-4 sm:px-6 lg:px-8">
+                        <div class="mt-8 flow-root">
+                            <div class="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
+                                <div class="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
+                                    <table class="min-w-full divide-y divide-gray-300">
+                                        <thead>
+                                        <tr>
+                                            <th scope="col" class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-3">Turn</th>
+                                            <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Reports</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody class="bg-white">
+                                        {{range .Turns}}{{- /*gotype:github.com/mdhender/ottomap/pkg/clans/handlers.ClanTurnDetail*/ -}}
+                                        <tr class="even:bg-gray-50">
+                                            <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-3">
+                                                <a href="{{.URL}}" class="text-indigo-600 hover:text-indigo-900">{{.Turn}}</a>
+                                            </td>
+                                            <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                                                {{range .Reports}}{{- /*gotype:github.com/mdhender/ottomap/pkg/clans/handlers.ClanReportDetail*/ -}}
+                                                {{.Separator}}<a href="{{.URL}}" class="text-indigo-600 hover:text-indigo-900">{{.Id}}</a>
+                                                {{end}}
+                                            </td>
+                                        </tr>
+                                        {{end}}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-{{else}}
-                <div class="text-center">
-                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                        <path vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
-                    </svg>
-                    <h3 class="mt-2 text-sm font-semibold text-gray-900">No reports</h3>
-                    <p class="mt-1 text-sm text-gray-500">Upload your first turn report to get started!</p>
-                    <div class="mt-6">
-                        <button type="button" class="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">Upload Turn Report</button>
-                    </div>
-                </div>
-{{end}}
+                {{end}}
             </div>
         </main>
     </div>

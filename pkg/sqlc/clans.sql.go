@@ -66,6 +66,40 @@ func (q *Queries) ReadAllClanReports(ctx context.Context, cid string) ([]ReadAll
 	return items, nil
 }
 
+const readAllTurns = `-- name: ReadAllTurns :many
+SELECT tid, turn, year, month, crdttm
+FROM turns
+`
+
+func (q *Queries) ReadAllTurns(ctx context.Context) ([]Turn, error) {
+	rows, err := q.db.QueryContext(ctx, readAllTurns)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Turn
+	for rows.Next() {
+		var i Turn
+		if err := rows.Scan(
+			&i.Tid,
+			&i.Turn,
+			&i.Year,
+			&i.Month,
+			&i.Crdttm,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const readUserClan = `-- name: ReadUserClan :one
 SELECT cid
 FROM clans

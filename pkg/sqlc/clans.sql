@@ -7,6 +7,10 @@ SELECT rid, tid, cid, crdttm
 FROM reports
 WHERE cid = ?1;
 
+-- name: ReadAllTurns :many
+SELECT tid, turn, year, month, crdttm
+FROM turns;
+
 -- name: ReadUserClan :one
 SELECT cid
 FROM clans

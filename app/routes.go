@@ -3,6 +3,7 @@
 package app
 
 import (
+	clans "github.com/mdhender/ottomap/pkg/clans/handlers"
 	reports "github.com/mdhender/ottomap/pkg/reports/handlers"
 	turns "github.com/mdhender/ottomap/pkg/turns/handlers"
 	"log"
@@ -18,6 +19,7 @@ func (a *App) Routes() (*http.ServeMux, error) {
 	mux := http.NewServeMux() // default mux, no routes
 
 	mux.HandleFunc("GET /", handleGetHero02(a.paths.templates, a.policies))
+	mux.HandleFunc("GET /clan", clans.HandleGetClanDetail(a.paths.templates, a.policies, a.db))
 	mux.HandleFunc("GET /dashboard", handleGetDashboard(a.paths.templates, a.policies, a.db))
 	mux.HandleFunc("GET /features", a.getFeatures())
 	mux.HandleFunc("GET /login", a.getLogin())

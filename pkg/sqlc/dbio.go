@@ -165,8 +165,24 @@ func (db *DB) AllClanReports(cid string) ([]reports.Report, error) {
 
 func (db *DB) AllTurns() ([]turns.Turn, error) {
 	log.Printf("sqlc: AllTurns()\n")
-	//TODO implement me
-	panic("implement me")
+	rows, err := db.q.ReadAllTurns(db.ctx)
+	if err != nil {
+		if !errors.Is(err, sql.ErrNoRows) {
+			return nil, errors.Join(fmt.Errorf("read all turns"), err)
+		}
+		return nil, sql.ErrNoRows
+	}
+	var list []turns.Turn
+	for _, row := range rows {
+		list = append(list, turns.Turn{
+			Id:      row.Tid,
+			Turn:    row.Turn,
+			Year:    int(row.Year),
+			Month:   int(row.Month),
+			Created: row.Crdttm,
+		})
+	}
+	return list, nil
 }
 
 func (db *DB) CreateClan(uid, cid string) error {
