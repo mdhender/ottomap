@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	version = semver.Version{Major: 0, Minor: 6, Patch: 6}
+	version = semver.Version{Major: 0, Minor: 7, Patch: 0}
 )
 
 func main() {
@@ -27,12 +27,37 @@ func main() {
 }
 
 func Execute() error {
-	cmdRoot.AddCommand(cmdIndex, cmdMap, cmdParse, cmdServe, cmdSetup, cmdVersion)
+	cmdRoot.AddCommand(cmdIndex, cmdInitialize, cmdMap, cmdParse, cmdServe, cmdSetup, cmdVersion)
 
 	cmdIndex.AddCommand(cmdIndexReports)
 	cmdIndexReports.Flags().StringVarP(&argsIndexReports.config, "config", "c", "data", "path to create configuration file in")
 	cmdIndexReports.Flags().StringVarP(&argsIndexReports.input, "input", "i", "data/input", "path to read input from")
 	cmdIndexReports.Flags().StringVarP(&argsIndexReports.output, "output", "o", "data/output", "path to write output to")
+
+	cmdInitialize.Flags().StringVar(&argsInitialize.admin.email, "email", "", "email for administrator")
+	if err := cmdInitialize.MarkFlagRequired("email"); err != nil {
+		log.Fatalf("initialize: email: mark required: %v\n", err)
+	}
+	cmdInitialize.Flags().StringVar(&argsInitialize.admin.secret, "secret", "", "secret (passphrase) for administrator")
+	if err := cmdInitialize.MarkFlagRequired("secret"); err != nil {
+		log.Fatalf("initialize: secret: mark required: %v\n", err)
+	}
+	cmdInitialize.Flags().StringVar(&argsInitialize.admin.username, "handle", "", "handle (user name) for administrator")
+	if err := cmdInitialize.MarkFlagRequired("secret"); err != nil {
+		log.Fatalf("initialize: handle: mark handle: %v\n", err)
+	}
+	cmdInitialize.Flags().StringVar(&argsInitialize.paths.db, "db", "", "path to create server database in")
+	if err := cmdInitialize.MarkFlagRequired("db"); err != nil {
+		log.Fatalf("initialize: db: mark required: %v\n", err)
+	}
+	cmdInitialize.Flags().StringVar(&argsInitialize.paths.public, "public", "", "path to public files")
+	if err := cmdInitialize.MarkFlagRequired("public"); err != nil {
+		log.Fatalf("initialize: public: mark required: %v\n", err)
+	}
+	cmdInitialize.Flags().StringVar(&argsInitialize.paths.templates, "templates", "", "path to template files")
+	if err := cmdInitialize.MarkFlagRequired("templates"); err != nil {
+		log.Fatalf("initialize: templates: mark required: %v\n", err)
+	}
 
 	cmdMap.Flags().BoolVar(&argsMap.debug.sectionMaps, "debug-section-maps", false, "save section maps for debugging")
 	cmdMap.Flags().BoolVar(&argsMap.debug.units, "debug-units", false, "enable unit debugging")
@@ -53,9 +78,9 @@ func Execute() error {
 	cmdParseReports.Flags().StringVarP(&argsParseReports.gridOrigin, "grid-origin", "g", "OO", "initial grid value for '##'")
 	cmdParse.AddCommand(cmdParseReports, cmdParseUnits)
 
-	cmdServe.Flags().StringVar(&argsServe.signingKey, "signing-key", "", "jot signing key")
-	if err := cmdServe.MarkFlagRequired("signing-key"); err != nil {
-		log.Fatalf("serve: signing-key: mark required: %v\n", err)
+	cmdServe.Flags().StringVar(&argsServe.paths.db, "db", "", "path to server database")
+	if err := cmdServe.MarkFlagRequired("db"); err != nil {
+		log.Fatalf("serve: db: mark required: %v\n", err)
 	}
 
 	cmdSetup.Flags().StringVar(&argsSetup.originTerrain, "origin-terrain", "PR", "origin terrain")
