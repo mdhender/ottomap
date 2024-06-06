@@ -8,7 +8,8 @@
 <body>
 <h1>Reports Queued for {{.Clan}}</h1>
 
-<h2>Report {{.QueuedReport.Id}}</h2>
+{{with .QueuedReport}}
+    <h2>Report {{.Name}}</h2>
     <table border="2">
         <thead>
         <tr>
@@ -17,20 +18,27 @@
             <th>Status</th>
             <th>Uploaded</th>
             <th>Updated</th>
-            <th>Checksum</th>
+            <th>Checksum ①</th>
         </tr>
         </thead>
         <tbody>
-            <tr>
-                <td>{{.QueuedReport.Clan}}</td>
-                <td>{{.QueuedReport.Name}}</td>
-                <td>{{.QueuedReport.Status}}</td>
-                <td>{{.QueuedReport.Created}}</td>
-                <td>{{.QueuedReport.Updated}}</td>
-                <td>{{.QueuedReport.Checksum}}</td>
-            </tr>
+        <tr>
+            <td>{{.Clan}}</td>
+            <td>{{.Name}}</td>
+            <td>{{.Status}}</td>
+            <td>{{.Created}}</td>
+            <td>{{.Updated}}</td>
+            <td>{{.Checksum}}</td>
+        </tr>
         </tbody>
     </table>
 
+    <button hx-delete="{{.URL}}"
+            hx-push-url="true"
+            hx-confirm="Are you sure you want to delete this report?"
+            hx-target="body">
+        Delete Queued Report
+    </button>
+{{end}}
 </body>
 </html>

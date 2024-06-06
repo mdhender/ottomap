@@ -31,6 +31,7 @@ func (h *HTMX) Routes() (*http.ServeMux, error) {
 	mux.HandleFunc("POST /clans/{clanId}/reports/upload", postClanReportsUpload(h.paths.templates, h.db))
 	mux.HandleFunc("GET /reports/queued", getReportsQueued(h.paths.templates, h.stores.auth, h.db))
 	mux.HandleFunc("GET /reports/queued/{queueId}", getReportsQueuedDetail(h.paths.templates, h.stores.auth, h.db))
+	mux.HandleFunc("DELETE /reports/queued/{queueId}", deleteReportQueuedDetail(h.stores.auth, nil))
 	mux.HandleFunc("GET /reports/upload/{queueId}", getReportsUpload(h.paths.templates, h.db))
 
 	// walk the public directory and add routes to serve static files
@@ -209,6 +210,34 @@ func getReportsQueued(templatesPath string, auth AuthRepo, db interface {
 		payload.NoQueuedReports = len(payload.Queue) == 0
 
 		render(w, r, payload, templateFiles...)
+	}
+}
+
+func deleteReportQueuedDetail(auth AuthRepo, db interface {
+	DeleteQueuedReport(cid, qid string) error
+}) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("%s: %s: entered\n", r.Method, r.URL.Path)
+
+		if !auth.CurrentUser(r).IsAuthenticated() {
+			log.Printf("%s: %s: user: not authenticated\n", r.Method, r.URL.Path)
+			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+			return
+		}
+		clanId := auth.CurrentUser(r).ClanId()
+		if clanId == "" {
+			log.Printf("%s: %s: clanId %q", r.Method, r.URL.Path, clanId)
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		queueId := r.PathValue("queueId")
+		if queueId == "" {
+			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+			return
+		}
+
+		http.Error(w, http.StatusText(http.StatusNotImplemented), http.StatusNotImplemented)
 	}
 }
 
