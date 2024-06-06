@@ -4,6 +4,7 @@ package server
 
 import (
 	"github.com/mdhender/ottomap/app"
+	"github.com/mdhender/ottomap/htmx"
 	"net"
 )
 
@@ -22,6 +23,13 @@ func WithHost(host string) Option {
 		s.host = host
 		s.Addr = net.JoinHostPort(s.host, s.port)
 		return nil
+	}
+}
+
+func WithHTMX(app *htmx.HTMX) Option {
+	return func(s *Server) (err error) {
+		s.mux, err = app.Routes()
+		return err
 	}
 }
 

@@ -32,3 +32,12 @@ type Turn struct {
 func (t Turn) Less(other Turn) bool {
 	return t.Id < other.Id
 }
+
+// Metadata is the metadata for a turn.
+type Metadata struct {
+	Id      string // turn id (e.g. 0991-02)
+	Name    string // display value for turn id formatted as YYY-MM (e.g. 901-02)
+	Year    int    // year of turn (e.g. 901)
+	Month   int    // month of turn (e.g. 02)
+	Created time.Time
+}

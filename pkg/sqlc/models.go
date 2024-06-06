@@ -46,6 +46,22 @@ type Report struct {
 	Crdttm time.Time
 }
 
+type ReportQueue struct {
+	Qid    string
+	Cid    string
+	Status string
+	Crdttm time.Time
+	Updttm time.Time
+}
+
+type ReportQueueDatum struct {
+	Qid    string
+	Name   string
+	Cksum  string
+	Lines  string
+	Crdttm time.Time
+}
+
 type ReportSection struct {
 	Rid    string
 	Eid    string

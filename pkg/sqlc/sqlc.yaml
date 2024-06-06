@@ -4,6 +4,7 @@ sql:
     queries:
       - "clans.sql"
       - "metadata.sql"
+      - "queues.sql"
       - "roles.sql"
       - "sessions.sql"
       - "users.sql"
