@@ -140,6 +140,29 @@ func (db *DB) AuthenticateUserHandle(handle, plaintextSecret string) (uid string
 	return user.Uid, nil
 }
 
+func (db *DB) AllClanReportMetadata(cid string) ([]reports.Metadata, error) {
+	log.Printf("sqlc: AllClanReportMetadata(%s)\n", cid)
+	rpts, err := db.q.ReadAllClanReports(db.ctx, cid)
+	if err != nil {
+		if !errors.Is(err, sql.ErrNoRows) {
+			return nil, errors.Join(fmt.Errorf("read all clan reports"), err)
+		}
+	}
+
+	var list []reports.Metadata
+	for _, rpt := range rpts {
+		list = append(list, reports.Metadata{
+			Id:      rpt.Rid,
+			TurnId:  rpt.Tid,
+			Clan:    rpt.Cid,
+			Status:  "N/A",
+			Created: rpt.Crdttm,
+		})
+	}
+
+	return list, nil
+}
+
 func (db *DB) AllClanReports(cid string) ([]reports.Report, error) {
 	log.Printf("sqlc: AllClanReports(%s)\n", cid)
 	rpts, err := db.q.ReadAllClanReports(db.ctx, cid)
@@ -157,6 +180,29 @@ func (db *DB) AllClanReports(cid string) ([]reports.Report, error) {
 			Clan:    rpt.Cid,
 			Status:  "N/A",
 			Created: rpt.Crdttm,
+		})
+	}
+
+	return list, nil
+}
+
+func (db *DB) AllTurnMetadata() ([]turns.Metadata, error) {
+	log.Printf("sqlc: AllTurnMetadata()\n")
+	rows, err := db.q.ReadAllTurns(db.ctx)
+	if err != nil {
+		if !errors.Is(err, sql.ErrNoRows) {
+			return nil, errors.Join(fmt.Errorf("read all turns"), err)
+		}
+	}
+
+	var list []turns.Metadata
+	for _, row := range rows {
+		list = append(list, turns.Metadata{
+			Id:      row.Tid,
+			Name:    row.Turn,
+			Year:    int(row.Year),
+			Month:   int(row.Month),
+			Created: row.Crdttm,
 		})
 	}
 
@@ -183,6 +229,30 @@ func (db *DB) AllTurns() ([]turns.Turn, error) {
 		})
 	}
 	return list, nil
+}
+
+func (db *DB) CountQueuedByChecksum(cksum string) int {
+	n, err := db.q.CountQueuedByChecksum(db.ctx, cksum)
+	if err != nil {
+		if !errors.Is(err, sql.ErrNoRows) {
+			log.Printf("sqlc: countQueuedByChecksum: error: %v\n", err)
+			return 999_999_999
+		}
+		n = 0
+	}
+	return int(n)
+}
+
+func (db *DB) CountQueuedInProgressReports(cid string) int {
+	n, err := db.q.CountQueuedInProgressReports(db.ctx)
+	if err != nil {
+		if !errors.Is(err, sql.ErrNoRows) {
+			log.Printf("sqlc: countQueuedInProgressReports: error: %v\n", err)
+			return 999_999_999
+		}
+		n = 0
+	}
+	return int(n)
 }
 
 func (db *DB) CreateClan(uid, cid string) error {
@@ -284,6 +354,44 @@ func (db *DB) DeleteSession(sid string) error {
 	return db.q.DeleteSession(db.ctx, sid)
 }
 
+func (db *DB) QueueReport(qid, cid, name, cksum, data string) error {
+	tx, err := db.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		_ = tx.Rollback()
+	}()
+
+	qtx := db.q.WithTx(tx)
+	cqrp := CreateQueuedReportParams{
+		Qid:    qid,
+		Cid:    cid,
+		Status: "uploading",
+	}
+	if err := qtx.CreateQueuedReport(db.ctx, cqrp); err != nil {
+		log.Printf("sqlc: queueReport: report: %v\n", err)
+		return err
+	}
+	cqrdp := CreateQueuedReportDataParams{
+		Qid:   qid,
+		Name:  name,
+		Cksum: cksum,
+		Lines: data,
+	}
+	if err := qtx.CreateQueuedReportData(db.ctx, cqrdp); err != nil {
+		log.Printf("sqlc: queueReport: data: %v\n", err)
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
+		log.Printf("sqlc: queueReport: commit: %v\n", err)
+		return err
+	}
+
+	return nil
+}
+
 func (db *DB) ReadMetadataPublic() (path string, err error) {
 	path, err = db.q.ReadMetadataPublic(db.ctx)
 	if err != nil {
@@ -304,6 +412,76 @@ func (db *DB) ReadMetadataTemplates() (path string, err error) {
 		return "", sql.ErrNoRows
 	}
 	return path, nil
+}
+
+type DBQueuedReportDetail struct {
+	Id       string
+	Clan     string
+	Name     string
+	Status   string
+	Checksum string
+	Created  time.Time
+	Updated  time.Time
+}
+
+func (db *DB) ReadQueuedReport(cid, qid string) (DBQueuedReportDetail, error) {
+	rqrp := ReadQueuedReportParams{
+		Cid: cid,
+		Qid: qid,
+	}
+	row, err := db.q.ReadQueuedReport(db.ctx, rqrp)
+	if err != nil {
+		if !errors.Is(err, sql.ErrNoRows) {
+			return DBQueuedReportDetail{}, errors.Join(fmt.Errorf("read queued report"), err)
+		}
+		return DBQueuedReportDetail{}, sql.ErrNoRows
+	}
+
+	rpt := DBQueuedReportDetail{
+		Id:      qid,
+		Clan:    row.Cid,
+		Status:  row.Status,
+		Created: row.Crdttm,
+		Updated: row.Updttm,
+	}
+	if row.Cksum.Valid {
+		rpt.Checksum = row.Cksum.String
+	}
+	if row.Name.Valid {
+		rpt.Name = row.Name.String
+	}
+
+	return rpt, nil
+}
+
+type DBQueuedReport struct {
+	Id      string
+	Clan    string
+	Status  string
+	Created time.Time
+	Updated time.Time
+}
+
+func (db *DB) ReadQueuedReports(cid string) ([]DBQueuedReport, error) {
+	rows, err := db.q.ReadQueuedReports(db.ctx, cid)
+	if err != nil {
+		if !errors.Is(err, sql.ErrNoRows) {
+			return nil, errors.Join(fmt.Errorf("read queued reports"), err)
+		}
+	}
+
+	var list []DBQueuedReport
+	for _, row := range rows {
+		list = append(list, DBQueuedReport{
+			Id:      row.Qid,
+			Clan:    row.Cid,
+			Status:  row.Status,
+			Created: row.Crdttm,
+			Updated: row.Updttm,
+		})
+	}
+
+	return list, nil
 }
 
 func (db *DB) ReadSession(sid string) (uid string, exp time.Time, err error) {

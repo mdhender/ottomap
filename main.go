@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	version = semver.Version{Major: 0, Minor: 7, Patch: 0}
+	version = semver.Version{Major: 0, Minor: 8, Patch: 0}
 )
 
 func main() {
@@ -81,6 +81,12 @@ func Execute() error {
 	cmdServe.Flags().StringVar(&argsServe.paths.db, "db", "", "path to server database")
 	if err := cmdServe.MarkFlagRequired("db"); err != nil {
 		log.Fatalf("serve: db: mark required: %v\n", err)
+	}
+
+	cmdServe.AddCommand(cmdServeHTMX)
+	cmdServeHTMX.Flags().StringVar(&argsServeHTMX.paths.db, "db", "", "path to server database")
+	if err := cmdServe.MarkFlagRequired("db"); err != nil {
+		log.Fatalf("serve: htmx: db: mark required: %v\n", err)
 	}
 
 	cmdSetup.Flags().StringVar(&argsSetup.originTerrain, "origin-terrain", "PR", "origin terrain")
