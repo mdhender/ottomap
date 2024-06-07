@@ -28,19 +28,19 @@ See the `OTTOMAP.md` file for an overview of running from command line and `BUIL
 ## Input Data
 OttoMap expects all turn reports to be in text files in a single directory.
 
-OttoMap loads all files that match the pattern "YEAR-MONTH.CLAN_ID.input.txt."
+OttoMap loads all files that match the pattern "YEAR-MONTH.CLAN_ID.report.txt."
 YEAR and MONTH are the three-digit year and two-digit month from the "Current Turn" line of the report.
 CLAN_ID is the four-digit identifier for the clan (it must include the leading zero).
 
 ```bash
 $ ls -1 input/*.txt
 
-input/899-12.0138.input.txt
-input/900-01.0138.input.txt
-input/900-02.0138.input.txt
-input/900-03.0138.input.txt
-input/900-04.0138.input.txt
-input/900-05.0138.input.txt
+input/899-12.0138.report.txt
+input/900-01.0138.report.txt
+input/900-02.0138.report.txt
+input/900-03.0138.report.txt
+input/900-04.0138.report.txt
+input/900-05.0138.report.txt
 ```
 
 The files are created by opening the turn report (the `.DOCX` file),
@@ -58,17 +58,17 @@ input/900-05.0138.Turn-Report.docx
 $ file input/*
 
 input/899-12.0138.Turn-Report.docx: Microsoft Word 2007+
-input/899-12.0138.input.txt:        Unicode text, UTF-8 text
+input/899-12.0138.report.txt:        Unicode text, UTF-8 text
 input/900-01.0138.Turn-Report.docx: Microsoft Word 2007+
-input/900-01.0138.input.txt:        Unicode text, UTF-8 text
+input/900-01.0138.report.txt:        Unicode text, UTF-8 text
 input/900-02.0138.Turn-Report.docx: Microsoft Word 2007+
-input/900-02.0138.input.txt:        Unicode text, UTF-8 text
+input/900-02.0138.report.txt:        Unicode text, UTF-8 text
 input/900-03.0138.Turn-Report.docx: Microsoft Word 2007+
-input/900-03.0138.input.txt:        Unicode text, UTF-8 text
+input/900-03.0138.report.txt:        Unicode text, UTF-8 text
 input/900-04.0138.Turn-Report.docx: Microsoft Word 2007+
-input/900-04.0138.input.txt:        Unicode text, UTF-8 text
+input/900-04.0138.report.txt:        Unicode text, UTF-8 text
 input/900-05.0138.Turn-Report.docx: Microsoft Word 2007+
-input/900-05.0138.input.txt:        Unicode text, UTF-8 text
+input/900-05.0138.report.txt:        Unicode text, UTF-8 text
 ```
 
 Spaces, line breaks, page breaks, and section breaks are important to the parser.
