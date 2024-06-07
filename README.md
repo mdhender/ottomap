@@ -2,9 +2,6 @@
 
 OttoMap is a tool that translates TribeNet turn report files into Worldographer maps.
 
-> WARNING OttoMap is in early development. 
-> I am breaking things and changing types almost daily. 
- 
 ## Overview
 I'm planning on translating a small subset of the turn report.
 See the files in the `domain` directory to get an idea of what we're looking at.
@@ -13,6 +10,19 @@ I think that will be enough data to feed the map generator.
 Let me know if you think that there's something missing.
 
 See the `OTTOMAP.md` file for an overview of running from command line and `BUILDING.md` for instructions on building the project.
+
+> ISSUES: Please report any issues on the TribeNet Discord server.
+
+### Status
+OttoMap is in early development.
+The turn report parser is nearly complete for land based movement.
+Fleet movement has not been implemented (it's waiting on actual examples from turn reports)
+
+The command line interface seems to be working but the documentation is incomplete.
+
+The web interface is not yet implemented.
+The single user server has been started but requires changes to the turn report parser.
+I don't want to break the CLI, so this is proceeding slowly at best.
 
 ## Input Data
 OttoMap expects all turn reports to be in text files in a single directory.
