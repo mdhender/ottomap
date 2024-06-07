@@ -1,8 +1,8 @@
 # OttoMap
 
-OttoMap is a tool that translates TribeNet turn report files into JSON data.
+OttoMap is a tool that translates TribeNet turn report files into Worldographer maps.
 
-A future version of the tool will convert the JSON data into a map.
+A future version of the tool will convert the turn report files into JSON data that you can use to create your own maps.
 
 > WARNING OttoMap is in early development. 
 > I am breaking things and changing types almost daily. 
@@ -73,6 +73,9 @@ input/900-05.0138.report.txt:        Unicode text, UTF-8 text
 
 Spaces, line breaks, page breaks, and section breaks are important to the parser.
 Please try to avoid altering them.
+
+> WARNING: Please don't make changes your original turn report (the `.DOCX` file).
+> You may not be able to revert back to the original file.
 
 
 ## Grids and the Big Map
