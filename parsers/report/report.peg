@@ -132,8 +132,12 @@ MONTH <- DIGIT DIGIT {
     return int(month), nil
 }
 
-TERRAIN <- "CONIFER HILLS" {
+TERRAIN <- "ARID TUNDRA" {
+    return domain.TAridTundra, nil
+} / "CONIFER HILLS" {
     return domain.TConiferHills, nil
+} / "DESERT" {
+    return domain.TDesert, nil
 } / "GRASSY HILLS" {
     return domain.TGrassyHills, nil
 } / "PRAIRIE" {
@@ -146,8 +150,12 @@ TERRAIN <- "CONIFER HILLS" {
     return domain.TLake, nil
 } / "OCEAN" {
     return domain.TOcean, nil
+} / "AR" {
+    return domain.TConiferHills, nil
 } / "CH" {
     return domain.TConiferHills, nil
+} / "DE" {
+    return domain.TDesert, nil
 } / "GH" {
     return domain.TGrassyHills, nil
 } / "PR" {

@@ -108,25 +108,36 @@ func (g *Grid) addTile(turnId string, hex *Hex) error {
 	if !alreadyExists {
 		tile.created = turnId
 		tile.Terrain = hex.Terrain
+		tile.Elevation = 1
 		switch tile.Terrain {
-		case domain.TConiferHills:
-			tile.Elevation = 2_250
-		case domain.TDesert:
-			tile.Elevation = 125
-		case domain.TGrassyHills:
-			tile.Elevation = 1_000
+		case domain.TAridTundra,
+			domain.TBrush,
+			domain.TBrushHills,
+			domain.TConiferHills,
+			domain.TDeciduousForest,
+			domain.TDeciduousHills,
+			domain.TDesert,
+			domain.TGrassyHills,
+			domain.TGrassyHillsPlateau,
+			domain.THighSnowyMountains,
+			domain.TJungle,
+			domain.TJungleHills,
+			domain.TLowAridMountains,
+			domain.TLowConiferMountains,
+			domain.TLowJungleMountains,
+			domain.TLowSnowyMountains,
+			domain.TLowVolcanicMountains,
+			domain.TPrairie,
+			domain.TPrairiePlateau,
+			domain.TRockyHills,
+			domain.TTundra:
+			tile.Elevation = 1_250
 		case domain.TLake:
 			tile.Elevation = -1
-		case domain.TLowConiferMountains:
-			tile.Elevation = 7_500
 		case domain.TOcean:
 			tile.Elevation = -3
-		case domain.TPrairie:
-			tile.Elevation = 750
-		case domain.TPrairiePlateau:
-			tile.Elevation = 1_250
-		case domain.TRockyHills:
-			tile.Elevation = 2_500
+		case domain.TPolarIce:
+			tile.Elevation = 10
 		case domain.TSwamp:
 			tile.Elevation = 1
 		default:

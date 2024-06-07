@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	version = semver.Version{Major: 0, Minor: 8, Patch: 1}
+	version = semver.Version{Major: 0, Minor: 8, Patch: 2}
 )
 
 func main() {
@@ -78,16 +78,26 @@ func Execute() error {
 	cmdParseReports.Flags().StringVarP(&argsParseReports.gridOrigin, "grid-origin", "g", "OO", "initial grid value for '##'")
 	cmdParse.AddCommand(cmdParseReports, cmdParseUnits)
 
-	cmdServe.Flags().StringVar(&argsServe.paths.db, "db", "", "path to server database")
-	if err := cmdServe.MarkFlagRequired("db"); err != nil {
+	cmdServe.PersistentFlags().StringVar(&argsServe.host, "host", "", "host to serve on")
+	cmdServe.PersistentFlags().StringVar(&argsServe.port, "port", "8080", "port to serve on")
+	cmdServe.PersistentFlags().StringVar(&argsServe.paths.db, "db", "", "path to server database")
+	if err := cmdServe.MarkPersistentFlagRequired("db"); err != nil {
 		log.Fatalf("serve: db: mark required: %v\n", err)
 	}
 
-	cmdServe.AddCommand(cmdServeHTMX)
-	cmdServeHTMX.Flags().StringVar(&argsServeHTMX.paths.db, "db", "", "path to server database")
-	if err := cmdServe.MarkFlagRequired("db"); err != nil {
-		log.Fatalf("serve: htmx: db: mark required: %v\n", err)
+	cmdServe.AddCommand(cmdServeCatalyst)
+	cmdServeCatalyst.Flags().StringVar(&argsServeCatalyst.paths.public, "build", "", "path to build folder")
+	if err := cmdServeCatalyst.MarkFlagRequired("build"); err != nil {
+		log.Fatalf("serve: catalyst: build: mark required: %v\n", err)
 	}
+
+	cmdServe.AddCommand(cmdServeEmberJS)
+	cmdServeEmberJS.Flags().StringVar(&argsServeEmberJS.paths.public, "dist", "", "path distribution folder")
+	if err := cmdServeEmberJS.MarkFlagRequired("dist"); err != nil {
+		log.Fatalf("serve: emberjs: dist: mark required: %v\n", err)
+	}
+
+	cmdServe.AddCommand(cmdServeHTMX)
 
 	cmdSetup.Flags().StringVar(&argsSetup.originTerrain, "origin-terrain", "PR", "origin terrain")
 	if err := cmdSetup.MarkFlagRequired("origin-terrain"); err != nil {

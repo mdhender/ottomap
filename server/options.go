@@ -3,15 +3,16 @@
 package server
 
 import (
-	"github.com/mdhender/ottomap/app"
-	"github.com/mdhender/ottomap/htmx"
 	"net"
+	"net/http"
 )
 
 type Options []Option
 type Option func(*Server) error
 
-func WithApp(app *app.App) Option {
+func WithApp(app interface {
+	Routes() (*http.ServeMux, error)
+}) Option {
 	return func(s *Server) (err error) {
 		s.mux, err = app.Routes()
 		return err
@@ -23,13 +24,6 @@ func WithHost(host string) Option {
 		s.host = host
 		s.Addr = net.JoinHostPort(s.host, s.port)
 		return nil
-	}
-}
-
-func WithHTMX(app *htmx.HTMX) Option {
-	return func(s *Server) (err error) {
-		s.mux, err = app.Routes()
-		return err
 	}
 }
 

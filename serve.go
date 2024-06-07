@@ -18,6 +18,8 @@ import (
 )
 
 var argsServe struct {
+	host  string
+	port  string
 	paths struct {
 		db string
 	}
@@ -27,7 +29,7 @@ var cmdServe = &cobra.Command{
 	Use:   "serve",
 	Short: "Start web server",
 	Long:  `Run a web server.`,
-	PreRunE: func(cmd *cobra.Command, args []string) error {
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		if len(argsServe.paths.db) == 0 {
 			return fmt.Errorf("missing database path")
 		} else if argsServe.paths.db != strings.TrimSpace(argsServe.paths.db) {
@@ -41,7 +43,19 @@ var cmdServe = &cobra.Command{
 		} else {
 			argsServe.paths.db = path
 		}
-		log.Printf("serve: db %s\n", argsServe.paths.db)
+		if len(argsServe.host) == 0 {
+			argsServe.host = "localhost"
+		} else if argsServe.host != strings.TrimSpace(argsServe.host) {
+			return fmt.Errorf("host must not contain leading or trailing spaces")
+		}
+		if len(argsServe.port) == 0 {
+			argsServe.port = "8080"
+		} else if argsServe.port != strings.TrimSpace(argsServe.port) {
+			return fmt.Errorf("port must not contain leading or trailing spaces")
+		}
+		log.Printf("serve: host %q\n", argsServe.host)
+		log.Printf("serve: port %q\n", argsServe.port)
+		log.Printf("serve: db   %q\n", argsServe.paths.db)
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {

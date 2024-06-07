@@ -4,7 +4,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"github.com/mdhender/ottomap/htmx"
 	"github.com/mdhender/ottomap/pkg/sqlc"
 	"github.com/mdhender/ottomap/server"
@@ -13,38 +12,22 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
-var argsServeHTMX struct {
-	paths struct {
-		db string // path to database
-	}
-}
+var argsServeHTMX struct{}
 
 var cmdServeHTMX = &cobra.Command{
 	Use:   "htmx",
 	Short: "Serve HTMX client files",
 	Long:  `Start a web server to serve HTMX client files.`,
 	PreRunE: func(cmd *cobra.Command, args []string) error {
-		if len(argsServeHTMX.paths.db) == 0 {
-			return fmt.Errorf("missing database path")
-		} else if argsServeHTMX.paths.db != strings.TrimSpace(argsServeHTMX.paths.db) {
-			return fmt.Errorf("database path must not contain leading or trailing spaces")
-		} else if path, err := filepath.Abs(argsServeHTMX.paths.db); err != nil {
-			return err
-		} else if sb, err := os.Stat(path); err != nil {
-			return err
-		} else if !sb.IsDir() {
-			return fmt.Errorf("database path is not a directory")
-		} else {
-			argsServeHTMX.paths.db = path
-		}
-		log.Printf("serve: htmx: db %s\n", argsServeHTMX.paths.db)
+		log.Printf("serve: host   %q\n", argsServe.host)
+		log.Printf("serve: port   %q\n", argsServe.port)
+		log.Printf("serve: db     %q\n", argsServe.paths.db)
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		dbName := filepath.Join(argsServeHTMX.paths.db, "ottomap.sqlite")
+		dbName := filepath.Join(argsServe.paths.db, "ottomap.sqlite")
 		if sb, err := os.Stat(dbName); err != nil {
 			log.Printf("serve: htmx: db %s: does not exist\n", dbName)
 		} else if !sb.Mode().IsRegular() {
@@ -65,9 +48,9 @@ var cmdServeHTMX = &cobra.Command{
 		}
 
 		s, err := server.New(
-			server.WithHost("localhost"),
-			server.WithPort("3030"),
-			server.WithHTMX(a),
+			server.WithHost(argsServe.host),
+			server.WithPort(argsServe.port),
+			server.WithApp(a),
 		)
 		if err != nil {
 			log.Fatal(err)
