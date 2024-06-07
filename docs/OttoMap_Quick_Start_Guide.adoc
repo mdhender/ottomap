@@ -1,26 +1,37 @@
 = OttoMap Quick-Start Guide
 
-Welcome to OttoMap! This guide will help you get started with generating maps from TribeNet turn report files in a few simple steps.
+Welcome to OttoMap!
+This guide will help you get started with generating maps from TribeNet turn report files in a few simple steps.
 
-== Step 1: Prepare Your Environment
+== Step 1: Prepare your Turn Report file
+
+NOTE: OttoMap requires that you store your turn report files in the `data/input` folder.
+The files must have a name like `YYYY-MM.CLAN.report.txt` (e.g., `901-02.0138.report.txt`).
+
+. Copy your Turn Report into a text File:
+* Open the Turn Report (the `DOCX` file that was mailed to you).
+* Select all the text and copy it to the clipboard.
+* Open a text editor and paste the text from the clipboard.
+* Save the file in the `data/input` folder using the file naming convention described above.
+
+You can do this for a single turn report or multiple turn reports, but we recommend working with a single turn report at a time.
+
+NOTE: You must start with your first turn report file.
+OttoMap plots all movement starting from your tribe's first hex.
+
+== Step 2: Open a Terminal or Command Prompt
 
 . Open a Terminal or Command Prompt:
 * Windows: Press `Win + R`, type `cmd`, and press `Enter`.
 * macOS: Press `Cmd + Space`, type `Terminal`, and press `Enter`.
 * Linux: Press `Ctrl + Alt + T`.
-. 
+.
 
 Navigate to the OttoMap Project Directory:
 
 ----
 cd path/to/ottomap
 ----
-
-== Step 2: Store Turn Report Files
-
-. Copy Your Turn Report into a Text File:
-* Save the file in the `data/input` folder.
-* Ensure the file is named in the format `YYY-MM.CLAN.report.txt` (e.g., `901-02.0991.report.txt`).
 
 == Step 3: Index the Reports
 
@@ -30,12 +41,17 @@ cd path/to/ottomap
 ottomap index reports
 ----
 
+This command adds the new turn report to the `data/config.json` file.
+
 == Step 4: Generate Maps
 
 . Run the `map` Command:
 
 ----
-ottomap map --turn 901-12 --clan 0991
+ottomap map --turn 901-12 --clan 0138
 ----
 
-That's it! Your maps will be generated in the `data/output` folder.
+The `--turn` option specifies the maximum turn year and month to map.
+
+That's it!
+Your maps will be generated in the `data/output` folder.
