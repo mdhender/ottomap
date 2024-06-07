@@ -102,3 +102,5 @@ The build process is consistent across all operating systems:
 This command creates an executable named `ottomap` (for macOS and Linux) or `ottomap.exe` (for Windows) in the current directory.
 
 For additional help or if you encounter issues, please join our Discord server. The Go team also provides excellent documentation, which you can find at [https://go.dev/doc/tutorial/compile-install](https://go.dev/doc/tutorial/compile-install).
+
+Please see the `OTTOMAP.md` file for more information about using OttoMap.
