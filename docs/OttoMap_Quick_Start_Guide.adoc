@@ -3,15 +3,19 @@
 Welcome to OttoMap!
 This guide will help you get started with generating maps from TribeNet turn report files in a few simple steps.
 
+NOTE: OttoMap expects the project directory to contain two folders, `data/input` and `data/output`.
+The input folder will contain your turn report files and the output folder will contain the generated maps.
+
 == Step 1: Prepare your Turn Report file
 
 NOTE: OttoMap requires that you store your turn report files in the `data/input` folder.
 The files must have a name like `YYYY-MM.CLAN.report.txt` (e.g., `901-02.0138.report.txt`).
 
-. Copy your Turn Report into a text File:
-* Open the Turn Report (the `DOCX` file that was mailed to you).
+1. Copy your Turn Report into a Text File:
+* Open the Turn Report (the `DOCX` file that was emailed to you).
 * Select all the text and copy it to the clipboard.
-* Open a text editor and paste the text from the clipboard.
+* Open a text editor (e.g., Notepad on Windows, TextEdit on macOS, or Gedit on Linux).
+* Paste the text from the clipboard into the text editor.
 * Save the file in the `data/input` folder using the file naming convention described above.
 
 You can do this for a single turn report or multiple turn reports, but we recommend working with a single turn report at a time.
@@ -21,37 +25,63 @@ OttoMap plots all movement starting from your tribe's first hex.
 
 == Step 2: Open a Terminal or Command Prompt
 
-. Open a Terminal or Command Prompt:
-* Windows: Press `Win + R`, type `cmd`, and press `Enter`.
-* macOS: Press `Cmd + Space`, type `Terminal`, and press `Enter`.
-* Linux: Press `Ctrl + Alt + T`.
-.
+To run OttoMap commands, you'll need to use a command line interface.
+Here's how to open it on different operating systems:
 
-Navigate to the OttoMap Project Directory:
+* Windows:
+- Press the `Win + R` keys on your keyboard.
+- In the "Run" dialog box, type `cmd` and press `Enter`.
+* macOS:
+- Press the `Cmd + Space` keys on your keyboard to open Spotlight Search.
+- Type `Terminal` and press `Enter`.
+* Linux:
+- Press the `Ctrl + Alt + T` keys on your keyboard.
+
+== Step 3: Navigate to the OttoMap Project Directory
+
+Now that you have the command line interface open, you need to navigate to the directory where the OttoMap project is located.
+This is usually done using the `cd` command followed by the path to the OttoMap directory.
+
+For example, if OttoMap is located in your `Documents` folder, you would type the following command and press `Enter`:
 
 ----
-cd path/to/ottomap
+cd ~/Documents/ottomap
 ----
 
-== Step 3: Index the Reports
+Replace `path/to/ottomap` with the actual path to your OttoMap project directory.
 
-. Run the `index reports` Command:
+== Step 4: Index the Reports
+
+Before you can generate maps, you need to index your turn report files.
+This is done using the `index reports` command:
 
 ----
 ottomap index reports
 ----
 
-This command adds the new turn report to the `data/config.json` file.
+This command adds the new turn report to the `data/config.json` file, which is used by OttoMap to keep track of the reports.
 
-== Step 4: Generate Maps
+== Step 5: Generate Maps
 
-. Run the `map` Command:
+Finally, you can generate the maps using the `map` command.
+You need to specify the turn and clan for which you want to generate the map.
 
 ----
 ottomap map --turn 901-12 --clan 0138
 ----
 
-The `--turn` option specifies the maximum turn year and month to map.
+* The `--turn` option specifies the maximum turn year and month to map (e.g., `901-12`).
+* The `--clan` option specifies the clan number (e.g., `0138`).
+
+After running this command, your maps will be generated and saved in the `data/output` folder.
+
+== Summary
+
+1. **Prepare your Turn Report file:** Save it in the `data/input` folder.
+2. **Open a Terminal or Command Prompt:** Use the appropriate method for your operating system.
+3. **Navigate to the OttoMap Project Directory:** Use the `cd` command.
+4. **Index the Reports:** Run `ottomap index reports`.
+5. **Generate Maps:** Run `ottomap map --turn <turn> --clan <clan>`.
 
 That's it!
-Your maps will be generated in the `data/output` folder.
+You are now ready to use OttoMap to generate maps from your TribeNet turn reports.
