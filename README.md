@@ -2,20 +2,9 @@
 
 OttoMap is a tool that translates TribeNet turn report files into Worldographer maps.
 
-A future version of the tool will convert the turn report files into JSON data that you can use to create your own maps.
-
 > WARNING OttoMap is in early development. 
 > I am breaking things and changing types almost daily. 
  
-## License
-OttoMap is licensed under version 3 of the GNU Affero General Public License.
-
-OttoMap is built using packages that have different licenses.
-All of these packages must be used in accordance with their original licenses;
-including them in this application does not change their license terms to the AGPLv3.
-
-Please see the individual packages for their license terms.
-
 ## Overview
 I'm planning on translating a small subset of the turn report.
 See the files in the `domain` directory to get an idea of what we're looking at.
@@ -77,6 +66,14 @@ Please try to avoid altering them.
 > WARNING: Please don't make changes your original turn report (the `.DOCX` file).
 > You may not be able to revert back to the original file.
 
+## License
+OttoMap is licensed under version 3 of the GNU Affero General Public License.
+
+OttoMap is built using packages that have different licenses.
+All of these packages must be used in accordance with their original licenses;
+including them in this application does not change their license terms to the AGPLv3.
+
+Please see the individual packages for their license terms.
 
 ## Grids and the Big Map
 The big map is divided into 676 grids arranged in 26 columns and 26 rows.
@@ -176,3 +173,9 @@ hexDirectionVectors["even-column"] = {
     "NW": {-1, -1}, // ## 1306 -> (12, 05) -> (11, 04) -> ## 1205
 }
 ```
+
+## Roadmap
+
+1. Replaced the CLI with a web front end.
+2. A future version of the tool will convert the turn report files into JSON data that you can use to create your own maps.
+3. Useable documentation.
