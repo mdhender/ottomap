@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	version = semver.Version{Major: 0, Minor: 8, Patch: 9}
+	version = semver.Version{Major: 0, Minor: 9, Patch: 0}
 )
 
 func main() {
@@ -27,7 +27,12 @@ func main() {
 }
 
 func Execute() error {
-	cmdRoot.AddCommand(cmdIndex, cmdInitialize, cmdMap, cmdParse, cmdServe, cmdSetup, cmdVersion)
+	cmdRoot.AddCommand(cmdImport, cmdIndex, cmdInitialize, cmdList, cmdMap, cmdParse, cmdOldParse, cmdServe, cmdSetup, cmdVersion)
+
+	cmdImport.Flags().StringVar(&argsImport.paths.db, "db", "", "path to database files")
+	if err := cmdImport.MarkFlagRequired("db"); err != nil {
+		log.Fatalf("import: db: mark required: %v\n", err)
+	}
 
 	cmdIndex.AddCommand(cmdIndexReports)
 	cmdIndexReports.Flags().StringVarP(&argsIndexReports.config, "config", "c", "data", "path to create configuration file in")
@@ -50,6 +55,14 @@ func Execute() error {
 	if err := cmdInitialize.MarkFlagRequired("db"); err != nil {
 		log.Fatalf("initialize: db: mark required: %v\n", err)
 	}
+	cmdInitialize.Flags().StringVar(&argsInitialize.paths.input, "input", "", "path to input files")
+	if err := cmdInitialize.MarkFlagRequired("input"); err != nil {
+		log.Fatalf("initialize: input: mark required: %v\n", err)
+	}
+	cmdInitialize.Flags().StringVar(&argsInitialize.paths.output, "output", "", "path to output files")
+	if err := cmdInitialize.MarkFlagRequired("output"); err != nil {
+		log.Fatalf("initialize: output: mark required: %v\n", err)
+	}
 	cmdInitialize.Flags().StringVar(&argsInitialize.paths.public, "public", "", "path to public files")
 	if err := cmdInitialize.MarkFlagRequired("public"); err != nil {
 		log.Fatalf("initialize: public: mark required: %v\n", err)
@@ -57,6 +70,11 @@ func Execute() error {
 	cmdInitialize.Flags().StringVar(&argsInitialize.paths.templates, "templates", "", "path to template files")
 	if err := cmdInitialize.MarkFlagRequired("templates"); err != nil {
 		log.Fatalf("initialize: templates: mark required: %v\n", err)
+	}
+
+	cmdList.Flags().StringVar(&argsList.paths.db, "db", "", "path to database files")
+	if err := cmdList.MarkFlagRequired("db"); err != nil {
+		log.Fatalf("list: db: mark required: %v\n", err)
 	}
 
 	cmdMap.Flags().BoolVar(&argsMap.debug.sectionMaps, "debug-section-maps", false, "save section maps for debugging")
@@ -71,12 +89,17 @@ func Execute() error {
 	cmdMap.Flags().StringVar(&argsMap.config, "config", "data/config.json", "configuration file to use")
 	cmdMap.Flags().StringVar(&argsMap.turnId, "turn", "", "turn to process (yyyy-mm format)")
 
-	cmdParse.PersistentFlags().BoolVar(&argsParse.debug.units, "debug-units", false, "enable unit debugging")
-	cmdParse.PersistentFlags().StringVarP(&argsParse.index, "index", "i", ".", "index file to process")
-	cmdParse.PersistentFlags().StringVarP(&argsParse.output, "output", "o", ".", "path to write output to")
-	cmdParseReports.Flags().BoolVar(&argsParseReports.debug.captureRawText, "capture-raw-text", false, "capture raw text")
-	cmdParseReports.Flags().StringVarP(&argsParseReports.gridOrigin, "grid-origin", "g", "OO", "initial grid value for '##'")
-	cmdParse.AddCommand(cmdParseReports, cmdParseUnits)
+	cmdParse.Flags().StringVar(&argsParse.paths.db, "db", "", "path to database files")
+	if err := cmdParse.MarkFlagRequired("db"); err != nil {
+		log.Fatalf("parse: db: mark required: %v\n", err)
+	}
+
+	cmdOldParse.PersistentFlags().BoolVar(&argsOldParse.debug.units, "debug-units", false, "enable unit debugging")
+	cmdOldParse.PersistentFlags().StringVarP(&argsOldParse.index, "index", "i", ".", "index file to process")
+	cmdOldParse.PersistentFlags().StringVarP(&argsOldParse.output, "output", "o", ".", "path to write output to")
+	cmdOldParseReports.Flags().BoolVar(&argsOldParseReports.debug.captureRawText, "capture-raw-text", false, "capture raw text")
+	cmdOldParseReports.Flags().StringVarP(&argsOldParseReports.gridOrigin, "grid-origin", "g", "OO", "initial grid value for '##'")
+	cmdOldParse.AddCommand(cmdOldParseReports, cmdOldParseUnits)
 
 	cmdServe.PersistentFlags().StringVar(&argsServe.host, "host", "", "host to serve on")
 	cmdServe.PersistentFlags().StringVar(&argsServe.port, "port", "8080", "port to serve on")

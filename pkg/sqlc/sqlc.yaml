@@ -3,6 +3,7 @@ sql:
   - engine: "sqlite"
     queries:
       - "clans.sql"
+      - "input.sql"
       - "metadata.sql"
       - "queues.sql"
       - "roles.sql"

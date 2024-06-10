@@ -1,36 +1,64 @@
+-- foreign keys must be disabled to drop tables with foreign keys
+PRAGMA foreign_keys = OFF;
+
+DROP TABLE IF EXISTS clans;
+DROP TABLE IF EXISTS element_metadata;
+DROP TABLE IF EXISTS elements;
+DROP TABLE IF EXISTS elements_parents;
+DROP TABLE IF EXISTS input;
+DROP TABLE IF EXISTS input_lines;
+DROP TABLE IF EXISTS message_log;
+DROP TABLE IF EXISTS metadata;
+DROP TABLE IF EXISTS report_queue;
+DROP TABLE IF EXISTS report_queue_data;
+DROP TABLE IF EXISTS report_sections;
+DROP TABLE IF EXISTS reports;
+DROP TABLE IF EXISTS roles;
+DROP TABLE IF EXISTS sessions;
+DROP TABLE IF EXISTS turns;
+DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS users_roles;
+
 -- foreign keys must be enabled with every database connection
 PRAGMA foreign_keys = ON;
-
-DROP TABLE IF EXISTS metadata;
 
 -- metadata stores information about this schema file
 -- and the paths to files needed by the server.
 CREATE TABLE metadata
 (
     version        TEXT NOT NULL, -- version of this schema file
+    input_path     TEXT NOT NULL, -- absolute path to the input directory
+    output_path    TEXT NOT NULL, -- absolute path to the output directory
     public_path    TEXT NOT NULL, -- absolute path to the public directory
     templates_path TEXT NOT NULL  -- absolute path to the templates directory
 );
 
-INSERT INTO metadata (version, public_path, templates_path)
-VALUES ('0.0.1', '', '');
+INSERT INTO metadata (version, input_path, output_path, public_path, templates_path)
+VALUES ('0.0.1', 'data/input', 'data/output', '', '');
 
-DROP TABLE IF EXISTS sessions;
-DROP TABLE IF EXISTS users_roles;
+-- input stores data for every input file uploaded
+CREATE TABLE input
+(
+    id     INTEGER PRIMARY KEY,
+    status TEXT      NOT NULL DEFAULT 'pending',         -- status of the input file
+    path   TEXT      NOT NULL,                           -- absolute path to the input file
+    name   TEXT      NOT NULL,                           -- file name, extracted from input path
+    cksum  TEXT      NOT NULL,                           -- SHA-256 checksum of the file
+    crdttm TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, -- when the row was created
+    updttm TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, -- when the row was last updated
+    UNIQUE (cksum)
+);
 
-DROP TABLE IF EXISTS roles;
+CREATE TABLE input_lines
+(
+    iid     INTEGER NOT NULL, -- input id
+    sect_no INTEGER NOT NULL, -- original input section
+    line_no INTEGER NOT NULL, -- original input line
+    line    TEXT    NOT NULL,
+    PRIMARY KEY (iid, sect_no, line_no),
+    FOREIGN KEY (iid) REFERENCES input (id) ON DELETE CASCADE
+);
 
-DROP TABLE IF EXISTS element_metadata;
-DROP TABLE IF EXISTS elements_parents;
-DROP TABLE IF EXISTS elements;
-DROP TABLE IF EXISTS clans;
-DROP TABLE IF EXISTS users;
-
-DROP TABLE IF EXISTS report_queue_data;
-DROP TABLE IF EXISTS report_queue;
-
-DROP TABLE IF EXISTS report_sections;
-DROP TABLE IF EXISTS reports;
 
 -- users stores information about the end-users (the players)
 CREATE TABLE users
@@ -189,4 +217,14 @@ CREATE TABLE report_queue_data
     PRIMARY KEY (qid),
     UNIQUE (cksum),
     FOREIGN KEY (qid) REFERENCES report_queue (qid) ON DELETE CASCADE
+);
+
+CREATE TABLE log_messages
+(
+    id      INTEGER PRIMARY KEY,                         -- unique id for the log message
+    arg_1   TEXT      NOT NULL,
+    arg_2   TEXT      NOT NULL,
+    arg_3   TEXT      NOT NULL,
+    message TEXT      NOT NULL,
+    crdttm  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP -- when the row was created
 );
