@@ -18,6 +18,7 @@ import (
 
 var (
 	argsImport struct {
+		debug bool
 		paths struct {
 			db string
 		}
@@ -115,18 +116,18 @@ var cmdImport = &cobra.Command{
 
 		// todo: write to a tabwriter
 		for _, report := range inputReports {
-			_, err := actions.ImportReport(db, filepath.Join(report.path, report.name))
+			_, err := actions.ImportReport(db, filepath.Join(report.path, report.name), argsImport.debug)
 			if err != nil {
 				if !errors.Is(err, cerrs.ErrDuplicateChecksum) {
 					log.Fatalf("import: %s: %v\n", report.name, err)
 				} else if !importAllFiles {
 					// user specified this report, and it already exists in the database
-					log.Printf("import: %s: %v\n", report.name, err)
+					log.Fatalf("import: %s: %v\n", report.name, err)
 				}
-				fmt.Printf("import: %s: duplicate file, ignored\n", report.name)
+				log.Printf("import: %s: duplicate file, ignored\n", report.name)
 				continue
 			}
-			fmt.Printf("import: %s: imported\n", report.name)
+			log.Printf("import: %s: imported\n", report.name)
 		}
 
 		log.Printf("import: imported %d reports\n", len(inputReports))

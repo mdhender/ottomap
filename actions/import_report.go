@@ -17,7 +17,7 @@ import (
 )
 
 // ImportReport imports a report from a file into the database.
-func ImportReport(db *sqlc.DB, path string) (id int, err error) {
+func ImportReport(db *sqlc.DB, path string, debug bool) (id int, err error) {
 	rxCourierSection, err := regexp.Compile(`^Courier \d{4}c\d, ,`)
 	if err != nil {
 		panic(err)
@@ -43,24 +43,30 @@ func ImportReport(db *sqlc.DB, path string) (id int, err error) {
 		panic(err)
 	}
 
-	log.Printf("importReport: %s\n", path)
+	debugf := func(format string, args ...any) {
+		if debug {
+			log.Printf(format, args...)
+		}
+	}
+
+	debugf("importReport: %s\n", path)
 
 	// split the file name into parts
 	importPath, importName := filepath.Split(path)
 	if importPath == "" {
 		importPath = "."
 	}
-	log.Printf("importReport: %s: %s\n", importPath, importName)
+	debugf("importReport: %s: %s\n", importPath, importName)
 
 	// verify that the report file exists.
 	if sb, err := os.Stat(path); err != nil {
-		log.Printf("importReport: %s: %v\n", path, err)
+		debugf("importReport: %s: %v\n", path, err)
 		return 0, err
 	} else if sb.IsDir() {
-		log.Printf("importReport: %s: %v\n", path, cerrs.ErrNotAFile)
+		debugf("importReport: %s: %v\n", path, cerrs.ErrNotAFile)
 		return 0, cerrs.ErrNotAFile
 	} else if !sb.Mode().IsRegular() {
-		log.Printf("importReport: %s: %v\n", path, cerrs.ErrNotAFile)
+		debugf("importReport: %s: %v\n", path, cerrs.ErrNotAFile)
 		return 0, cerrs.ErrNotAFile
 	}
 
@@ -69,14 +75,14 @@ func ImportReport(db *sqlc.DB, path string) (id int, err error) {
 	if data, err = os.ReadFile(path); err != nil {
 		return 0, err
 	}
-	log.Printf("importReport: %s: loaded %d bytes\n", importName, len(data))
+	debugf("importReport: %s: loaded %d bytes\n", importName, len(data))
 	if len(data) < 128 || !bytes.HasPrefix(data, []byte("Tribe 0")) {
 		return 0, cerrs.ErrNotATurnReport
 	}
 
 	// calculate the checksum of the data.
 	cksum := fmt.Sprintf("%x", sha256.Sum256(data))
-	log.Printf("importReport: %s: cksum %s\n", importName, cksum)
+	debugf("importReport: %s: cksum %s\n", importName, cksum)
 
 	// return an error if there are records with the same checksum.
 	// the caller will need to delete the file and try again.
@@ -90,7 +96,7 @@ func ImportReport(db *sqlc.DB, path string) (id int, err error) {
 	if len(duplicateRows) != 0 {
 		// rows with this checksum exist, so we cannot insert this report
 		for _, dup := range duplicateRows {
-			log.Printf("importInput: duplicate %s\n", dup.Name)
+			debugf("importInput: duplicate %s\n", dup.Name)
 		}
 		return 0, cerrs.ErrDuplicateChecksum
 	}
@@ -108,7 +114,7 @@ func ImportReport(db *sqlc.DB, path string) (id int, err error) {
 		no := n + 1
 		if rxCourierSection.Match(line) {
 			elementId = line[8 : 8+6]
-			log.Printf("importReport: %5d: found %q %q\n", no, line[:14], elementId)
+			debugf("importReport: %5d: found %q %q\n", no, line[:14], elementId)
 			if section != nil {
 				sections = append(sections, section)
 			}
@@ -116,7 +122,7 @@ func ImportReport(db *sqlc.DB, path string) (id int, err error) {
 			elementStatusPrefix = []byte(fmt.Sprintf("%s Status: ", string(elementId)))
 		} else if rxElementSection.Match(line) {
 			elementId = line[8 : 8+6]
-			log.Printf("importReport: %5d: found %q %q\n", no, line[:14], elementId)
+			debugf("importReport: %5d: found %q %q\n", no, line[:14], elementId)
 			if section != nil {
 				sections = append(sections, section)
 			}
@@ -124,7 +130,7 @@ func ImportReport(db *sqlc.DB, path string) (id int, err error) {
 			elementStatusPrefix = []byte(fmt.Sprintf("%s Status: ", string(elementId)))
 		} else if rxFleetSection.Match(line) {
 			elementId = line[6 : 6+6]
-			log.Printf("importReport: %5d: found %q %q\n", no, line[:12], elementId)
+			debugf("importReport: %5d: found %q %q\n", no, line[:12], elementId)
 			if section != nil {
 				sections = append(sections, section)
 			}
@@ -132,7 +138,7 @@ func ImportReport(db *sqlc.DB, path string) (id int, err error) {
 			elementStatusPrefix = []byte(fmt.Sprintf("%s Status: ", string(elementId)))
 		} else if rxGarrisonSection.Match(line) {
 			elementId = line[9 : 9+6]
-			log.Printf("importReport: %5d: found %q %q\n", no, line[:15], elementId)
+			debugf("importReport: %5d: found %q %q\n", no, line[:15], elementId)
 			if section != nil {
 				sections = append(sections, section)
 			}
@@ -140,7 +146,7 @@ func ImportReport(db *sqlc.DB, path string) (id int, err error) {
 			elementStatusPrefix = []byte(fmt.Sprintf("%s Status: ", string(elementId)))
 		} else if rxTribeSection.Match(line) {
 			elementId = line[6 : 6+4]
-			log.Printf("importReport: %5d: found %q %q\n", no, line[:10], elementId)
+			debugf("importReport: %5d: found %q %q\n", no, line[:10], elementId)
 			if section != nil {
 				sections = append(sections, section)
 			}
@@ -148,14 +154,17 @@ func ImportReport(db *sqlc.DB, path string) (id int, err error) {
 			elementStatusPrefix = []byte(fmt.Sprintf("%s Status: ", string(elementId)))
 		} else if section == nil {
 			// ignore
+		} else if len(section) == 1 && bytes.HasPrefix(line, []byte("Current Turn ")) {
+			debugf("importReport: %5d: found %q\n", no, line[:12])
+			section = append(section, sline{no: no, line: string(line)})
 		} else if bytes.HasPrefix(line, []byte("Tribe Movement: ")) {
-			log.Printf("importReport: %5d: found %q\n", no, line[:16])
+			debugf("importReport: %5d: found %q\n", no, line[:16])
 			section = append(section, sline{no: no, line: string(line)})
 		} else if rxScoutLine.Match(line) {
-			log.Printf("importReport: %5d: found %q\n", no, line[:14])
+			debugf("importReport: %5d: found %q\n", no, line[:14])
 			section = append(section, sline{no: no, line: string(line)})
 		} else if bytes.HasPrefix(line, elementStatusPrefix) {
-			log.Printf("importReport: %5d: found %q\n", no, line[:len(elementStatusPrefix)])
+			debugf("importReport: %5d: found %q\n", no, line[:len(elementStatusPrefix)])
 			section = append(section, sline{no: no, line: string(line)})
 		}
 	}
@@ -165,9 +174,9 @@ func ImportReport(db *sqlc.DB, path string) (id int, err error) {
 	for n, s := range sections {
 		for _, ss := range s {
 			if len(ss.line) < 55 {
-				log.Printf("section %3d: line %5d: %s\n", n+1, ss.no, ss.line)
+				debugf("section %3d: line %5d: %s\n", n+1, ss.no, ss.line)
 			} else {
-				log.Printf("section %3d: line %5d: %s...\n", n+1, ss.no, ss.line[:55])
+				debugf("section %3d: line %5d: %s...\n", n+1, ss.no, ss.line[:55])
 			}
 		}
 	}
@@ -190,7 +199,7 @@ func ImportReport(db *sqlc.DB, path string) (id int, err error) {
 	} else {
 		id = int(n)
 	}
-	log.Printf("importInput: %s: %s\n", importName, cksum)
+	debugf("importInput: %s: %s\n", importName, cksum)
 
 	for n, s := range sections {
 		sectNo := n + 1
@@ -206,10 +215,10 @@ func ImportReport(db *sqlc.DB, path string) (id int, err error) {
 		}
 	}
 
-	log.Printf("importInput: %s: lines: %d\n", importName, len(bytes.Split(data, []byte{'\n'})))
+	debugf("importInput: %s: lines: %d\n", importName, len(bytes.Split(data, []byte{'\n'})))
 
 	if err = tx.Commit(); err != nil {
-		log.Printf("sqlc: importInput: commit: %v\n", err)
+		debugf("sqlc: importInput: commit: %v\n", err)
 		return id, err
 	}
 
