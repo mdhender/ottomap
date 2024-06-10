@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 var (
@@ -71,15 +72,17 @@ var cmdParse = &cobra.Command{
 			log.Fatalf("parsePending: %v\n", err)
 		}
 
-		parsed := 0
+		started, parsed := time.Now(), 0
 		for n, pendingRow := range pendingRows {
+			startedThisRow := time.Now()
 			log.Printf("parsePending: name %s: id %d: row %d of %d\n", pendingRow.Name, pendingRow.ID, n+1, len(pendingRows))
 			if err = actions.ParsePendingInput(db, pendingRow); err != nil {
 				log.Fatalf("parsePending: name %s: id %d: %v\n", pendingRow.Name, pendingRow.ID, err)
 			}
 			parsed++
+			log.Printf("parse: parsed import in %v\n", time.Since(startedThisRow))
 		}
 
-		log.Printf("parse: parsed %d imports\n", parsed)
+		log.Printf("parse: parsed %d imports in %v\n", parsed, time.Since(started))
 	},
 }

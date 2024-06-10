@@ -157,8 +157,11 @@ func ImportReport(db *sqlc.DB, path string, debug bool) (id int, err error) {
 		} else if len(section) == 1 && bytes.HasPrefix(line, []byte("Current Turn ")) {
 			debugf("importReport: %5d: found %q\n", no, line[:12])
 			section = append(section, sline{no: no, line: string(line)})
+		} else if bytes.HasPrefix(line, []byte("Tribe Follows: ")) {
+			debugf("importReport: %5d: found %q\n", no, line[:13])
+			section = append(section, sline{no: no, line: string(line)})
 		} else if bytes.HasPrefix(line, []byte("Tribe Movement: ")) {
-			debugf("importReport: %5d: found %q\n", no, line[:16])
+			debugf("importReport: %5d: found %q\n", no, line[:14])
 			section = append(section, sline{no: no, line: string(line)})
 		} else if rxScoutLine.Match(line) {
 			debugf("importReport: %5d: found %q\n", no, line[:14])

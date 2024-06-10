@@ -670,11 +670,12 @@ func (dbs *DBSession) Close(err error) error {
 	return err
 }
 
-func (dbs *DBSession) Abort() {
+func (dbs *DBSession) Abort(err error) error {
 	if dbs.tx != nil {
 		_ = dbs.tx.Rollback()
 	}
 	dbs.tx = nil
+	return err
 }
 
 func (dbs *DBSession) Rollback() error {
