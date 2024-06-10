@@ -14,6 +14,7 @@ import (
 	turns "github.com/mdhender/ottomap/pkg/turns/domain"
 	"golang.org/x/crypto/bcrypt"
 	_ "modernc.org/sqlite"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -65,9 +66,9 @@ func CreateDatabase(dbName string) error {
 }
 
 type DB struct {
-	db  *sql.DB
-	q   *Queries
-	ctx context.Context
+	DB      *sql.DB
+	Ctx     context.Context
+	Queries *Queries
 }
 
 func OpenDatabase(dbName string, ctx context.Context) (*DB, error) {
@@ -79,13 +80,13 @@ func OpenDatabase(dbName string, ctx context.Context) (*DB, error) {
 		return nil, err
 	}
 
-	db := &DB{ctx: ctx}
+	db := &DB{Ctx: ctx}
 
 	if mdb, err := sql.Open("sqlite", dbName); err != nil {
 		return nil, err
-	} else if db.db = mdb; db.db == nil {
+	} else if db.DB = mdb; db.DB == nil {
 		return nil, fmt.Errorf("db.db is nil")
-	} else if db.q = New(mdb); db.q == nil {
+	} else if db.Queries = New(mdb); db.Queries == nil {
 		return nil, fmt.Errorf("db.q is nil")
 	} else {
 		// confirm that the database has foreign keys enabled
@@ -104,14 +105,14 @@ func OpenDatabase(dbName string, ctx context.Context) (*DB, error) {
 }
 
 func (db *DB) CloseDatabase() {
-	if db.db != nil {
-		db.db.Close()
-		db.db = nil
+	if db.DB != nil {
+		db.DB.Close()
+		db.DB = nil
 	}
 }
 
 func (db *DB) AuthenticateUserEmail(email, plaintextSecret string) (uid string, err error) {
-	handle, err := db.q.ReadUserByEmail(db.ctx, email)
+	handle, err := db.Queries.ReadUserByEmail(db.Ctx, email)
 	if err != nil {
 		if !errors.Is(err, sql.ErrNoRows) {
 			return "", errors.Join(fmt.Errorf("read user authentication data"), err)
@@ -122,7 +123,7 @@ func (db *DB) AuthenticateUserEmail(email, plaintextSecret string) (uid string, 
 }
 
 func (db *DB) AuthenticateUserHandle(handle, plaintextSecret string) (uid string, err error) {
-	user, err := db.q.ReadUserAuthData(db.ctx, handle)
+	user, err := db.Queries.ReadUserAuthData(db.Ctx, handle)
 	if err != nil {
 		if !errors.Is(err, sql.ErrNoRows) {
 			return "", errors.Join(fmt.Errorf("read user authentication data"), err)
@@ -142,7 +143,7 @@ func (db *DB) AuthenticateUserHandle(handle, plaintextSecret string) (uid string
 
 func (db *DB) AllClanReportMetadata(cid string) ([]reports.Metadata, error) {
 	log.Printf("sqlc: AllClanReportMetadata(%s)\n", cid)
-	rpts, err := db.q.ReadAllClanReports(db.ctx, cid)
+	rpts, err := db.Queries.ReadAllClanReports(db.Ctx, cid)
 	if err != nil {
 		if !errors.Is(err, sql.ErrNoRows) {
 			return nil, errors.Join(fmt.Errorf("read all clan reports"), err)
@@ -165,7 +166,7 @@ func (db *DB) AllClanReportMetadata(cid string) ([]reports.Metadata, error) {
 
 func (db *DB) AllClanReports(cid string) ([]reports.Report, error) {
 	log.Printf("sqlc: AllClanReports(%s)\n", cid)
-	rpts, err := db.q.ReadAllClanReports(db.ctx, cid)
+	rpts, err := db.Queries.ReadAllClanReports(db.Ctx, cid)
 	if err != nil {
 		if !errors.Is(err, sql.ErrNoRows) {
 			return nil, errors.Join(fmt.Errorf("read all clan reports"), err)
@@ -188,7 +189,7 @@ func (db *DB) AllClanReports(cid string) ([]reports.Report, error) {
 
 func (db *DB) AllTurnMetadata() ([]turns.Metadata, error) {
 	log.Printf("sqlc: AllTurnMetadata()\n")
-	rows, err := db.q.ReadAllTurns(db.ctx)
+	rows, err := db.Queries.ReadAllTurns(db.Ctx)
 	if err != nil {
 		if !errors.Is(err, sql.ErrNoRows) {
 			return nil, errors.Join(fmt.Errorf("read all turns"), err)
@@ -211,7 +212,7 @@ func (db *DB) AllTurnMetadata() ([]turns.Metadata, error) {
 
 func (db *DB) AllTurns() ([]turns.Turn, error) {
 	log.Printf("sqlc: AllTurns()\n")
-	rows, err := db.q.ReadAllTurns(db.ctx)
+	rows, err := db.Queries.ReadAllTurns(db.Ctx)
 	if err != nil {
 		if !errors.Is(err, sql.ErrNoRows) {
 			return nil, errors.Join(fmt.Errorf("read all turns"), err)
@@ -232,7 +233,7 @@ func (db *DB) AllTurns() ([]turns.Turn, error) {
 }
 
 func (db *DB) CountQueuedByChecksum(cksum string) int {
-	n, err := db.q.CountQueuedByChecksum(db.ctx, cksum)
+	n, err := db.Queries.CountQueuedByChecksum(db.Ctx, cksum)
 	if err != nil {
 		if !errors.Is(err, sql.ErrNoRows) {
 			log.Printf("sqlc: countQueuedByChecksum: error: %v\n", err)
@@ -244,7 +245,7 @@ func (db *DB) CountQueuedByChecksum(cksum string) int {
 }
 
 func (db *DB) CountQueuedInProgressReports(cid string) int {
-	n, err := db.q.CountQueuedInProgressReports(db.ctx)
+	n, err := db.Queries.CountQueuedInProgressReports(db.Ctx)
 	if err != nil {
 		if !errors.Is(err, sql.ErrNoRows) {
 			log.Printf("sqlc: countQueuedInProgressReports: error: %v\n", err)
@@ -260,7 +261,7 @@ func (db *DB) CreateClan(uid, cid string) error {
 		Uid: uid,
 		Cid: cid,
 	}
-	if err := db.q.CreateClan(db.ctx, ccp); err != nil {
+	if err := db.Queries.CreateClan(db.Ctx, ccp); err != nil {
 		return errors.Join(fmt.Errorf("create clan"), err)
 	}
 	return nil
@@ -275,7 +276,7 @@ func (db *DB) CreateRole(rlid string) error {
 	} else if rlid != strings.ToLower(rlid) {
 		return fmt.Errorf("invalid role")
 	}
-	err := db.q.CreateRole(db.ctx, rlid)
+	err := db.Queries.CreateRole(db.Ctx, rlid)
 	if err != nil {
 		return err
 	}
@@ -285,7 +286,7 @@ func (db *DB) CreateRole(rlid string) error {
 func (db *DB) CreateSession(uid string) (sid string, err error) {
 	sid = uuid.New().String()
 	exp := time.Now().UTC().Add(2 * 7 * 24 * time.Hour)
-	if err := db.q.CreateSession(db.ctx, CreateSessionParams{
+	if err := db.Queries.CreateSession(db.Ctx, CreateSessionParams{
 		Uid:       uid,
 		Sid:       sid,
 		ExpiresAt: exp,
@@ -331,7 +332,7 @@ func (db *DB) CreateUser(handle, email, secret string) (string, error) {
 		Email:          email,
 		HashedPassword: hashedSecret,
 	}
-	if err := db.q.CreateUser(db.ctx, cup); err != nil {
+	if err := db.Queries.CreateUser(db.Ctx, cup); err != nil {
 		return "", errors.Join(fmt.Errorf("create user"), err)
 	}
 
@@ -344,42 +345,43 @@ func (db *DB) CreateUserRole(uid, rlid string) error {
 		Rlid:  rlid,
 		Value: "true",
 	}
-	if err := db.q.CreateUserRole(db.ctx, curp); err != nil {
+	if err := db.Queries.CreateUserRole(db.Ctx, curp); err != nil {
 		return errors.Join(fmt.Errorf("create user role"), err)
 	}
 	return nil
 }
 
 func (db *DB) DeleteSession(sid string) error {
-	return db.q.DeleteSession(db.ctx, sid)
+	return db.Queries.DeleteSession(db.Ctx, sid)
 }
 
 func (db *DB) QueueReport(qid, cid, name, cksum, data string) error {
-	tx, err := db.db.Begin()
+	tx, err := db.DB.Begin()
 	if err != nil {
 		return err
 	}
 	defer func() {
 		_ = tx.Rollback()
 	}()
+	qtx := db.Queries.WithTx(tx)
 
-	qtx := db.q.WithTx(tx)
 	cqrp := CreateQueuedReportParams{
 		Qid:    qid,
 		Cid:    cid,
 		Status: "uploading",
 	}
-	if err := qtx.CreateQueuedReport(db.ctx, cqrp); err != nil {
+	if err := qtx.CreateQueuedReport(db.Ctx, cqrp); err != nil {
 		log.Printf("sqlc: queueReport: report: %v\n", err)
 		return err
 	}
+
 	cqrdp := CreateQueuedReportDataParams{
 		Qid:   qid,
 		Name:  name,
 		Cksum: cksum,
 		Lines: data,
 	}
-	if err := qtx.CreateQueuedReportData(db.ctx, cqrdp); err != nil {
+	if err := qtx.CreateQueuedReportData(db.Ctx, cqrdp); err != nil {
 		log.Printf("sqlc: queueReport: data: %v\n", err)
 		return err
 	}
@@ -392,8 +394,19 @@ func (db *DB) QueueReport(qid, cid, name, cksum, data string) error {
 	return nil
 }
 
+func (db *DB) ReadInputOutputPaths() (input, output string, err error) {
+	paths, err := db.Queries.ReadMetadataInputOutputPaths(db.Ctx)
+	if err != nil {
+		if !errors.Is(err, sql.ErrNoRows) {
+			return "", "", errors.Join(fmt.Errorf("read metadata public"), err)
+		}
+		return "", "", sql.ErrNoRows
+	}
+	return paths.InputPath, paths.OutputPath, nil
+}
+
 func (db *DB) ReadMetadataPublic() (path string, err error) {
-	path, err = db.q.ReadMetadataPublic(db.ctx)
+	path, err = db.Queries.ReadMetadataPublic(db.Ctx)
 	if err != nil {
 		if !errors.Is(err, sql.ErrNoRows) {
 			return "", errors.Join(fmt.Errorf("read metadata public"), err)
@@ -404,7 +417,7 @@ func (db *DB) ReadMetadataPublic() (path string, err error) {
 }
 
 func (db *DB) ReadMetadataTemplates() (path string, err error) {
-	path, err = db.q.ReadMetadataTemplates(db.ctx)
+	path, err = db.Queries.ReadMetadataTemplates(db.Ctx)
 	if err != nil {
 		if !errors.Is(err, sql.ErrNoRows) {
 			return "", errors.Join(fmt.Errorf("read metadata templates"), err)
@@ -412,6 +425,24 @@ func (db *DB) ReadMetadataTemplates() (path string, err error) {
 		return "", sql.ErrNoRows
 	}
 	return path, nil
+}
+
+type DBPendingInputDetail struct {
+	Id   int
+	Path string
+	Name string
+}
+
+func (db *DB) ReadPendingInput() (DBPendingInputDetail, bool) {
+	rows, err := db.Queries.ReadPendingInputMetadata(db.Ctx)
+	if err != nil || len(rows) == 0 {
+		return DBPendingInputDetail{}, false
+	}
+	return DBPendingInputDetail{
+		Id:   int(rows[0].ID),
+		Path: rows[0].Path,
+		Name: rows[0].Name,
+	}, true
 }
 
 type DBQueuedReportDetail struct {
@@ -429,7 +460,7 @@ func (db *DB) ReadQueuedReport(cid, qid string) (DBQueuedReportDetail, error) {
 		Cid: cid,
 		Qid: qid,
 	}
-	row, err := db.q.ReadQueuedReport(db.ctx, rqrp)
+	row, err := db.Queries.ReadQueuedReport(db.Ctx, rqrp)
 	if err != nil {
 		if !errors.Is(err, sql.ErrNoRows) {
 			return DBQueuedReportDetail{}, errors.Join(fmt.Errorf("read queued report"), err)
@@ -463,7 +494,7 @@ type DBQueuedReport struct {
 }
 
 func (db *DB) ReadQueuedReports(cid string) ([]DBQueuedReport, error) {
-	rows, err := db.q.ReadQueuedReports(db.ctx, cid)
+	rows, err := db.Queries.ReadQueuedReports(db.Ctx, cid)
 	if err != nil {
 		if !errors.Is(err, sql.ErrNoRows) {
 			return nil, errors.Join(fmt.Errorf("read queued reports"), err)
@@ -485,7 +516,7 @@ func (db *DB) ReadQueuedReports(cid string) ([]DBQueuedReport, error) {
 }
 
 func (db *DB) ReadSession(sid string) (uid string, exp time.Time, err error) {
-	session, err := db.q.ReadSession(db.ctx, sid)
+	session, err := db.Queries.ReadSession(db.Ctx, sid)
 	if err != nil {
 		if !errors.Is(err, sql.ErrNoRows) {
 			return "", time.Time{}, errors.Join(fmt.Errorf("read session"), err)
@@ -496,7 +527,7 @@ func (db *DB) ReadSession(sid string) (uid string, exp time.Time, err error) {
 }
 
 func (db *DB) ReadUser(uid string) (handle, email string, err error) {
-	user, err := db.q.ReadUser(db.ctx, uid)
+	user, err := db.Queries.ReadUser(db.Ctx, uid)
 	if err != nil {
 		if !errors.Is(err, sql.ErrNoRows) {
 			return "", "", errors.Join(fmt.Errorf("read user"), err)
@@ -507,7 +538,7 @@ func (db *DB) ReadUser(uid string) (handle, email string, err error) {
 }
 
 func (db *DB) ReadUserAuthData(handle string) (uid, hashedSecret string, err error) {
-	user, err := db.q.ReadUserAuthData(db.ctx, handle)
+	user, err := db.Queries.ReadUserAuthData(db.Ctx, handle)
 	if err != nil {
 		if !errors.Is(err, sql.ErrNoRows) {
 			return "", "", errors.Join(fmt.Errorf("read user auth data"), err)
@@ -518,7 +549,7 @@ func (db *DB) ReadUserAuthData(handle string) (uid, hashedSecret string, err err
 }
 
 func (db *DB) ReadUserClan(uid string) (clan string, err error) {
-	cid, err := db.q.ReadUserClan(db.ctx, uid)
+	cid, err := db.Queries.ReadUserClan(db.Ctx, uid)
 	if err != nil {
 		if !errors.Is(err, sql.ErrNoRows) {
 			return "", errors.Join(fmt.Errorf("read user clan"), err)
@@ -529,7 +560,7 @@ func (db *DB) ReadUserClan(uid string) (clan string, err error) {
 }
 
 func (db *DB) ReadUserRole(uid, role string) (value string, err error) {
-	value, err = db.q.ReadUserRole(db.ctx, ReadUserRoleParams{
+	value, err = db.Queries.ReadUserRole(db.Ctx, ReadUserRoleParams{
 		Uid:  uid,
 		Rlid: role,
 	})
@@ -542,10 +573,96 @@ func (db *DB) ReadUserRole(uid, role string) (value string, err error) {
 	return value, nil
 }
 
-func (db *DB) UpdateMetadataPublicPath(path string) error {
-	return db.q.UpdateMetadataPublic(db.ctx, path)
+func (db *DB) UpdateInputOutputPaths(input, output string) error {
+	if path, err := filepath.Abs(input); err != nil {
+		return err
+	} else if path != input {
+		return errors.New("input path is not absolute")
+	}
+	if path, err := filepath.Abs(output); err != nil {
+		return err
+	} else if path != output {
+		return errors.New("output path is not absolute")
+	}
+
+	umiop := UpdateMetadataInputOutputPathsParams{
+		InputPath:  input,
+		OutputPath: output,
+	}
+	return db.Queries.UpdateMetadataInputOutputPaths(db.Ctx, umiop)
 }
 
-func (db *DB) UpdateMetadataTemplatesPath(path string) error {
-	return db.q.UpdateMetadataTemplates(db.ctx, path)
+func (db *DB) UpdateInputStatus(id int, from, to string) error {
+	return db.Queries.UpdateInputStatus(db.Ctx, UpdateInputStatusParams{
+		ID:       int64(id),
+		Status:   from,
+		Status_2: to,
+	})
+}
+
+func (db *DB) UpdateMetadataPublicPath(public string) error {
+	if path, err := filepath.Abs(public); err != nil {
+		return err
+	} else if path != public {
+		return errors.New("public path is not absolute")
+	}
+	return db.Queries.UpdateMetadataPublic(db.Ctx, public)
+}
+
+func (db *DB) UpdateMetadataTemplatesPath(templates string) error {
+	if path, err := filepath.Abs(templates); err != nil {
+		return err
+	} else if path != templates {
+		return errors.New("public path is not absolute")
+	}
+	return db.Queries.UpdateMetadataTemplates(db.Ctx, templates)
+}
+
+func (db *DB) OpenSession() (*DBSession, error) {
+	tx, err := db.DB.BeginTx(db.Ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &DBSession{
+		tx:      tx,
+		Queries: db.Queries.WithTx(tx),
+	}, nil
+}
+
+type DBSession struct {
+	tx      *sql.Tx
+	Queries *Queries
+}
+
+func (dbs *DBSession) Close(err error) error {
+	if dbs.tx != nil {
+		if err != nil {
+			_ = dbs.tx.Rollback()
+		} else {
+			_ = dbs.tx.Commit()
+		}
+	}
+	dbs.tx = nil
+	return err
+}
+
+func (dbs *DBSession) Abort() {
+	if dbs.tx != nil {
+		_ = dbs.tx.Rollback()
+	}
+	dbs.tx = nil
+}
+
+func (dbs *DBSession) Rollback() error {
+	if dbs.tx == nil {
+		return nil
+	}
+	return dbs.tx.Rollback()
+}
+
+func (dbs *DBSession) Commit() error {
+	if dbs.tx == nil {
+		return nil
+	}
+	return dbs.tx.Commit()
 }

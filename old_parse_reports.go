@@ -7,7 +7,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var argsParseReports struct {
+var argsOldParseReports struct {
 	gridOrigin string // grid value to replace ## with
 	debug      struct {
 		captureRawText bool
@@ -15,29 +15,29 @@ var argsParseReports struct {
 	}
 }
 
-var cmdParseReports = &cobra.Command{
+var cmdOldParseReports = &cobra.Command{
 	Use:   "reports",
 	Short: "Parse all reports in the index file",
 	Long:  `Create unit movement files for all TribeNet turn reports listed in the index file.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		//if argsParseReports.gridOrigin == "" {
+		//if argsOldParseReports.gridOrigin == "" {
 		//	return fmt.Errorf("missing grid origin")
-		//} else if strings.TrimSpace(argsParseReports.gridOrigin) != argsParseReports.gridOrigin {
+		//} else if strings.TrimSpace(argsOldParseReports.gridOrigin) != argsOldParseReports.gridOrigin {
 		//	return fmt.Errorf("grid origin can not contain spaces")
-		//} else if len(argsParseReports.gridOrigin) != 2 {
+		//} else if len(argsOldParseReports.gridOrigin) != 2 {
 		//	return fmt.Errorf("grid orgin must be two upper-case letters")
-		//} else if strings.Trim(argsParseReports.gridOrigin, "ABCDEFGHIJKLMNOPQRSTUVWYZ") != "" {
+		//} else if strings.Trim(argsOldParseReports.gridOrigin, "ABCDEFGHIJKLMNOPQRSTUVWYZ") != "" {
 		//	return fmt.Errorf("grid orgin must be two upper-case letters")
 		//}
-		//log.Printf("parse: reports: index  %s\n", argsParse.index)
-		//log.Printf("parse: reports: output %s\n", argsParse.output)
-		//log.Printf("parse: reports: origin %s\n", argsParseReports.gridOrigin)
-		//if argsParse.debug.units {
-		//	log.Printf("parse: reports: debug: units %v\n", argsParse.debug.units)
+		//log.Printf("parse: reports: index  %s\n", argsOldParse.index)
+		//log.Printf("parse: reports: output %s\n", argsOldParse.output)
+		//log.Printf("parse: reports: origin %s\n", argsOldParseReports.gridOrigin)
+		//if argsOldParse.debug.units {
+		//	log.Printf("parse: reports: debug: units %v\n", argsOldParse.debug.units)
 		//}
 		//
 		//var index *domain.Index
-		//if data, err := os.ReadFile(argsParse.index); err != nil {
+		//if data, err := os.ReadFile(argsOldParse.index); err != nil {
 		//	log.Fatalf("parse: reports: failed to read index file: %v", err)
 		//} else if err = json.Unmarshal(data, &index); err != nil {
 		//	log.Fatalf("parse: reports: failed to parse index file: %v", err)
@@ -64,7 +64,7 @@ var cmdParseReports = &cobra.Command{
 		//
 		//	// skip if we're debugging units and this report doesn't have
 		//	// a debug section or any units in that section.
-		//	if argsParse.debug.units {
+		//	if argsOldParse.debug.units {
 		//		if rpf.Debug == nil {
 		//			log.Printf("parse: reports: %s: debug: units: skipping (unset)\n", rpf.Id)
 		//			continue
@@ -81,7 +81,7 @@ var cmdParseReports = &cobra.Command{
 		//		}
 		//	}
 		//
-		//	rss, err := turn_reports.Parse(rpf, argsParseReports.debug.clanShowSlugs, argsParseReports.debug.captureRawText)
+		//	rss, err := turn_reports.Parse(rpf, argsOldParseReports.debug.clanShowSlugs, argsOldParseReports.debug.captureRawText)
 		//	if err != nil {
 		//		log.Printf("parse: reports: %s: error: %v\n", rpf.Id, err)
 		//		errCount++
@@ -93,7 +93,7 @@ var cmdParseReports = &cobra.Command{
 		//	for _, rs := range rss {
 		//		log.Printf("parse: reports: %s: unit %-8s: parsed\n", rpf.Id, rs.Id)
 		//		units = append(units, rs.Unit)
-		//		//path := filepath.Join(argsParse.output, fmt.Sprintf("%s.%s.json", rpf.Id, rs.Id))
+		//		//path := filepath.Join(argsOldParse.output, fmt.Sprintf("%s.%s.json", rpf.Id, rs.Id))
 		//		//data, err := json.MarshalIndent(rs, "", "  ")
 		//		//if err != nil {
 		//		//	log.Fatalf("parse: reports: %s: %v\n", rpf.Id, err)
@@ -122,12 +122,12 @@ var cmdParseReports = &cobra.Command{
 		//})
 		//
 		//// write out our debug logs
-		//if err := os.WriteFile(filepath.Join(argsParse.output, "debug_turn_report_movements.txt"), movements.GetDebugBuffer(), 0644); err != nil {
+		//if err := os.WriteFile(filepath.Join(argsOldParse.output, "debug_turn_report_movements.txt"), movements.GetDebugBuffer(), 0644); err != nil {
 		//	log.Fatal(err)
 		//}
 		//
 		//// write out our combined index file
-		//combinedOutput := filepath.Join(argsParse.output, "outputs.json")
+		//combinedOutput := filepath.Join(argsOldParse.output, "outputs.json")
 		//if data, err := json.MarshalIndent(outputs, "", "  "); err != nil {
 		//	log.Fatal(err)
 		//} else if err = os.WriteFile(combinedOutput, data, 0644); err != nil {

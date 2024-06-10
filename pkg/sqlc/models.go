@@ -33,8 +33,36 @@ type ElementsParent struct {
 	ParentEid string
 }
 
+type Input struct {
+	ID     int64
+	Status string
+	Path   string
+	Name   string
+	Cksum  string
+	Crdttm time.Time
+	Updttm time.Time
+}
+
+type InputLine struct {
+	Iid    int64
+	SectNo int64
+	LineNo int64
+	Line   string
+}
+
+type LogMessage struct {
+	ID      int64
+	Arg1    string
+	Arg2    string
+	Arg3    string
+	Message string
+	Crdttm  time.Time
+}
+
 type Metadatum struct {
 	Version       string
+	InputPath     string
+	OutputPath    string
 	PublicPath    string
 	TemplatesPath string
 }

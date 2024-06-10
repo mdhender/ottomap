@@ -9,6 +9,23 @@ import (
 	"context"
 )
 
+const readMetadataInputOutputPaths = `-- name: ReadMetadataInputOutputPaths :one
+SELECT input_path, output_path
+FROM metadata
+`
+
+type ReadMetadataInputOutputPathsRow struct {
+	InputPath  string
+	OutputPath string
+}
+
+func (q *Queries) ReadMetadataInputOutputPaths(ctx context.Context) (ReadMetadataInputOutputPathsRow, error) {
+	row := q.db.QueryRowContext(ctx, readMetadataInputOutputPaths)
+	var i ReadMetadataInputOutputPathsRow
+	err := row.Scan(&i.InputPath, &i.OutputPath)
+	return i, err
+}
+
 const readMetadataPublic = `-- name: ReadMetadataPublic :one
 SELECT public_path
 FROM metadata
@@ -31,6 +48,22 @@ func (q *Queries) ReadMetadataTemplates(ctx context.Context) (string, error) {
 	var templates_path string
 	err := row.Scan(&templates_path)
 	return templates_path, err
+}
+
+const updateMetadataInputOutputPaths = `-- name: UpdateMetadataInputOutputPaths :exec
+UPDATE metadata
+SET input_path = ?1,
+    output_path = ?2
+`
+
+type UpdateMetadataInputOutputPathsParams struct {
+	InputPath  string
+	OutputPath string
+}
+
+func (q *Queries) UpdateMetadataInputOutputPaths(ctx context.Context, arg UpdateMetadataInputOutputPathsParams) error {
+	_, err := q.db.ExecContext(ctx, updateMetadataInputOutputPaths, arg.InputPath, arg.OutputPath)
+	return err
 }
 
 const updateMetadataPublic = `-- name: UpdateMetadataPublic :exec

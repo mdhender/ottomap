@@ -20,6 +20,8 @@ var (
 	argsInitialize struct {
 		paths struct {
 			db        string
+			input     string
+			output    string
 			public    string
 			templates string
 		}
@@ -48,6 +50,32 @@ var cmdInitialize = &cobra.Command{
 			return fmt.Errorf("database path is not a directory")
 		} else {
 			argsInitialize.paths.db = path
+		}
+		if len(argsInitialize.paths.input) == 0 {
+			return fmt.Errorf("missing input path")
+		} else if argsInitialize.paths.input != strings.TrimSpace(argsInitialize.paths.input) {
+			return fmt.Errorf("input path must not contain leading or trailing spaces")
+		} else if path, err := filepath.Abs(argsInitialize.paths.input); err != nil {
+			return err
+		} else if sb, err := os.Stat(path); err != nil {
+			return err
+		} else if !sb.IsDir() {
+			return fmt.Errorf("input path is not a directory")
+		} else {
+			argsInitialize.paths.input = path
+		}
+		if len(argsInitialize.paths.output) == 0 {
+			return fmt.Errorf("missing output path")
+		} else if argsInitialize.paths.output != strings.TrimSpace(argsInitialize.paths.output) {
+			return fmt.Errorf("output path must not contain leading or trailing spaces")
+		} else if path, err := filepath.Abs(argsInitialize.paths.public); err != nil {
+			return err
+		} else if sb, err := os.Stat(path); err != nil {
+			return err
+		} else if !sb.IsDir() {
+			return fmt.Errorf("output path is not a directory")
+		} else {
+			argsInitialize.paths.output = path
 		}
 		if len(argsInitialize.paths.public) == 0 {
 			return fmt.Errorf("missing public path")
@@ -125,8 +153,10 @@ var cmdInitialize = &cobra.Command{
 			db.CloseDatabase()
 		}()
 
-		// update the metadata for the public and template paths
-		if err := db.UpdateMetadataPublicPath(argsInitialize.paths.public); err != nil {
+		// update the metadata for the input, output, public, and template paths
+		if err := db.UpdateInputOutputPaths(argsInitialize.paths.input, argsInitialize.paths.output); err != nil {
+			log.Fatalf("initialize: iopaths: %v\n", err)
+		} else if err := db.UpdateMetadataPublicPath(argsInitialize.paths.public); err != nil {
 			log.Fatalf("initialize: public %q: %v\n", argsInitialize.paths.public, err)
 		} else if err = db.UpdateMetadataTemplatesPath(argsInitialize.paths.templates); err != nil {
 			log.Fatalf("initialize: templates %q: %v\n", argsInitialize.paths.templates, err)

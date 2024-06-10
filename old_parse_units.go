@@ -7,13 +7,13 @@ import (
 	"log"
 )
 
-var cmdParseUnits = &cobra.Command{
+var cmdOldParseUnits = &cobra.Command{
 	Use:   "units",
 	Short: "Parse all unit files in the input path",
 	Long:  `Read all unit input files, parse them for locations, status, and movement data. Write the combined results into the output path.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		log.Printf("parse: units: index  %s\n", argsParse.index)
-		log.Printf("parse: units: output %s\n", argsParse.output)
+		log.Printf("parse: units: index  %s\n", argsOldParse.index)
+		log.Printf("parse: units: output %s\n", argsOldParse.output)
 
 		//// unit files have names like YEAR-MONTH.CLAN.UNIT.input.txt
 		//pattern := `^(\d{3})-(\d{2})\.(0\d{3})\.(\d{4}([cefg][1-9])?)\.input\.txt$`
@@ -24,7 +24,7 @@ var cmdParseUnits = &cobra.Command{
 		//
 		//// find all unit input files in the input directory.
 		//var inputFiles []units.InputFile
-		//entries, err := os.ReadDir(argsParse.input)
+		//entries, err := os.ReadDir(argsOldParse.input)
 		//if err != nil {
 		//	log.Fatal(err)
 		//}
@@ -44,7 +44,7 @@ var cmdParseUnits = &cobra.Command{
 		//		Month: matches[2],
 		//		Clan:  matches[3],
 		//		Unit:  matches[4],
-		//		File:  filepath.Join(argsParse.input, fileName),
+		//		File:  filepath.Join(argsOldParse.input, fileName),
 		//	})
 		//}
 		//
@@ -91,7 +91,7 @@ var cmdParseUnits = &cobra.Command{
 		//
 		//// write out our debug log
 		//if b := movements.DebugBuffer.Bytes(); len(b) > 0 {
-		//	if err := os.WriteFile(filepath.Join(argsParse.output, "debug_movements.txt"), b, 0644); err != nil {
+		//	if err := os.WriteFile(filepath.Join(argsOldParse.output, "debug_movements.txt"), b, 0644); err != nil {
 		//		log.Fatal(err)
 		//	}
 		//}
