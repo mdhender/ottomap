@@ -13,13 +13,13 @@ import (
 )
 
 var (
-	version = semver.Version{Major: 0, Minor: 9, Patch: 1}
+	version = semver.Version{Major: 0, Minor: 9, Patch: 2}
 )
 
 func main() {
 	log.SetFlags(log.Lshortfile | log.Ltime)
 
-	log.Printf("todo: detect when a unit is created as an after-move action\n")
+	// todo: detect when a unit is created as an after-move action
 
 	if err := Execute(); err != nil {
 		log.Fatal(err)

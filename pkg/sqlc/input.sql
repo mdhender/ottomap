@@ -8,7 +8,7 @@ INSERT INTO input_lines (iid, sect_no, line_no, line)
 VALUES (?1, ?2, ?3, ?4);
 
 -- name: ReadAllInputMetadata :many
-SELECT id, path, name, cksum, crdttm
+SELECT id, path, name, cksum, status, crdttm
 FROM input;
 
 -- name: ReadInputLines :many

@@ -405,6 +405,30 @@ func (db *DB) ReadInputOutputPaths() (input, output string, err error) {
 	return paths.InputPath, paths.OutputPath, nil
 }
 
+type DBImportedFile struct {
+	Name     string
+	Checksum string
+	Status   string
+	Created  time.Time
+}
+
+func (db *DB) ReadImportedFiles() ([]DBImportedFile, error) {
+	rows, err := db.Queries.ReadAllInputMetadata(db.Ctx)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return nil, errors.Join(fmt.Errorf("read imported files"), err)
+	}
+	var list []DBImportedFile
+	for _, row := range rows {
+		list = append(list, DBImportedFile{
+			Name:     row.Name,
+			Checksum: row.Cksum,
+			Status:   row.Status,
+			Created:  row.Crdttm,
+		})
+	}
+	return list, nil
+}
+
 func (db *DB) ReadMetadataPublic() (path string, err error) {
 	path, err = db.Queries.ReadMetadataPublic(db.Ctx)
 	if err != nil {

@@ -74,7 +74,7 @@ func (q *Queries) InsertInputLine(ctx context.Context, arg InsertInputLineParams
 }
 
 const readAllInputMetadata = `-- name: ReadAllInputMetadata :many
-SELECT id, path, name, cksum, crdttm
+SELECT id, path, name, cksum, status, crdttm
 FROM input
 `
 
@@ -83,6 +83,7 @@ type ReadAllInputMetadataRow struct {
 	Path   string
 	Name   string
 	Cksum  string
+	Status string
 	Crdttm time.Time
 }
 
@@ -100,6 +101,7 @@ func (q *Queries) ReadAllInputMetadata(ctx context.Context) ([]ReadAllInputMetad
 			&i.Path,
 			&i.Name,
 			&i.Cksum,
+			&i.Status,
 			&i.Crdttm,
 		); err != nil {
 			return nil, err

@@ -15,6 +15,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"text/tabwriter"
 )
 
 var (
@@ -31,8 +32,8 @@ var (
 
 var cmdList = &cobra.Command{
 	Use:   "list",
-	Short: "Display a list of reports in the database or folder",
-	Long:  `Display a list of reports in the database or folder.`,
+	Short: "Display a list of reports in the data folder",
+	Long:  `Display a list of reports in the data folder.`,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		if len(argsList.paths.db) == 0 {
 			return fmt.Errorf("missing database path")
@@ -47,7 +48,7 @@ var cmdList = &cobra.Command{
 		} else {
 			argsList.paths.db = path
 		}
-		log.Printf("list: db   %q\n", argsList.paths.db)
+		// log.Printf("list: db   %q\n", argsList.paths.db)
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
@@ -70,23 +71,56 @@ var cmdList = &cobra.Command{
 		if err != nil {
 			log.Fatalf("list: db: read paths: %v\n", err)
 		}
-		log.Printf("list: input %s\n", input)
+		// log.Printf("list: input %s\n", input)
 		if sb, err := os.Stat(input); err != nil {
 			log.Fatalf("list: input %s: does not exist\n", input)
 		} else if !sb.IsDir() {
 			log.Fatalf("list: input %s: is not a folder\n", input)
 		}
 
+		type fileData struct {
+			fsName   string // file system name
+			dbName   string
+			dbStatus string // status from database
+			dbDate   string // date from database
+		}
+		var fileList = make(map[string]*fileData)
+
 		// inputReports are all the reports in the input path on the file system
 		inputReports, err := allTheInputReports(input)
 		if err != nil {
 			log.Fatal(err)
 		}
-
-		// todo: write to a tabwriter
 		for _, report := range inputReports {
-			fmt.Printf("input: %s %s\n", report.name, report.cksum)
+			fileList[report.cksum] = &fileData{
+				fsName:   report.name,
+				dbStatus: "not imported",
+			}
 		}
+
+		// importedFiles are all the reports in the database
+		importedFiles, err := db.ReadImportedFiles()
+		if err != nil {
+			log.Fatalf("list: db: read imported files: %v\n", err)
+		}
+		for _, importedFile := range importedFiles {
+			fd, ok := fileList[importedFile.Checksum]
+			if !ok {
+				// file has not been imported
+				continue
+			}
+			fd.dbName = importedFile.Name
+			fd.dbStatus = importedFile.Status
+			fd.dbDate = importedFile.Created.Format("2006-01-02 15:04:05")
+		}
+
+		// print the list as a simple table
+		tb := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
+		_, _ = tb.Write([]byte("Input File Name\tDB File Name\tParse Status\tWhen\n"))
+		for _, v := range fileList {
+			_, _ = tb.Write([]byte(fmt.Sprintf("%s\t%s\t%s\t%s\n", v.fsName, v.dbName, v.dbStatus, v.dbDate)))
+		}
+		_ = tb.Flush()
 	},
 }
 
