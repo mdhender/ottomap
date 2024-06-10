@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"text/tabwriter"
@@ -113,6 +114,15 @@ var cmdList = &cobra.Command{
 			fd.dbStatus = importedFile.Status
 			fd.dbDate = importedFile.Created.Format("2006-01-02 15:04:05")
 		}
+
+		// convert the map to a slice and sort it by file system name
+		var fsList []fileData
+		for _, v := range fileList {
+			fsList = append(fsList, *v)
+		}
+		sort.Slice(fsList, func(i, j int) bool {
+			return fsList[i].fsName < fsList[j].fsName
+		})
 
 		// print the list as a simple table
 		tb := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
