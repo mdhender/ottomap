@@ -61,7 +61,7 @@ Step <- d:DIRECTION "-" t:TERRAIN_CODE EOF {
         }
     }
     return found, nil
-} / t:LakeOrOceanCode SP+ d:DIRECTION sdi:SpaceDirection* EOF {
+} / t:ObviousNeighboringTerrainCode SP+ d:DIRECTION sdi:SpaceDirection* EOF {
     kind := t.(domain.Terrain)
     neighbors := []*Neighbor{{
         Direction: d.(directions.Direction),
@@ -118,13 +118,18 @@ EdgeType <- "Ford" {
     return domain.EPass, nil
 } / "River" {
     return domain.ERiver, nil
+} / "Stone Road" {
+    return domain.EStoneRoad, nil
 }
 
-LakeOrOceanCode <- "L" {
+ObviousNeighboringTerrainCode <- "Lcm" {
+    return domain.TLowConiferMountains, nil
+} / "L" {
     return domain.TLake, nil
 } / "O" {
     return domain.TOcean, nil
 }
+
 
 SpaceDirection <- SP d:DIRECTION {
     return d, nil
@@ -176,6 +181,8 @@ TERRAIN <- "ALPS" {
     return domain.TAlps, nil
 } / "ARID TUNDRA" {
     return domain.TAridTundra, nil
+} / "ARID" {
+    return domain.TAridHills, nil
 } / "BRUSH HILLS" {
     return domain.TBrushHills, nil
 } / "BRUSH" {
@@ -235,6 +242,7 @@ TERRAIN_CODE <- "ALPS" {    return domain.TAlps, nil
 } / "LSM" { return domain.TLowSnowyMountains, nil
 } / "LVM" { return domain.TLowVolcanicMountains, nil
 } / "PPR" { return domain.TPrairiePlateau, nil
+} / "AH" { return domain.TAridHills, nil
 } / "AR" { return domain.TAridTundra, nil
 } / "BH" { return domain.TBrushHills, nil
 } / "BR" { return domain.TBrush, nil
@@ -242,6 +250,7 @@ TERRAIN_CODE <- "ALPS" {    return domain.TAlps, nil
 } / "DE" { return domain.TDesert, nil
 } / "DH" { return domain.TDeciduousHills, nil
 } / "GH" { return domain.TGrassyHills, nil
+} / "JG" { return domain.TJungle, nil
 } / "JH" { return domain.TJungleHills, nil
 } / "PI" { return domain.TPolarIce, nil
 } / "PR" { return domain.TPrairie, nil
@@ -250,7 +259,6 @@ TERRAIN_CODE <- "ALPS" {    return domain.TAlps, nil
 } / "SW" { return domain.TSwamp, nil
 } / "TU" { return domain.TTundra, nil
 } / "D" { return domain.TDeciduousForest, nil
-} / "J" { return domain.TJungle, nil
 } / "L" { return domain.TLake, nil
 } / "O" { return domain.TOcean, nil
 }

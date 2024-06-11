@@ -168,10 +168,27 @@ func parseStep(turnId, unitId string, step []byte, showDebug bool) (result *Step
 				log.Printf("parser:  sub: %q\n", subStep)
 				return nil, fmt.Errorf("neighbors forbidden at beginning of step")
 			} else if result.Neighbors != nil {
-				log.Printf("parser:  sub: %q\n", subStep)
-				return nil, fmt.Errorf("multiple neighbors forbidden")
+				// cross compare neighbors, returning an error if either list contains the same edge
+				for _, nn := range result.Neighbors {
+					for _, nv := range v {
+						if nn.Direction == nv.Direction {
+							log.Printf("parser:  sub: %q\n", subStep)
+							return nil, fmt.Errorf("duplicate neighbor direction %s", nn.Direction)
+						}
+					}
+				}
+				for _, nv := range v {
+					for _, nn := range result.Neighbors {
+						if nv.Direction == nn.Direction {
+							log.Printf("parser:  sub: %q\n", subStep)
+							return nil, fmt.Errorf("duplicate neighbor direction %s", nv.Direction)
+						}
+					}
+				}
+				result.Neighbors = append(result.Neighbors, v...)
+			} else {
+				result.Neighbors = v
 			}
-			result.Neighbors = v
 		case *ProhibitedFrom:
 			if result != nil {
 				log.Printf("parser:  sub: %q\n", subStep)

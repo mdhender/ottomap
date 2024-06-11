@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	version = semver.Version{Major: 0, Minor: 9, Patch: 5}
+	version = semver.Version{Major: 0, Minor: 10, Patch: 0}
 )
 
 func main() {
@@ -35,9 +35,10 @@ func Execute() error {
 	}
 
 	cmdIndex.AddCommand(cmdIndexReports)
-	cmdIndexReports.Flags().StringVarP(&argsIndexReports.config, "config", "c", "data", "path to create configuration file in")
-	cmdIndexReports.Flags().StringVarP(&argsIndexReports.input, "input", "i", "data/input", "path to read input from")
-	cmdIndexReports.Flags().StringVarP(&argsIndexReports.output, "output", "o", "data/output", "path to write output to")
+	cmdIndexReports.Flags().StringVar(&argsIndexReports.paths.data, "data", "", "path to root of data files")
+	cmdIndexReports.Flags().StringVarP(&argsIndexReports.paths.config, "config", "c", "data", "path to create configuration file in")
+	cmdIndexReports.Flags().StringVarP(&argsIndexReports.paths.input, "input", "i", "data/input", "path to read input from")
+	cmdIndexReports.Flags().StringVarP(&argsIndexReports.paths.output, "output", "o", "data/output", "path to write output to")
 
 	cmdInitialize.Flags().StringVar(&argsInitialize.admin.email, "email", "", "email for administrator")
 	if err := cmdInitialize.MarkFlagRequired("email"); err != nil {
@@ -86,7 +87,8 @@ func Execute() error {
 	if err := cmdMap.MarkFlagRequired("clan"); err != nil {
 		log.Fatalf("map: clan: mark required: %v\n", err)
 	}
-	cmdMap.Flags().StringVar(&argsMap.config, "config", "data/config.json", "configuration file to use")
+	cmdMap.Flags().StringVar(&argsMap.paths.config, "config", "data/config.json", "configuration file to use")
+	cmdMap.Flags().StringVar(&argsMap.paths.data, "data", "", "path to root of data files")
 	cmdMap.Flags().StringVar(&argsMap.turnId, "turn", "", "turn to process (yyyy-mm format)")
 
 	cmdParse.Flags().StringVar(&argsParse.paths.db, "db", "", "path to database files")

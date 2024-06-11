@@ -21,6 +21,7 @@ const (
 	EFord
 	EPass
 	ERiver
+	EStoneRoad
 )
 
 // MarshalJSON implements the json.Marshaler interface.
@@ -51,17 +52,19 @@ func (e Edge) String() string {
 var (
 	// helper map for marshalling the enum
 	edgeEnumToString = map[Edge]string{
-		ENone:  "",
-		EFord:  "Ford",
-		EPass:  "Pass",
-		ERiver: "River",
+		ENone:      "",
+		EFord:      "Ford",
+		EPass:      "Pass",
+		ERiver:     "River",
+		EStoneRoad: "Stone Road",
 	}
 	// helper map for unmarshalling the enum
 	edgeStringToEnum = map[string]Edge{
-		"":      ENone,
-		"Ford":  EFord,
-		"Pass":  EPass,
-		"River": ERiver,
+		"":           ENone,
+		"Ford":       EFord,
+		"Pass":       EPass,
+		"River":      ERiver,
+		"Stone Road": EStoneRoad,
 	}
 )
 
@@ -225,6 +228,7 @@ const (
 	// TBlank must be the first enum value or the map will not render
 	TBlank Terrain = iota
 	TAlps
+	TAridHills
 	TAridTundra
 	TBrush
 	TBrushHills
@@ -293,6 +297,7 @@ var (
 	terrainEnumToString = map[Terrain]string{
 		TBlank:                "",
 		TAlps:                 "ALPS",
+		TAridHills:            "AH",
 		TAridTundra:           "AR",
 		TBrush:                "BR",
 		TBrushHills:           "BH",
@@ -303,7 +308,7 @@ var (
 		TGrassyHills:          "GH",
 		TGrassyHillsPlateau:   "GHP",
 		THighSnowyMountains:   "HSM",
-		TJungle:               "J",
+		TJungle:               "JG",
 		TJungleHills:          "JH",
 		TLake:                 "L",
 		TLowAridMountains:     "LAM",
@@ -324,6 +329,7 @@ var (
 	terrainStringToEnum = map[string]Terrain{
 		"":     TBlank,
 		"ALPS": TAlps,
+		"AH":   TAridHills,
 		"AR":   TAridTundra,
 		"BR":   TBrush,
 		"BH":   TBrushHills,
@@ -334,7 +340,7 @@ var (
 		"GH":   TGrassyHills,
 		"GHP":  TGrassyHillsPlateau,
 		"HSM":  THighSnowyMountains,
-		"J":    TJungle,
+		"JG":   TJungle,
 		"JH":   TJungleHills,
 		"L":    TLake,
 		"LAM":  TLowAridMountains,
@@ -358,6 +364,7 @@ var (
 	TileTerrainNames = map[Terrain]string{
 		TBlank:                "Blank",
 		TAlps:                 "Mountains",
+		TAridHills:            "Hills",
 		TAridTundra:           "Flat Moss",
 		TBrush:                "Flat Shrubland",
 		TBrushHills:           "Hills Shrubland",

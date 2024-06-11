@@ -25,7 +25,10 @@ import (
 )
 
 var argsMap struct {
-	config string // path to configuration file
+	paths struct {
+		data   string
+		config string // path to configuration file
+	}
 	clanId string // clan id to use
 	turnId string // turn id to use
 	debug  struct {
@@ -44,25 +47,51 @@ var cmdMap = &cobra.Command{
 	Short: "Create a map from a report",
 	Long:  `Load a parsed report and create a map.`,
 	PreRunE: func(cmd *cobra.Command, args []string) error {
-		if strings.TrimSpace(argsMap.config) != argsMap.config {
+		// if paths.data is set, then it is an absolute path and the other values must be blank since they will be set by the absolute path
+		if argsMap.paths.data != "" {
+			// strip the default values if all of them are set
+			if argsMap.paths.config == "data/config.json" {
+				argsMap.paths.config = ""
+			}
+			// now check that they are not set
+			if argsMap.paths.config != "" {
+				log.Fatalf("map: config: cannot be set when data is set")
+			}
+			// do the abs path check for data
+			if strings.TrimSpace(argsMap.paths.data) != argsMap.paths.data {
+				log.Fatalf("map: data: leading or trailing spaces are not allowed\n")
+			} else if path, err := abspath(argsMap.paths.data); err != nil {
+				log.Fatalf("map: data: %v\n", err)
+			} else if sb, err := os.Stat(path); err != nil {
+				log.Fatalf("map: data: %v\n", err)
+			} else if !sb.IsDir() {
+				log.Fatalf("map: data: %v is not a directory\n", path)
+			} else {
+				argsMap.paths.data = path
+			}
+			// finally, update the other paths
+			argsMap.paths.config = filepath.Join(argsMap.paths.data, "config.json")
+		}
+
+		if strings.TrimSpace(argsMap.paths.config) != argsMap.paths.config {
 			log.Fatalf("map: config: leading or trailing spaces are not allowed\n")
-		} else if path, err := filepath.Abs(argsMap.config); err != nil {
-			log.Printf("map: config: output: %q\n", argsMap.config)
+		} else if path, err := filepath.Abs(argsMap.paths.config); err != nil {
+			log.Printf("map: config: output: %q\n", argsMap.paths.config)
 			log.Printf("map: config: %v\n", err)
 		} else if sb, err := os.Stat(path); err != nil {
 			log.Fatalf("map: config: %v\n", err)
 		} else if !sb.Mode().IsRegular() {
 			log.Fatalf("map: config: %v is not a file\n", path)
 		} else {
-			argsIndexReports.config = path
+			argsMap.paths.config = path
 		}
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		log.Printf("maps: todo: detect when a unit is created as an after-move action\n")
 
-		log.Printf("map: config: file %s\n", argsMap.config)
-		cfg, err := config.Load(argsMap.config)
+		log.Printf("map: config: file %s\n", argsMap.paths.config)
+		cfg, err := config.Load(argsMap.paths.config)
 		if err != nil {
 			log.Fatalf("map: config: %v\n", err)
 		}

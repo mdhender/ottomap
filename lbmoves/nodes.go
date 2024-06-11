@@ -54,6 +54,11 @@ func hexReportToNodes(hexReport []byte, showDebug bool) (root *node) {
 				tmp.addText(tmp.next)
 				tmp.next = tmp.next.next
 			}
+		} else if tmp.isLowConiferMountainsEdge() {
+			for tmp.next.isDirection() {
+				tmp.addText(tmp.next)
+				tmp.next = tmp.next.next
+			}
 		} else if tmp.isOceanEdge() {
 			for tmp.next.isDirection() {
 				tmp.addText(tmp.next)
@@ -70,6 +75,11 @@ func hexReportToNodes(hexReport []byte, showDebug bool) (root *node) {
 				tmp.next = tmp.next.next
 			}
 		} else if tmp.isRiverEdge() {
+			for tmp.next.isDirection() {
+				tmp.addText(tmp.next)
+				tmp.next = tmp.next.next
+			}
+		} else if tmp.isStoneRoadEdge() {
 			for tmp.next.isDirection() {
 				tmp.addText(tmp.next)
 				tmp.next = tmp.next.next
@@ -181,6 +191,13 @@ func (n *node) isLakeEdge() bool {
 	return bytes.HasPrefix(n.text, []byte{'O', ' '})
 }
 
+func (n *node) isLowConiferMountainsEdge() bool {
+	if n == nil {
+		return false
+	}
+	return bytes.HasPrefix(n.text, []byte{'L', 'c', 'm', ' '})
+}
+
 func (n *node) isOceanEdge() bool {
 	if n == nil {
 		return false
@@ -214,6 +231,13 @@ func (n *node) isRiverEdge() bool {
 		return false
 	}
 	return bytes.HasPrefix(n.text, []byte{'R', 'i', 'v', 'e', 'r', ' '})
+}
+
+func (n *node) isStoneRoadEdge() bool {
+	if n == nil {
+		return false
+	}
+	return bytes.HasPrefix(n.text, []byte{'S', 't', 'o', 'n', 'e', ' ', 'R', 'o', 'a', 'd', ' '})
 }
 
 func (n *node) isUnitId() bool {
