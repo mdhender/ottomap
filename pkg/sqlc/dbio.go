@@ -659,30 +659,20 @@ type DBSession struct {
 }
 
 func (dbs *DBSession) Close(err error) error {
-	if dbs.tx != nil {
-		if err != nil {
-			_ = dbs.tx.Rollback()
-		} else {
-			_ = dbs.tx.Commit()
-		}
+	if err != nil {
+		_ = dbs.Rollback()
+		dbs.tx = nil
+		return err
 	}
+	_ = dbs.Commit()
 	dbs.tx = nil
 	return err
 }
 
 func (dbs *DBSession) Abort(err error) error {
-	if dbs.tx != nil {
-		_ = dbs.tx.Rollback()
-	}
+	_ = dbs.Rollback()
 	dbs.tx = nil
 	return err
-}
-
-func (dbs *DBSession) Rollback() error {
-	if dbs.tx == nil {
-		return nil
-	}
-	return dbs.tx.Rollback()
 }
 
 func (dbs *DBSession) Commit() error {
@@ -690,4 +680,11 @@ func (dbs *DBSession) Commit() error {
 		return nil
 	}
 	return dbs.tx.Commit()
+}
+
+func (dbs *DBSession) Rollback() error {
+	if dbs.tx == nil {
+		return nil
+	}
+	return dbs.tx.Rollback()
 }

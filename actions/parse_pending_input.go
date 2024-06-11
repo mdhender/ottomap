@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/mdhender/ottomap/cerrs"
+	"github.com/mdhender/ottomap/lbmoves"
 	ploc "github.com/mdhender/ottomap/parsers/locations"
 	pturn "github.com/mdhender/ottomap/parsers/turns"
 	"github.com/mdhender/ottomap/pkg/sqlc"
@@ -41,7 +42,7 @@ func ParsePendingInput(db *sqlc.DB, pendingRow sqlc.ReadPendingInputMetadataRow)
 		Arg3:    fmt.Sprintf("input %d", pendingRow.ID),
 		Message: "starting parse",
 	}); err != nil {
-		log.Printf("parsePending: name %s: id %5d: %v\n", pendingRow.Name, pendingRow.ID, err)
+		log.Printf("parsePending: name %s: id %5d: clm %v\n", pendingRow.Name, pendingRow.ID, err)
 		return dbs.Abort(err)
 	}
 
@@ -50,23 +51,24 @@ func ParsePendingInput(db *sqlc.DB, pendingRow sqlc.ReadPendingInputMetadataRow)
 		Status:   "pending",
 		Status_2: "parsing",
 	}); err != nil {
-		return dbs.Close(err)
+		log.Printf("parsePending: name %s: id %5d: uis %v\n", pendingRow.Name, pendingRow.ID, err)
+		return dbs.Abort(err)
 	}
 	log.Printf("parsePending: name %s: id %5d: set status to 'parsing'\n", pendingRow.Name, pendingRow.ID)
 
 	sectionRows, err := q.ReadInputSections(db.Ctx, pendingRow.ID)
 	if err != nil {
 		log.Printf("parsePending: name %s: id %5d: readInputSections: %v\n", pendingRow.Name, pendingRow.ID, err)
-		return dbs.Close(err)
+		return dbs.Abort(err)
 	} else if len(sectionRows) == 0 {
 		log.Printf("parsePending: name %s: id %5d: readInputSections: %d sections\n", pendingRow.Name, pendingRow.ID, len(sectionRows))
-		if err = db.Queries.UpdateInputStatus(db.Ctx, sqlc.UpdateInputStatusParams{
+		if err = q.UpdateInputStatus(db.Ctx, sqlc.UpdateInputStatusParams{
 			ID:       pendingRow.ID,
 			Status:   "parsing",
 			Status_2: "completed",
 		}); err != nil {
 			log.Printf("parsePending: name %s: id %5d: updatingStatus: %v\n", pendingRow.Name, pendingRow.ID, err)
-			return dbs.Close(err)
+			return dbs.Abort(err)
 		}
 		return sql.ErrNoRows
 	}
@@ -190,21 +192,38 @@ func ParsePendingInput(db *sqlc.DB, pendingRow sqlc.ReadPendingInputMetadataRow)
 			errorCount++
 			continue
 		}
+		turnId := fmt.Sprintf("%04d-%02d", ti.TurnDate.Year, ti.TurnDate.Month)
 
+		showSteps := true
 		// remaining rows are movement or status lines; process them
 		for n, row := range rows {
 			if n == 0 || n == 1 { // already processed these rows
 				continue
 			}
+			slug := row.Line
+			if len(slug) > 18 {
+				slug = slug[:18] + "..."
+			}
 			// parse and report, breaking on the first error we encounter
 			if strings.HasPrefix(row.Line, "Tribe Follows: ") {
 				// parse the tribe follows line
+				log.Printf("parsePending: name %s: unit %s: element follows: %q\n", pendingRow.Name, ul.UnitId, slug)
 			} else if strings.HasPrefix(row.Line, "Tribe Movement: ") {
 				// parse the tribe movement line
+				log.Printf("parsePending: name %s: unit %s: element movements: %q\n", pendingRow.Name, ul.UnitId, slug)
 			} else if strings.HasPrefix(row.Line, "Scout ") {
 				// parse the scout line
+				log.Printf("parsePending: name %s: unit %s: element scouts: %q\n", pendingRow.Name, ul.UnitId, slug)
 			} else if strings.HasPrefix(row.Line, elementStatusPrefix) {
 				// parse the element status line
+				log.Printf("parsePending: name %s: unit %s: element status: %q\n", pendingRow.Name, ul.UnitId, slug)
+				steps, err := lbmoves.ParseMoveResults(turnId, ul.UnitId, []byte(row.Line), showSteps)
+				if err != nil {
+					log.Fatalf("parsePending: name %s: unit %s: line %d: %v\n", pendingRow.Name, ul.UnitId, row.LineNo, err)
+				} else if len(steps) != 1 {
+					log.Fatalf("parsePending: name %s: unit %s: line %d: want 1 step, got %d\n", pendingRow.Name, ul.UnitId, row.LineNo, len(steps))
+				}
+				log.Printf("do something with %v\n", *steps[0])
 			} else {
 				panic(fmt.Sprintf("section %d: row %d: unknown line type: %q", sectionRow.SectNo, row.LineNo, row.Line))
 			}

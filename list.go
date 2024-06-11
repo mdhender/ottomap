@@ -152,7 +152,7 @@ func allTheInputReports(path string) (reports []reportFileMetadata, err error) {
 		panic(err)
 	}
 
-	entries, err := os.ReadDir(argsIndexReports.input)
+	entries, err := os.ReadDir(path)
 	if err != nil {
 		return nil, err
 	}
