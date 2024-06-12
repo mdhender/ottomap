@@ -694,10 +694,12 @@ func walk(turnId, unitId string, worldHexMap map[string]*wxx.Hex, stepNo int, st
 			// ignore, shouldn't ever happen
 		case domain.EFord:
 			daHex.Features.Edges.Ford = append(daHex.Features.Edges.Ford, edge.Direction)
-		case domain.ERiver:
-			daHex.Features.Edges.River = append(daHex.Features.Edges.River, edge.Direction)
 		case domain.EPass:
 			daHex.Features.Edges.Pass = append(daHex.Features.Edges.Pass, edge.Direction)
+		case domain.ERiver:
+			daHex.Features.Edges.River = append(daHex.Features.Edges.River, edge.Direction)
+		case domain.EStoneRoad:
+			daHex.Features.Edges.StoneRoad = append(daHex.Features.Edges.StoneRoad, edge.Direction)
 		default:
 			panic(fmt.Sprintf("assert(edge != %d)", edge.Edge))
 		}
