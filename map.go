@@ -37,6 +37,9 @@ var argsMap struct {
 		showIgnoredSections bool
 		showSectionData     bool
 	}
+	parse struct {
+		skipBOM bool
+	}
 	show struct {
 		gridCenters bool
 		gridCoords  bool
@@ -195,6 +198,14 @@ var cmdMap = &cobra.Command{
 			}
 			if argsMap.debug.showSectionData {
 				log.Printf("map: report %s: loaded %8d bytes\n", rpt.Id, len(data))
+			}
+
+			if argsMap.parse.skipBOM {
+				// check for bom and remove it if present
+				if len(data) >= 3 && data[0] == 0xEF && data[1] == 0xBB && data[2] == 0xBF {
+					log.Printf("map: report %s: skipped %8d BOM bytes\n", rpt.Id, 3)
+					data = data[3:]
+				}
 			}
 
 			// split the report into sections before parsing it
