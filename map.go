@@ -185,7 +185,7 @@ var cmdMap = &cobra.Command{
 			}
 
 			if argsMap.debug.showSectionData {
-				log.Fatalf("map: report %s: parsing\n", rpt.Path)
+				log.Printf("map: report %s: parsing\n", rpt.Path)
 			}
 
 			// load the report file
@@ -281,7 +281,7 @@ var cmdMap = &cobra.Command{
 			}
 
 			if argsMap.debug.showSectionData {
-				log.Fatalf("map: report %s: len(moves) now %8d\n", rpt.Path, len(allMovementResults))
+				log.Printf("map: report %s: len(moves) now %8d\n", rpt.Path, len(allMovementResults))
 			}
 		}
 
