@@ -37,6 +37,19 @@ just restart the application.
 I'm trying to get all the error messages to be consistent.
 If you notice one that's wonky, please report it.
 
+## No movement results found
+If you run `ottomap map` and it ends with a line like `map: no movement results found`,
+the likely cause is a copy+paste error with the report file.
+
+Check that the first line of the report file starts with `Tribe 0nnn` where `0nnn` is your clan number.
+
+If it does, it might be that your text editor is saving
+[BOM](https://en.wikipedia.org/wiki/Byte_order_mark)
+bytes to the file.
+Please try running with the `--skip-bom` flag.
+
+If that doesn't work, please report the error on the `#mapping-tools` channel of the Discord server.
+
 ## Backslashes
 The report uses backslashes ("\") as movement step separators.
 When we report an error, you'll see two backslashes.
