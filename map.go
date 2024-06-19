@@ -32,8 +32,10 @@ var argsMap struct {
 	clanId string // clan id to use
 	turnId string // turn id to use
 	debug  struct {
-		units       bool
-		sectionMaps bool
+		units               bool
+		sectionMaps         bool
+		showIgnoredSections bool
+		showSectionData     bool
 	}
 	show struct {
 		gridCenters bool
@@ -143,6 +145,7 @@ var cmdMap = &cobra.Command{
 			if rpt.Clan == argsMap.clanId {
 				rptTurnId := fmt.Sprintf("%04d-%02d", rpt.Year, rpt.Month)
 				if rptTurnId > cfg.Inputs.TurnId {
+					log.Printf("map: config: %s: forcing ignore\n", rptTurnId)
 					rpt.Ignore = true
 				}
 			}
@@ -161,10 +164,10 @@ var cmdMap = &cobra.Command{
 		}
 		//log.Printf("map: reports %d\n", len(allReports))
 
-		log.Printf("map: todo: followers are not updated after movement\n")
-		log.Printf("map: todo: hexes are not assigned for each step in the results\n")
-		log.Printf("map: todo: named hexes that are only in the status line are missed\n")
-		log.Printf("map: todo: walk the hex reports and update grid as well as ending coordinates\n")
+		//log.Printf("map: todo: followers are not updated after movement\n")
+		//log.Printf("map: todo: hexes are not assigned for each step in the results\n")
+		//log.Printf("map: todo: named hexes that are only in the status line are missed\n")
+		//log.Printf("map: todo: walk the hex reports and update grid as well as ending coordinates\n")
 
 		// create a map for every movement result we have
 		var allMovementResults []*lbmoves.MovementResults
@@ -175,10 +178,14 @@ var cmdMap = &cobra.Command{
 		// parse the report files into a single map
 		for _, rpt := range cfg.Reports {
 			if rpt.Ignore {
-				if cfg.Inputs.ShowIgnoredReports {
+				if argsMap.debug.showIgnoredSections {
 					log.Printf("map: report %s: ignored report\n", rpt.Id)
 				}
 				continue
+			}
+
+			if argsMap.debug.showSectionData {
+				log.Fatalf("map: report %s: parsing\n", rpt.Path)
 			}
 
 			// load the report file
@@ -186,11 +193,15 @@ var cmdMap = &cobra.Command{
 			if err != nil {
 				log.Fatalf("map: report %s: %v", rpt.Path, err)
 			}
-			//log.Printf("map: report %s: loaded %8d bytes\n", rpt.Id, len(data))
+			if argsMap.debug.showSectionData {
+				log.Printf("map: report %s: loaded %8d bytes\n", rpt.Id, len(data))
+			}
 
 			// split the report into sections before parsing it
 			rpt.Sections, err = reports.Sections(data, cfg.Inputs.ShowSkippedSections)
-			//log.Printf("map: report %s: loaded %8d sections\n", rpt.Id, len(rpt.Sections))
+			if argsMap.debug.showSectionData {
+				log.Printf("map: report %s: loaded %8d sections\n", rpt.Id, len(rpt.Sections))
+			}
 			if err != nil {
 				for _, section := range rpt.Sections {
 					if section.Error != nil {
@@ -267,6 +278,10 @@ var cmdMap = &cobra.Command{
 				if missingPrevGridCoords {
 					// todo: report on if we were able to find the previous coordinates or not
 				}
+			}
+
+			if argsMap.debug.showSectionData {
+				log.Fatalf("map: report %s: len(moves) now %8d\n", rpt.Path, len(allMovementResults))
 			}
 		}
 
