@@ -342,10 +342,18 @@ func Sections(id string, input []byte, showSkippedSections, featureRegExSections
 	var sections []*Section
 	var chunks [][]byte
 	if featureRegExSections {
-		var ok bool
-		chunks, ok = xscts.SplitRegEx(id, input, showSkippedSections)
+		scts, ok := xscts.SplitRegEx(id, input, showSkippedSections)
 		if !ok {
 			return nil, fmt.Errorf("regex: no sections found")
+		}
+		// convert those sections into byte slices
+		for _, sct := range scts {
+			var lines []byte
+			for _, line := range sct.Lines {
+				lines = append(lines, line.Text...)
+				lines = append(lines, '\n')
+			}
+			chunks = append(chunks, lines)
 		}
 	} else {
 		chunks, _ = split(id, input)

@@ -9,6 +9,16 @@ import (
 	"regexp"
 )
 
+type Section struct {
+	No    int
+	Lines []*Line
+}
+
+type Line struct {
+	No   int
+	Text []byte
+}
+
 // SplitComment splits the input assuming comment-style section breaks
 func SplitComment(input []byte) ([][]byte, bool) {
 	// scan the input to find the comment separator
@@ -62,7 +72,7 @@ var (
 	rxTribeSection    *regexp.Regexp
 )
 
-func SplitRegEx(id string, input []byte, showSections bool) ([][]byte, bool) {
+func SplitRegEx(id string, input []byte, showSections bool) ([]*Section, bool) {
 	if len(input) == 0 {
 		return nil, false
 	}
@@ -95,80 +105,78 @@ func SplitRegEx(id string, input []byte, showSections bool) ([][]byte, bool) {
 		return nil, false
 	}
 
-	type Section struct {
-		No    int
-		Lines [][]byte
-	}
-
 	var scts []*Section
 	var sct *Section
 	var elementId []byte
 	var elementStatusPrefix []byte
 
-	for lineNo, line := range bytes.Split(input, []byte{'\n'}) {
-		if rxCourierSection.Match(line) {
+	lines := bytes.Split(input, []byte{'\n'})
+	for no, line := range lines {
+		lineNo := no + 1
+		var nextLine []byte
+		if no < len(lines)-1 {
+			nextLine = lines[no+1]
+		}
+
+		if rxCourierSection.Match(line) && bytes.HasPrefix(nextLine, []byte("Current Turn ")) {
+			if sct != nil {
+				scts = append(scts, sct)
+			}
+			sct = &Section{No: len(scts) + 1, Lines: []*Line{{No: lineNo, Text: line}, {No: lineNo, Text: nextLine}}}
 			elementId = line[8 : 8+6]
+			elementStatusPrefix = []byte(fmt.Sprintf("%s Status: ", string(elementId)))
+			debugf("report %s: section %5d: line %5d: found %q %q\n", id, sct.No, lineNo, line[:14], elementId)
+		} else if rxElementSection.Match(line) && bytes.HasPrefix(nextLine, []byte("Current Turn ")) {
 			if sct != nil {
 				scts = append(scts, sct)
 			}
-			sct = &Section{No: len(scts) + 1, Lines: [][]byte{line}}
-			debugf("report %s: section %5d: line %5d: found %q %q\n", id, sct.No, lineNo+1, line[:14], elementId)
-			elementStatusPrefix = []byte(fmt.Sprintf("%s Status: ", string(elementId)))
-		} else if rxElementSection.Match(line) {
+			sct = &Section{No: len(scts) + 1, Lines: []*Line{{No: lineNo, Text: line}, {No: lineNo, Text: nextLine}}}
 			elementId = line[8 : 8+6]
+			elementStatusPrefix = []byte(fmt.Sprintf("%s Status: ", string(elementId)))
+			debugf("report %s: section %5d: line %5d: found %q %q\n", id, sct.No, lineNo, line[:14], elementId)
+		} else if rxFleetSection.Match(line) && bytes.HasPrefix(nextLine, []byte("Current Turn ")) {
 			if sct != nil {
 				scts = append(scts, sct)
 			}
-			sct = &Section{No: len(scts) + 1, Lines: [][]byte{line}}
-			debugf("report %s: section %5d: line %5d: found %q %q\n", id, sct.No, lineNo+1, line[:14], elementId)
+			sct = &Section{No: len(scts) + 1, Lines: []*Line{{No: lineNo, Text: line}, {No: lineNo, Text: nextLine}}}
+			elementId = line[8 : 8+6]
 			elementStatusPrefix = []byte(fmt.Sprintf("%s Status: ", string(elementId)))
-		} else if rxFleetSection.Match(line) {
-			elementId = line[6 : 6+6]
+			debugf("report %s: section %5d: line %5d: found %q %q\n", id, sct.No, lineNo, line[:12], elementId)
+		} else if rxGarrisonSection.Match(line) && bytes.HasPrefix(nextLine, []byte("Current Turn ")) {
 			if sct != nil {
 				scts = append(scts, sct)
 			}
-			sct = &Section{No: len(scts) + 1, Lines: [][]byte{line}}
-			debugf("report %s: section %5d: line %5d: found %q %q\n", id, sct.No, lineNo+1, line[:12], elementId)
-			elementStatusPrefix = []byte(fmt.Sprintf("%s Status: ", string(elementId)))
-		} else if rxGarrisonSection.Match(line) {
+			sct = &Section{No: len(scts) + 1, Lines: []*Line{{No: lineNo, Text: line}, {No: lineNo, Text: nextLine}}}
 			elementId = line[9 : 9+6]
+			elementStatusPrefix = []byte(fmt.Sprintf("%s Status: ", string(elementId)))
+			debugf("report %s: section %5d: line %5d: found %q %q\n", id, sct.No, lineNo, line[:15], elementId)
+		} else if rxTribeSection.Match(line) && bytes.HasPrefix(nextLine, []byte("Current Turn ")) {
 			if sct != nil {
 				scts = append(scts, sct)
 			}
-			sct = &Section{No: len(scts) + 1, Lines: [][]byte{line}}
-			debugf("report %s: section %5d: line %5d: found %q %q\n", id, sct.No, lineNo+1, line[:15], elementId)
-			elementStatusPrefix = []byte(fmt.Sprintf("%s Status: ", string(elementId)))
-		} else if rxTribeSection.Match(line) {
+			sct = &Section{No: len(scts) + 1, Lines: []*Line{{No: lineNo, Text: line}, {No: lineNo, Text: nextLine}}}
 			elementId = line[6 : 6+4]
-			if sct != nil {
-				scts = append(scts, sct)
-			}
-			sct = &Section{No: len(scts) + 1, Lines: [][]byte{line}}
-			debugf("report %s: section %5d: line %5d: found %q %q\n", id, sct.No, lineNo+1, line[:10], elementId)
 			elementStatusPrefix = []byte(fmt.Sprintf("%s Status: ", string(elementId)))
+			debugf("report %s: section %5d: line %5d: found %q %q\n", id, sct.No, lineNo, line[:10], elementId)
 		} else if sct == nil {
-			if len(line) < 35 {
-				log.Fatalf("report %s: section %5d: line %5d: found line outside of section: %q\n", id, len(scts)+1, lineNo+1, line)
-			} else {
-				log.Fatalf("report %s: section %5d: line %5d: found line outside of section: %q\n", id, len(scts)+1, lineNo+1, line[:35])
-			}
-		} else if len(scts) == 1 && bytes.HasPrefix(line, []byte("Current Turn ")) {
-			sct.Lines = append(sct.Lines, line)
-			//debugf("report %s: section %5d: line %5d: found %q\n", id, sct.No, lineNo+1, line[:12])
+			// ignore all lines that are not in a section
+			//} else if len(scts) == 1 && bytes.HasPrefix(line, []byte("Current Turn ")) {
+			//	sct.Lines = append(sct.Lines, &Line{No: lineNo, Text: line})
+			//	//debugf("report %s: section %5d: line %5d: found %q\n", id, sct.No, lineNo, line[:12])
 		} else if bytes.HasPrefix(line, []byte("Tribe Follows: ")) {
-			sct.Lines = append(sct.Lines, line)
-			//debugf("report %s: section %5d: line %5d: found %q\n", id, sct.No, lineNo+1, line[:13])
+			sct.Lines = append(sct.Lines, &Line{No: lineNo, Text: line})
+			debugf("report %s: section %5d: line %5d: found %q\n", id, sct.No, lineNo, line[:13])
 		} else if bytes.HasPrefix(line, []byte("Tribe Movement: ")) {
-			sct.Lines = append(sct.Lines, line)
-			//debugf("report %s: section %5d: line %5d: found %q\n", id, sct.No, lineNo+1, line[:14])
+			sct.Lines = append(sct.Lines, &Line{No: lineNo, Text: line})
+			debugf("report %s: section %5d: line %5d: found %q\n", id, sct.No, lineNo, line[:14])
 		} else if rxScoutLine.Match(line) {
-			sct.Lines = append(sct.Lines, line)
-			//debugf("report %s: section %5d: line %5d: found %q\n", id, sct.No, lineNo+1, line[:14])
+			sct.Lines = append(sct.Lines, &Line{No: lineNo, Text: line})
+			debugf("report %s: section %5d: line %5d: found %q\n", id, sct.No, lineNo, line[:14])
 		} else if bytes.HasPrefix(line, elementStatusPrefix) {
-			sct.Lines = append(sct.Lines, line)
-			//debugf("report %s: section %5d: line %5d: found %q\n", id, sct.No, lineNo+1, line[:len(elementStatusPrefix)])
+			sct.Lines = append(sct.Lines, &Line{No: lineNo, Text: line})
+			debugf("report %s: section %5d: line %5d: found %q\n", id, sct.No, lineNo, line[:len(elementStatusPrefix)])
 		} else {
-			sct.Lines = append(sct.Lines, line)
+			// ignore all other lines
 		}
 	}
 	if sct != nil {
@@ -176,18 +184,7 @@ func SplitRegEx(id string, input []byte, showSections bool) ([][]byte, bool) {
 	}
 	debugf("report %s: found %d sections\n", id, len(scts))
 
-	// convert those Section slices into byte slices
-	var sections [][]byte
-	for _, sct := range scts {
-		// our parsers expect sections to not start or end with blank lines.
-		// they also require that the last line end with a new-line.
-		lines := bytes.Join(sct.Lines, []byte{'\n'})
-		lines = bytes.TrimRight(bytes.TrimLeft(lines, "\n"), "\n")
-		lines = append(lines, '\n')
-		sections = append(sections, lines)
-	}
-
-	return sections, true
+	return scts, true
 }
 
 // SplitSimpleFormFeed splits the input assuming simple form feeds.
