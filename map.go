@@ -37,6 +37,9 @@ var argsMap struct {
 		showIgnoredSections bool
 		showSectionData     bool
 	}
+	feature struct {
+		regExSections bool
+	}
 	parse struct {
 		skipBOM bool
 	}
@@ -209,7 +212,8 @@ var cmdMap = &cobra.Command{
 			}
 
 			// split the report into sections before parsing it
-			rpt.Sections, err = reports.Sections(data, cfg.Inputs.ShowSkippedSections)
+			argsMap.feature.regExSections = false
+			rpt.Sections, err = reports.Sections(rpt.Id, data, cfg.Inputs.ShowSkippedSections, argsMap.feature.regExSections)
 			if argsMap.debug.showSectionData {
 				log.Printf("map: report %s: loaded %8d sections\n", rpt.Id, len(rpt.Sections))
 			}

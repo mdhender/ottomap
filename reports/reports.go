@@ -13,6 +13,8 @@ import (
 	"regexp"
 	"time"
 
+	xscts "github.com/mdhender/ottomap/pkg/sections"
+
 	pfollows "github.com/mdhender/ottomap/parsers/follows"
 	ploc "github.com/mdhender/ottomap/parsers/locations"
 	pmoves "github.com/mdhender/ottomap/parsers/movements"
@@ -336,9 +338,18 @@ type ScoutLine struct {
 	Moves   [][]byte
 }
 
-func Sections(input []byte, showSkippedSections bool) ([]*Section, error) {
+func Sections(id string, input []byte, showSkippedSections, featureRegExSections bool) ([]*Section, error) {
 	var sections []*Section
-	chunks, _ := split(input)
+	var chunks [][]byte
+	if featureRegExSections {
+		var ok bool
+		chunks, ok = xscts.SplitRegEx(id, input, true /*showSkippedSections*/)
+		if !ok {
+			return nil, fmt.Errorf("no sections found")
+		}
+	} else {
+		chunks, _ = split(id, input)
+	}
 
 	for n, chunk := range chunks {
 		// ignore non-unit sections
@@ -574,7 +585,7 @@ func slug(lines []byte) string {
 // one section, so we wouldn't find a section separator. The
 // instructions should tell the user to manually add one. Or the
 // caller should have logic to handle.
-func split(input []byte) ([][]byte, []byte) {
+func split(id string, input []byte) ([][]byte, []byte) {
 	// scan the input to find the section separator
 	var separator []byte
 	for _, pattern := range [][]byte{
@@ -603,6 +614,12 @@ func split(input []byte) ([][]byte, []byte) {
 		section = bytes.TrimRight(bytes.TrimLeft(section, "\n"), "\n")
 		section = append(section, '\n')
 		sections[i] = section
+
+		if len(section) < 35 {
+			log.Printf("report %s: section %3d: %q\n", id, i+1, section)
+		} else {
+			log.Printf("report %s: section %3d: %q\n", id, i+1, section[:35])
+		}
 	}
 
 	return sections, separator

@@ -115,7 +115,7 @@ func (g *Grid) addTile(turnId string, hex *Hex) error {
 			domain.TBrush,
 			domain.TBrushHills,
 			domain.TConiferHills,
-			domain.TDeciduousForest,
+			domain.TDeciduous,
 			domain.TDeciduousHills,
 			domain.TDesert,
 			domain.TGrassyHills,

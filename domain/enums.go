@@ -233,7 +233,7 @@ const (
 	TBrush
 	TBrushHills
 	TConiferHills
-	TDeciduousForest
+	TDeciduous
 	TDeciduousHills
 	TDesert
 	TGrassyHills
@@ -302,9 +302,9 @@ var (
 		TBrush:                "BR",
 		TBrushHills:           "BH",
 		TConiferHills:         "CH",
-		TDeciduousForest:      "D",
-		TDeciduousHills:       "DH",
+		TDeciduous:            "D",
 		TDesert:               "DE",
+		TDeciduousHills:       "DH",
 		TGrassyHills:          "GH",
 		TGrassyHillsPlateau:   "GHP",
 		THighSnowyMountains:   "HSM",
@@ -334,7 +334,7 @@ var (
 		"BR":   TBrush,
 		"BH":   TBrushHills,
 		"CH":   TConiferHills,
-		"D":    TDeciduousForest,
+		"D":    TDeciduous,
 		"DH":   TDeciduousHills,
 		"DE":   TDesert,
 		"GH":   TGrassyHills,
@@ -369,7 +369,7 @@ var (
 		TBrush:                "Flat Shrubland",
 		TBrushHills:           "Hills Shrubland",
 		TConiferHills:         "Hills Forest Evergreen",
-		TDeciduousForest:      "Flat Forest Deciduous Heavy",
+		TDeciduous:            "Flat Forest Deciduous Heavy",
 		TDeciduousHills:       "Hills Deciduous Forest",
 		TDesert:               "Flat Desert Sandy",
 		TGrassyHills:          "Hills Grassland",

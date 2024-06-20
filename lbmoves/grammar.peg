@@ -190,9 +190,11 @@ TERRAIN <- "ALPS" {
 } / "CONIFER HILLS" {
     return domain.TConiferHills, nil
 } / "DECIDUOUS FOREST" {
-    return domain.TDeciduousForest, nil
+    return domain.TDeciduous, nil
 } / "DECIDUOUS HILLS" {
     return domain.TDeciduousHills, nil
+} / "DECIDUOUS" {
+    return domain.TDeciduous, nil
 } / "DESERT" {
     return domain.TDesert, nil
 } / "GRASSY HILLS PLATEAU" {
@@ -258,7 +260,7 @@ TERRAIN_CODE <- "ALPS" {    return domain.TAlps, nil
 } / "SH" { return domain.TSnowyHills, nil
 } / "SW" { return domain.TSwamp, nil
 } / "TU" { return domain.TTundra, nil
-} / "D" { return domain.TDeciduousForest, nil
+} / "D" { return domain.TDeciduous, nil
 } / "L" { return domain.TLake, nil
 } / "O" { return domain.TOcean, nil
 }
