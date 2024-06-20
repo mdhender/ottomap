@@ -339,6 +339,18 @@ type ScoutLine struct {
 }
 
 func Sections(id string, input []byte, showSkippedSections, featureRegExSections bool) ([]*Section, error) {
+	// check for bom and remove it if present.
+	for _, bom := range [][]byte{
+		// see https://en.wikipedia.org/wiki/Byte_order_mark for BOM values
+		[]byte{0xEF, 0xBB, 0xBF},
+	} {
+		if bytes.HasPrefix(input, bom) {
+			log.Printf("report %s: skipped %8d BOM bytes\n", id, len(bom))
+			input = input[len(bom):]
+			break
+		}
+	}
+
 	var sections []*Section
 	var chunks [][]byte
 	if featureRegExSections {
