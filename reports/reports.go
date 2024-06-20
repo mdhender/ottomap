@@ -343,19 +343,22 @@ func Sections(id string, input []byte, showSkippedSections, featureRegExSections
 	var chunks [][]byte
 	if featureRegExSections {
 		var ok bool
-		chunks, ok = xscts.SplitRegEx(id, input, true /*showSkippedSections*/)
+		chunks, ok = xscts.SplitRegEx(id, input, showSkippedSections)
 		if !ok {
-			return nil, fmt.Errorf("no sections found")
+			return nil, fmt.Errorf("regex: no sections found")
 		}
 	} else {
 		chunks, _ = split(id, input)
+	}
+	if showSkippedSections {
+		log.Printf("report %s: %d chunks\n", id, len(chunks))
 	}
 
 	for n, chunk := range chunks {
 		// ignore non-unit sections
 		if !isUnitSection(chunk) {
 			if showSkippedSections {
-				log.Printf("reports: sections: skipping %q\n", slug(chunk))
+				log.Printf("report %s: section %5d: skipping %q\n", id, n+1, slug(chunk))
 			}
 			continue
 		}

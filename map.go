@@ -36,6 +36,7 @@ var argsMap struct {
 		sectionMaps         bool
 		showIgnoredSections bool
 		showSectionData     bool
+		showSectionsSkipped bool
 	}
 	feature struct {
 		regExSections bool
@@ -181,6 +182,13 @@ var cmdMap = &cobra.Command{
 		// this hex is the clan's starting hex from the first turn report
 		var originHex *wxx.Hex
 
+		if argsMap.feature.regExSections {
+			log.Printf("map: feature: regex sections is enabled!\n")
+		}
+		if argsMap.debug.showSectionsSkipped {
+			log.Printf("map: debug: show sections skipped is enabled!\n")
+		}
+
 		// parse the report files into a single map
 		for _, rpt := range cfg.Reports {
 			if rpt.Ignore {
@@ -212,8 +220,7 @@ var cmdMap = &cobra.Command{
 			}
 
 			// split the report into sections before parsing it
-			argsMap.feature.regExSections = false
-			rpt.Sections, err = reports.Sections(rpt.Id, data, cfg.Inputs.ShowSkippedSections, argsMap.feature.regExSections)
+			rpt.Sections, err = reports.Sections(rpt.Id, data, argsMap.debug.showSectionsSkipped, argsMap.feature.regExSections)
 			if argsMap.debug.showSectionData {
 				log.Printf("map: report %s: loaded %8d sections\n", rpt.Id, len(rpt.Sections))
 			}

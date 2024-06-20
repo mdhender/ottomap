@@ -171,6 +171,10 @@ func SplitRegEx(id string, input []byte, showSections bool) ([][]byte, bool) {
 			sct.Lines = append(sct.Lines, line)
 		}
 	}
+	if sct != nil {
+		scts = append(scts, sct)
+	}
+	debugf("report %s: found %d sections\n", id, len(scts))
 
 	// convert those Section slices into byte slices
 	var sections [][]byte
