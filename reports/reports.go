@@ -338,7 +338,7 @@ type ScoutLine struct {
 	Moves   [][]byte
 }
 
-func Sections(id string, input []byte, showSkippedSections, featureRegExSections bool) ([]*Section, error) {
+func Sections(id string, input []byte, showSkippedSections bool) ([]*Section, error) {
 	// check for bom and remove it if present.
 	for _, bom := range [][]byte{
 		// see https://en.wikipedia.org/wiki/Byte_order_mark for BOM values
@@ -351,49 +351,32 @@ func Sections(id string, input []byte, showSkippedSections, featureRegExSections
 		}
 	}
 
-	var sections []*Section
-	var chunks [][]byte
-	if featureRegExSections {
-		scts, ok := xscts.SplitRegEx(id, input, showSkippedSections)
-		if !ok {
-			return nil, fmt.Errorf("regex: no sections found")
-		}
-		// convert those sections into byte slices
-		for _, sct := range scts {
-			var lines []byte
-			for _, line := range sct.Lines {
-				lines = append(lines, line.Text...)
-				lines = append(lines, '\n')
-			}
-			chunks = append(chunks, lines)
-		}
-	} else {
-		chunks, _ = split(id, input)
+	inputSections, ok := xscts.SplitRegEx(id, input, showSkippedSections)
+	if !ok {
+		return nil, fmt.Errorf("regex: no sections found")
 	}
 	if showSkippedSections {
-		log.Printf("report %s: %d chunks\n", id, len(chunks))
+		log.Printf("report %s: %d sections\n", id, len(inputSections))
 	}
 
-	for n, chunk := range chunks {
+	var sections []*Section
+	for n, chunk := range inputSections {
 		// ignore non-unit sections
-		if !isUnitSection(chunk) {
+		if chunk.Type == domain.UTUnknown {
 			if showSkippedSections {
-				log.Printf("report %s: section %5d: skipping %q\n", id, n+1, slug(chunk))
+				log.Printf("report %s: section %5d: skipping %q\n", id, n+1, chunk.Slug())
 			}
-			continue
 		}
 
 		sections = append(sections, &Section{Id: fmt.Sprintf("%d", n+1)})
 		section := sections[len(sections)-1]
 
-		lines := bytes.Split(chunk, []byte("\n"))
-
-		if len(lines) < 2 {
+		if len(chunk.Lines) < 2 || chunk.Id == "" {
 			section.Error = cerrs.ErrNotATurnReport
 			continue
 		}
 
-		section.Location = bdup(lines[0])
+		section.Location = bdup(chunk.Lines[0].Text)
 
 		// parse the location so that we can get the unit id.
 		// that id is needed to extract the status line.
@@ -407,6 +390,11 @@ func Sections(id string, input []byte, showSkippedSections, featureRegExSections
 		} else if ul, ok = v.(*ploc.Location); !ok {
 			log.Printf("reports: sections: location: %q\n", string(section.Location))
 			panic(fmt.Sprintf("expected *locations.Location, got %T", v))
+		} else if ul.UnitId != chunk.Id {
+			log.Printf("reports: sections: element id: %q\n", chunk.Id)
+			log.Printf("reports: sections:   location: %q\n", string(section.Location))
+			log.Printf("reports: sections:    unit id: %q\n", ul.UnitId)
+			panic("assert(ul.UnitId == chunk.Id)")
 		}
 		section.UnitId = ul.UnitId
 		section.PrevCoords = ul.PrevCoords
@@ -423,32 +411,45 @@ func Sections(id string, input []byte, showSkippedSections, featureRegExSections
 			scoutLines[sid] = []byte(fmt.Sprintf("Scout %d:Scout ", sid+1))
 		}
 		statusLine := []byte(fmt.Sprintf("%s Status: ", ul.UnitId))
-		for n, line := range lines {
-			if n == 1 {
-				section.TurnInfo = bdup(line)
-			} else if bytes.HasPrefix(line, followsLine) {
+		for n, ctext := range chunk.Lines {
+			line := bdup(ctext.Text)
+			if n == 0 {
+				if !ctext.IsLocation {
+					log.Printf("reports: sections: unexpected line: %q\n", chunk.Slug())
+					log.Printf("reports: sections: unexpected line: %q\n", string(line))
+					panic("expected location line")
+				}
+			} else if n == 1 {
+				if !ctext.IsTurnInfo {
+					log.Printf("reports: sections: unexpected line: %q\n", chunk.Slug())
+					log.Printf("reports: sections: unexpected line: %q\n", string(line))
+					panic("expected turn info line")
+				}
+				section.TurnInfo = bdup(ctext.Text)
+			} else if ctext.IsStatus {
+				if section.Status != nil {
+					section.Error = cerrs.ErrMultipleStatusLines
+					break
+				}
+				section.Status = bdup(ctext.Text)
+				section.StatusLine = bdup(ctext.Text)
+			} else if ctext.MovementType == domain.UMFleet {
+				log.Printf("%s: %d: %d: found fleet movement\n\t%s\n\t\t%s\n", id, chunk.No, ctext.No, chunk.Slug(), ctext.Slug(35))
+			} else if ctext.MovementType == domain.UMFollows {
 				if section.Follows != nil {
 					section.Error = cerrs.ErrMultipleFollowsLines
 					break
 				}
-				section.Follows = line
-				section.FollowsLine = bdup(line)
-			} else if bytes.HasPrefix(line, movesLine) {
-				section.MovementLine = bdup(line)
-				// remove the prefix and trim the line
-				line = bytes.TrimSpace(bytes.TrimPrefix(line, movesLine))
-				if bytes.HasPrefix(line, []byte{'M', 'o', 'v', 'e'}) {
-					line = bytes.TrimSpace(bytes.TrimPrefix(line, []byte{'M', 'o', 'v', 'e'}))
-				}
-				section.Moves = scrubMoves(line)
-			} else if bytes.HasPrefix(line, []byte{'S', 'c', 'o', 'u', 't'}) {
-				if rxScoutLine.Match(line) {
-					section.ScoutLines = append(section.ScoutLines, bdup(line))
+				section.Follows = ctext.Text
+				section.FollowsLine = bdup(ctext.Text)
+			} else if ctext.MovementType == domain.UMScouts {
+				if rxScoutLine.Match(ctext.Text) {
+					section.ScoutLines = append(section.ScoutLines, bdup(ctext.Text))
 				}
 				for sid := 0; sid < 8; sid++ {
-					if bytes.HasPrefix(line, scoutLines[sid]) {
-						scoutLine := &ScoutLine{ScoutId: sid + 1, Move: bdup(line)}
-						for _, jo := range scrubScouts(line) {
+					if bytes.HasPrefix(ctext.Text, scoutLines[sid]) {
+						scoutLine := &ScoutLine{ScoutId: sid + 1, Move: bdup(ctext.Text)}
+						for _, jo := range scrubScouts(ctext.Text) {
 							if len(jo) != 0 {
 								scoutLine.Moves = append(scoutLine.Moves, jo)
 							}
@@ -457,13 +458,26 @@ func Sections(id string, input []byte, showSkippedSections, featureRegExSections
 						break
 					}
 				}
-			} else if bytes.HasPrefix(line, statusLine) {
-				if section.Status != nil {
-					section.Error = cerrs.ErrMultipleStatusLines
-					break
+			} else if ctext.MovementType == domain.UMTribe {
+				section.MovementLine = bdup(ctext.Text)
+				// remove the prefix and trim the line
+				text := bytes.TrimSpace(bytes.TrimPrefix(ctext.Text, movesLine))
+				if bytes.HasPrefix(text, []byte{'M', 'o', 'v', 'e'}) {
+					text = bytes.TrimSpace(bytes.TrimPrefix(line, []byte{'M', 'o', 'v', 'e'}))
 				}
-				section.Status = bdup(line)
-				section.StatusLine = bdup(line)
+				section.Moves = scrubMoves(text)
+			} else if bytes.HasPrefix(line, followsLine) {
+				panic("should not find follows line here")
+			} else if bytes.HasPrefix(line, movesLine) {
+				panic("should not find tribe movement line here")
+			} else if bytes.HasPrefix(line, []byte{'S', 'c', 'o', 'u', 't'}) {
+				panic("should not find scout line here")
+			} else if bytes.HasPrefix(line, statusLine) {
+				panic("should not find status line here")
+			} else {
+				log.Printf("reports: sections: unexpected line: %q\n", chunk.Slug())
+				log.Printf("reports: sections: unexpected line: %q\n", string(line))
+				panic("unhandled line?")
 			}
 		}
 		if section.Error != nil {

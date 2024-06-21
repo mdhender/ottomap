@@ -1,0 +1,47 @@
+{
+package wbmoves
+
+import (
+	"log"
+	"github.com/mdhender/ottomap/directions"
+	"github.com/mdhender/ottomap/domain"
+	"github.com/mdhender/ottomap/items"
+)
+
+func toAnySlice(v any) []any {
+    if v == nil {
+        return nil
+    }
+    return v.([]any)
+}
+
+}
+
+Step <- w:WIND SP d:DIRECTION SP "Fleet Movement:" SP "Move" SP _ EOF {
+    var fm FleetMovement
+    fm.Winds.Strength = w.(domain.WindStrength_e)
+    fm.Winds.From = d.(directions.Direction)
+}
+
+DIRECTION <- "NE" {
+    return directions.DNorthEast, nil
+} / "SE" {
+    return directions.DSouthEast, nil
+} / "SW" {
+    return directions.DSouthWest, nil
+} / "NW" {
+    return directions.DNorthWest, nil
+} / "N" {
+    return directions.DNorth, nil
+} / "S" {
+    return directions.DSouth, nil
+}
+
+WIND <- "MILD" {
+    return domain.WSMild, nil
+} / "STRONG" {
+    return domain.WStrong, nil
+}
+
+SP     = [ \t]+
+_      = [ \t]*

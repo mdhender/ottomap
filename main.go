@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	version = semver.Version{Major: 0, Minor: 11, Patch: 2}
+	version = semver.Version{Major: 0, Minor: 12, Patch: 0}
 )
 
 func main() {
@@ -83,8 +83,6 @@ func Execute() error {
 	cmdMap.Flags().BoolVar(&argsMap.debug.showSectionData, "debug-show-section-data", false, "show section data")
 	cmdMap.Flags().BoolVar(&argsMap.debug.showSectionsSkipped, "debug-sections-skipped", false, "show ignored sections")
 	cmdMap.Flags().BoolVar(&argsMap.debug.units, "debug-units", false, "enable unit debugging")
-	cmdMap.Flags().BoolVar(&argsMap.feature.regExSections, "feature-regex-sections", false, "enable experimental feature")
-	cmdMap.Flags().BoolVar(&argsMap.parse.skipBOM, "skip-bom", false, "ignore BOM")
 	cmdMap.Flags().BoolVar(&argsMap.show.gridCenters, "show-grid-centers", false, "show grid centers")
 	cmdMap.Flags().BoolVar(&argsMap.show.gridCoords, "show-grid-id-coords", false, "show grid id and coordinates")
 	cmdMap.Flags().BoolVar(&argsMap.show.gridNumbers, "show-grid-coords", false, "show grid coordinates")

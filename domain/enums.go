@@ -403,6 +403,7 @@ const (
 	UTTribe
 	UTCourier
 	UTElement
+	UTFleet
 	UTGarrison
 )
 
@@ -438,6 +439,7 @@ var (
 		UTTribe:    "Tribe",
 		UTCourier:  "Courier",
 		UTElement:  "Element",
+		UTFleet:    "Fleet",
 		UTGarrison: "Garrison",
 	}
 	// helper map for unmarshalling the enum
@@ -446,6 +448,112 @@ var (
 		"Tribe":    UTTribe,
 		"Courier":  UTCourier,
 		"Element":  UTElement,
+		"Fleet":    UTFleet,
 		"Garrison": UTGarrison,
+	}
+)
+
+type WindStrength_e int
+
+const (
+	WSUnknown WindStrength_e = iota
+	WSMild
+	WSStrong
+)
+
+// MarshalJSON implements the json.Marshaler interface.
+func (e WindStrength_e) MarshalJSON() ([]byte, error) {
+	return json.Marshal(windStrengthEnumToString[e])
+}
+
+// UnmarshalJSON implements the json.Unmarshaler interface.
+func (e *WindStrength_e) UnmarshalJSON(data []byte) error {
+	var s string
+	var ok bool
+	if err := json.Unmarshal(data, &s); err != nil {
+		return err
+	} else if *e, ok = windStrengthStringToEnum[s]; !ok {
+		return fmt.Errorf("invalid WindStrength %q", s)
+	}
+	return nil
+}
+
+// String implements the fmt.Stringer interface.
+func (e WindStrength_e) String() string {
+	if str, ok := windStrengthEnumToString[e]; ok {
+		return str
+	}
+	return fmt.Sprintf("WindStrength(%d)", int(e))
+}
+
+var (
+	// helper map for marshalling the enum
+	windStrengthEnumToString = map[WindStrength_e]string{
+		WSUnknown: "N/A",
+		WSMild:    "MILD",
+		WSStrong:  "STRONG",
+	}
+	// helper map for unmarshalling the enum
+	windStrengthStringToEnum = map[string]WindStrength_e{
+		"N/A":    WSUnknown,
+		"MILD":   WSMild,
+		"STRONG": WSStrong,
+	}
+)
+
+type UnitMovement_e int
+
+const (
+	UMUnknown UnitMovement_e = iota
+	UMFleet
+	UMFollows
+	UMScouts
+	UMStill
+	UMTribe
+)
+
+// MarshalJSON implements the json.Marshaler interface.
+func (e UnitMovement_e) MarshalJSON() ([]byte, error) {
+	return json.Marshal(unitMoveEnumToString[e])
+}
+
+// UnmarshalJSON implements the json.Unmarshaler interface.
+func (e *UnitMovement_e) UnmarshalJSON(data []byte) error {
+	var s string
+	var ok bool
+	if err := json.Unmarshal(data, &s); err != nil {
+		return err
+	} else if *e, ok = unitMoveStringToEnum[s]; !ok {
+		return fmt.Errorf("invalid UnitMovement %q", s)
+	}
+	return nil
+}
+
+// String implements the fmt.Stringer interface.
+func (e UnitMovement_e) String() string {
+	if str, ok := unitMoveEnumToString[e]; ok {
+		return str
+	}
+	return fmt.Sprintf("UnitMovement(%d)", int(e))
+}
+
+var (
+	// helper map for marshalling the enum
+	unitMoveEnumToString = map[UnitMovement_e]string{
+		UMUnknown: "N/A",
+		UMFleet:   "Fleet",
+		UMFollows: "Follows",
+		UMScouts:  "Scout",
+		UMStill:   "Still",
+		UMTribe:   "Tribe",
+	}
+	// helper map for unmarshalling the enum
+	unitMoveStringToEnum = map[string]UnitMovement_e{
+		"N/A":     UMUnknown,
+		"Fleet":   UMFleet,
+		"Follows": UMFollows,
+		"Scout":   UMScouts,
+		"Still":   UMStill,
+		"Tribe":   UMTribe,
 	}
 )

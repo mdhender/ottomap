@@ -38,13 +38,9 @@ var argsMap struct {
 		showSectionData     bool
 		showSectionsSkipped bool
 	}
-	feature struct {
-		regExSections bool
-	}
-	parse struct {
-		skipBOM bool
-	}
-	show struct {
+	features struct{}
+	parse    struct{}
+	show     struct {
 		gridCenters bool
 		gridCoords  bool
 		gridNumbers bool
@@ -182,9 +178,6 @@ var cmdMap = &cobra.Command{
 		// this hex is the clan's starting hex from the first turn report
 		var originHex *wxx.Hex
 
-		if argsMap.feature.regExSections {
-			log.Printf("map: feature: regex sections is enabled!\n")
-		}
 		if argsMap.debug.showSectionsSkipped {
 			log.Printf("map: debug: show sections skipped is enabled!\n")
 		}
@@ -211,16 +204,14 @@ var cmdMap = &cobra.Command{
 				log.Printf("map: report %s: loaded %8d bytes\n", rpt.Id, len(data))
 			}
 
-			if argsMap.parse.skipBOM {
-				// check for bom and remove it if present
-				if len(data) >= 3 && data[0] == 0xEF && data[1] == 0xBB && data[2] == 0xBF {
-					log.Printf("map: report %s: skipped %8d BOM bytes\n", rpt.Id, 3)
-					data = data[3:]
-				}
+			// check for bom and remove it if present
+			if len(data) >= 3 && data[0] == 0xEF && data[1] == 0xBB && data[2] == 0xBF {
+				log.Printf("map: report %s: skipped %8d BOM bytes\n", rpt.Id, 3)
+				data = data[3:]
 			}
 
 			// split the report into sections before parsing it
-			rpt.Sections, err = reports.Sections(rpt.Id, data, argsMap.debug.showSectionsSkipped, argsMap.feature.regExSections)
+			rpt.Sections, err = reports.Sections(rpt.Id, data, argsMap.debug.showSectionsSkipped)
 			if argsMap.debug.showSectionData {
 				log.Printf("map: report %s: loaded %8d sections\n", rpt.Id, len(rpt.Sections))
 			}
@@ -559,10 +550,15 @@ var cmdMap = &cobra.Command{
 					// does the unit have a move next turn? if they don't, we're hosed since we can't look forward multiple turns yet.
 					nextTurnUnitStepId := fmt.Sprintf("%s.%s", nextTurnId, mrl.UnitId)
 					nextTurn, ok := movementResultsMap[nextTurnUnitStepId]
+					//if !ok {
+					//	log.Fatalf("map: %s: %-6s: start %s: end: missing next turn\n", mrl.TurnId, mrl.UnitId, mrl.StartingGridCoordinates)
+					//}
+					//nextTurn.StartingGridCoordinates = mrl.EndingGridCoordinates
 					if !ok {
-						log.Fatalf("map: %s: %-6s: start %s: end: missing next turn\n", mrl.TurnId, mrl.UnitId, mrl.StartingGridCoordinates)
+						log.Printf("map: %s: %-6s: start %s: unit is missing next turn\n", mrl.TurnId, mrl.UnitId, mrl.StartingGridCoordinates)
+					} else {
+						nextTurn.StartingGridCoordinates = mrl.EndingGridCoordinates
 					}
-					nextTurn.StartingGridCoordinates = mrl.EndingGridCoordinates
 					//log.Printf("map: %s: %-6s: start %s: end: %s <-- next turn\n", nextTurn.TurnId, nextTurn.UnitId, nextTurn.StartingGridCoordinates, nextTurn.EndingGridCoordinates)
 				}
 				if missingEnds != 0 {
