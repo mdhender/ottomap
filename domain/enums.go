@@ -457,8 +457,10 @@ type WindStrength_e int
 
 const (
 	WSUnknown WindStrength_e = iota
+	WSCalm
 	WSMild
 	WSStrong
+	WSGale
 )
 
 // MarshalJSON implements the json.Marshaler interface.
@@ -490,14 +492,18 @@ var (
 	// helper map for marshalling the enum
 	windStrengthEnumToString = map[WindStrength_e]string{
 		WSUnknown: "N/A",
+		WSCalm:    "CALM",
 		WSMild:    "MILD",
 		WSStrong:  "STRONG",
+		WSGale:    "GALE",
 	}
 	// helper map for unmarshalling the enum
 	windStrengthStringToEnum = map[string]WindStrength_e{
 		"N/A":    WSUnknown,
+		"CALM":   WSCalm,
 		"MILD":   WSMild,
 		"STRONG": WSStrong,
+		"GALE":   WSGale,
 	}
 )
 

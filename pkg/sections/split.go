@@ -69,7 +69,7 @@ func SplitRegEx(id string, input []byte, showSections bool) ([]*Section, bool) {
 			panic(err)
 		} else if rxElementSection, err = regexp.Compile(`^Element \d{4}e\d, ,`); err != nil {
 			panic(err)
-		} else if rxFleetMove, err = regexp.Compile(`^(MILD|STRONG)\s+(N|NE|SE|S|SW|NW)\s+Fleet Movement: Move\s+`); err != nil {
+		} else if rxFleetMove, err = regexp.Compile(`^(CALM|MILD|STRONG|GALE)\s+(N|NE|SE|S|SW|NW)\s+Fleet Movement: Move\s+`); err != nil {
 			panic(err)
 		} else if rxFleetSection, err = regexp.Compile(`^Fleet \d{4}f\d, ,`); err != nil {
 			panic(err)
