@@ -143,14 +143,14 @@ func (r *Report) parseSection(section *Section) ([]*Move, error) {
 	}
 	if len(section.Moves) != 0 { // unit moved this turn
 		for n, mm := range section.Moves {
-			log.Printf("parse: report %s: unit %s: move %d: %q\n", r.Id, ul.UnitId, n+1, string(mm))
+			log.Printf("parse: report %s: unit %s: move %d: %q\n", r.Id, ul.UnitId, n+1, mm.Text)
 		}
 		for _, mm := range section.Moves {
-			log.Printf("parse: todo: parse movement %q\n", string(mm))
-			v, err := pmoves.Parse("movement", mm)
+			log.Printf("parse: todo: parse movement %q\n", mm.Text)
+			v, err := pmoves.Parse("movement", mm.Text)
 			if err != nil {
 				log.Printf("parse: report %s: unit %s: parsing error\n", r.Id, ul.UnitId)
-				log.Printf("parse: input: %q\n", string(mm))
+				log.Printf("parse: input: %q\n", mm.Text)
 				log.Fatalf("parse: error: %v\n", err)
 			}
 			switch t := v.(type) {
@@ -196,14 +196,14 @@ func (r *Report) parseSection(section *Section) ([]*Move, error) {
 
 	// parse the unit's scouts
 	for _, scouts := range section.Scout {
-		log.Printf("parse: report %s: section %s: line %d: scout %q\n", r.Id, section.Id, scouts.LineNo, scouts.Move)
+		log.Printf("parse: report %s: section %s: line %d: scout %q\n", r.Id, section.Id, scouts.Line.No, scouts.Line.Text)
 		for _, scout := range scouts.Moves {
-			log.Printf("parse: report %s: section %s: line %d: scout move %q\n", r.Id, section.Id, scouts.LineNo, string(scout))
-			v, err := pscouts.Parse("scout", scout)
+			log.Printf("parse: report %s: section %s: line %d: scout move %q\n", r.Id, section.Id, scout.No, scout.Text)
+			v, err := pscouts.Parse("scout", scout.Text)
 			if err != nil {
-				log.Printf("parse: report %s: section %s: line %d: unit %s: parsing error\n", r.Id, section.Id, scouts.LineNo, ul.UnitId)
-				log.Printf("parse: report %s: section %s: line %d: scout %d: move %q\n", r.Id, section.Id, scouts.LineNo, scouts.ScoutId, string(scout))
-				log.Printf("parse: input: %q\n", string(scout))
+				log.Printf("parse: report %s: section %s: line %d: unit %s: parsing error\n", r.Id, section.Id, scouts.Line.No, ul.UnitId)
+				log.Printf("parse: report %s: section %s: line %d: scout %d: move %q\n", r.Id, section.Id, scouts.Line.No, scouts.ScoutId, scout.Text)
+				log.Printf("parse: input: %q\n", scout.Text)
 				log.Fatalf("parse: error: %v\n", err)
 			}
 			log.Printf("parse: scout: returned %T", v)
@@ -334,7 +334,7 @@ type Section struct {
 	TurnInfo     *Line
 	Follows      *Line
 	FollowsLine  *Line
-	Moves        [][]byte
+	Moves        []*Line
 	MovementLine *Line
 	Scout        []*ScoutLine
 	ScoutLines   []*Line
@@ -350,9 +350,8 @@ type Line struct {
 
 type ScoutLine struct {
 	ScoutId int
-	LineNo  int // line number
-	Move    []byte
-	Moves   [][]byte
+	Line    *Line
+	Moves   []*Line
 }
 
 func Sections(id string, input []byte, showSkippedSections bool) ([]*Section, error) {
@@ -480,9 +479,9 @@ func Sections(id string, input []byte, showSkippedSections bool) ([]*Section, er
 				}
 				for sid := 0; sid < 8; sid++ {
 					if bytes.HasPrefix(ctext.Text, scoutLines[sid]) {
-						scoutLine := &ScoutLine{ScoutId: sid + 1, LineNo: ctext.No, Move: bdup(ctext.Text)}
-						for _, jo := range scrubScouts(ctext.Text) {
-							if len(jo) != 0 {
+						scoutLine := &ScoutLine{ScoutId: sid + 1, Line: &Line{No: ctext.No, Text: bdup(ctext.Text)}}
+						for _, jo := range scrubScouts(scoutLine.Line) {
+							if len(jo.Text) != 0 {
 								scoutLine.Moves = append(scoutLine.Moves, jo)
 							}
 						}
@@ -500,7 +499,10 @@ func Sections(id string, input []byte, showSkippedSections bool) ([]*Section, er
 				if bytes.HasPrefix(text, []byte{'M', 'o', 'v', 'e'}) {
 					text = bytes.TrimSpace(bytes.TrimPrefix(ctext.Text, []byte{'M', 'o', 'v', 'e'}))
 				}
-				section.Moves = scrubMoves(text)
+				section.Moves = scrubMoves(&Line{
+					No:   ctext.No,
+					Text: text,
+				})
 			} else if bytes.HasPrefix(ctext.Text, followsLine) {
 				panic("should not find follows line here")
 			} else if bytes.HasPrefix(ctext.Text, movesLine) {
@@ -617,20 +619,26 @@ func isUnitSection(chunk []byte) bool {
 
 // scrubMoves splits the line into individual moves and then removes
 // leading and trailing spaces and any trailing commas from the move.
-func scrubMoves(line []byte) [][]byte {
-	var moves [][]byte
-	for _, move := range bytes.Split(line, []byte{'\\'}) {
+func scrubMoves(line *Line) []*Line {
+	var moves []*Line
+	for _, move := range bytes.Split(line.Text, []byte{'\\'}) {
 		move = bytes.TrimSpace(bytes.TrimRight(move, ", \t"))
 		if len(move) != 0 {
-			moves = append(moves, move)
+			moves = append(moves, &Line{
+				No:   line.No,
+				Text: bdup(move),
+			})
 		}
 	}
 	return moves
 }
 
-func scrubScouts(line []byte) [][]byte {
+func scrubScouts(line *Line) []*Line {
 	// trim the scout number and then split the rest of the line
-	line = line[len("Scout 8:Scout "):]
+	line = &Line{
+		No:   line.No,
+		Text: line.Text[len("Scout 8:Scout "):],
+	}
 	return scrubMoves(line)
 }
 
