@@ -37,10 +37,14 @@ DIRECTION <- "NE" {
     return directions.DSouth, nil
 }
 
-WIND <- "MILD" {
+WIND <- "CALM" {
+    return domain.WSCalm, nil
+} / "MILD" {
     return domain.WSMild, nil
 } / "STRONG" {
     return domain.WStrong, nil
+} / "GALE" {
+    return domain.WSGale, nil
 }
 
 SP     = [ \t]+

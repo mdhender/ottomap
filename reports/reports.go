@@ -86,9 +86,11 @@ func (r *Report) parseSection(section *Section) ([]*Move, error) {
 	// that id is needed to extract the status line.
 	var ul *ploc.Location
 	var ok bool
-	if v, err := ploc.Parse("location", section.Location); err != nil {
+	if v, err := ploc.Parse("location", section.Location.Text); err != nil {
 		log.Printf("parse: report %s: parsing error\n", r.Id)
-		log.Printf("parse: input: %q\n", string(section.Location))
+		log.Printf("parse: report %s: section %s: parsing error\n", r.Id, section.Id)
+		log.Printf("parse: report %s: section %s: line %d: parsing error\n", r.Id, section.Id, section.Location.No)
+		log.Printf("parse: input: %q\n", string(section.Location.Text))
 		log.Fatalf("parse: error: %v\n", err)
 	} else if ul, ok = v.(*ploc.Location); !ok {
 		panic(fmt.Sprintf("expected *locations.Location, got %T", v))
@@ -319,7 +321,7 @@ type Section struct {
 	PrevCoords string // grid coordinates before the unit moved
 	CurrCoords string // grid coordinates after the unit moved
 
-	Location     []byte
+	Location     *Line
 	TurnInfo     []byte
 	Follows      []byte
 	Moves        [][]byte
@@ -330,6 +332,11 @@ type Section struct {
 	ScoutLines   [][]byte
 	StatusLine   []byte
 	Error        error
+}
+
+type Line struct {
+	No   int
+	Text []byte
 }
 
 type ScoutLine struct {
@@ -376,24 +383,27 @@ func Sections(id string, input []byte, showSkippedSections bool) ([]*Section, er
 			continue
 		}
 
-		section.Location = bdup(chunk.Lines[0].Text)
+		section.Location = &Line{
+			No:   chunk.Lines[0].No,
+			Text: bdup(chunk.Lines[0].Text),
+		}
 
 		// parse the location so that we can get the unit id.
 		// that id is needed to extract the status line.
 		var ul *ploc.Location
 		var ok bool
-		if v, err := ploc.Parse("location", section.Location); err != nil {
-			log.Printf("reports: sections: location: %q\n", string(section.Location))
-			log.Printf("reports: sections: location: %v\n", err)
+		if v, err := ploc.Parse("location", section.Location.Text); err != nil {
+			log.Printf("report %s: section %s: line %d: parse error\n\t%v\n", id, section.Id, section.Location.No, err)
 			section.Error = err
 			continue
 		} else if ul, ok = v.(*ploc.Location); !ok {
-			log.Printf("reports: sections: location: %q\n", string(section.Location))
+			log.Printf("report %s: section %s: parse error\n", id, section.Id)
+			log.Printf("report %s: section %s: line %d: parse error\n", id, section.Id, section.Location.No)
+			log.Printf("report %s: section %s: line %d: parse error\n\t%v\n", id, section.Id, section.Location.No, err)
 			panic(fmt.Sprintf("expected *locations.Location, got %T", v))
 		} else if ul.UnitId != chunk.Id {
-			log.Printf("reports: sections: element id: %q\n", chunk.Id)
-			log.Printf("reports: sections:   location: %q\n", string(section.Location))
-			log.Printf("reports: sections:    unit id: %q\n", ul.UnitId)
+			log.Printf("report %s: section %s: line %d: element id %q\n", id, section.Id, section.Location.No, chunk.Id)
+			log.Printf("report %s: section %s: line %d:    unit id %q\n", id, section.Id, section.Location.No, ul.UnitId)
 			panic("assert(ul.UnitId == chunk.Id)")
 		}
 		section.UnitId = ul.UnitId
