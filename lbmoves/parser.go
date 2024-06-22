@@ -26,7 +26,7 @@ var (
 // Handles Tribe Follows, Tribe Movement, and Scout lines.
 //
 // Returns the steps and the first error encountered.
-func ParseMoveResults(turnId, unitId string, line []byte, showDebug bool) ([]*Step, error) {
+func ParseMoveResults(turnId, unitId string, lineNo int, line []byte, showDebug bool) ([]*Step, error) {
 	if rxScoutLine == nil {
 		rxScoutLine = regexp.MustCompile(`^Scout [12345678]:Scout `)
 		rxStatusLine = regexp.MustCompile(`^[0-9][[0-9][0-9][0-9]([cefg][0-9])? Status: `)

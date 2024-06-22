@@ -99,7 +99,6 @@ func (r *Report) parseSection(section *Section) ([]*Move, error) {
 
 	var ti *pturn.TurnInfo
 	if v, err := pturn.Parse("turnInfo", section.TurnInfo.Text); err != nil {
-		log.Printf("parse: report %s: parsing error\n", r.Id)
 		log.Printf("parse: report %s: section %s: parsing error\n", r.Id, section.Id)
 		log.Printf("parse: report %s: section %s: line %d: parsing error\n", r.Id, section.Id, section.TurnInfo.No)
 		log.Printf("parse: input: %q\n", string(section.TurnInfo.Text))
@@ -117,16 +116,18 @@ func (r *Report) parseSection(section *Section) ([]*Move, error) {
 	}
 	if section.Follows != nil { // unit followed another unit this turn
 		var ums []*pfollows.Move
-		log.Printf("parse: todo: parse follows  %q\n", string(section.Follows))
-		if v, err := pfollows.Parse("follows", section.Follows); err != nil {
-			log.Printf("parse: report %s: unit %s: parsing error\n", r.Id, ul.UnitId)
-			log.Printf("parse: input: %q\n", string(section.Follows))
+		log.Printf("parse: report %s: section %s: line %d: unit %q: todo: parse follows\n", r.Id, section.Id, section.Follows.No, ul.UnitId)
+		if v, err := pfollows.Parse("follows", section.Follows.Text); err != nil {
+			log.Printf("parse: report %s: section %s: parsing error\n", r.Id, section.Id)
+			log.Printf("parse: report %s: section %s: line %d: unit %q: parsing error\n", r.Id, section.Id, section.Follows.No, ul.UnitId)
+			log.Printf("parse: input: %q\n", string(section.Follows.Text))
 			log.Fatalf("parse: error: %v\n", err)
 		} else if ums, ok = v.([]*pfollows.Move); !ok {
 			panic(fmt.Sprintf("expected []*follows.Move, got %T", v))
 		} else if len(ums) != 1 {
-			log.Printf("parse: report %s: unit %s: parsing error\n", r.Id, ul.UnitId)
-			log.Printf("parse: input: %q\n", string(section.Follows))
+			log.Printf("parse: report %s: section %s: parsing error\n", r.Id, section.Id)
+			log.Printf("parse: report %s: section %s: line %d: unit %q: parsing error\n", r.Id, section.Id, section.Follows.No, ul.UnitId)
+			log.Printf("parse: input: %q\n", string(section.Follows.Text))
 			log.Fatalf("parse: error: %v\n", cerrs.ErrUnexpectedNumberOfMoves)
 		}
 		log.Printf("parse: report %s: unit %s: followed %q\n", r.Id, ul.UnitId, ums[0].Follows)
@@ -247,10 +248,11 @@ func (r *Report) parseSection(section *Section) ([]*Move, error) {
 
 	// parse the unit's status line into the final tile
 	var sh *pstatus.Hex
-	log.Printf("parse: section: status %q\n", string(section.Status))
-	if v, err := pstatus.Parse("status", section.Status); err != nil {
-		log.Printf("parse: report %s: unit %s: parsing error\n", r.Id, ul.UnitId)
-		log.Printf("parse: input: %q\n", string(section.Status))
+	log.Printf("parse: report %s: section %s: line %d: status %q\n", r.Id, section.Id, section.Status.No, section.Status.Text)
+	if v, err := pstatus.Parse("status", section.Status.Text); err != nil {
+		log.Printf("parse: report %s: section %s: parsing error\n", r.Id, section.Id)
+		log.Printf("parse: report %s: section %s: line %d: unit %q: parsing error\n", r.Id, section.Id, section.Status.No, ul.UnitId)
+		log.Printf("parse: input: %q\n", string(section.Status.Text))
 		log.Fatalf("parse: error: %v\n", err)
 	} else if sh, ok = v.(*pstatus.Hex); !ok {
 		panic(fmt.Sprintf("expected *status.Hex, got %T", v))
@@ -262,8 +264,9 @@ func (r *Report) parseSection(section *Section) ([]*Move, error) {
 	if len(sh.Settlements) == 1 {
 		log.Printf("parse: section: status: settlement %q\n", sh.Settlements[0].Name)
 	} else if len(sh.Settlements) > 1 {
-		log.Printf("parse: report %s: unit %s: parsing error\n", r.Id, ul.UnitId)
-		log.Printf("parse: input: %q\n", string(section.Status))
+		log.Printf("parse: report %s: section %s: parsing error\n", r.Id, section.Id)
+		log.Printf("parse: report %s: section %s: line %d: unit %q: parsing error\n", r.Id, section.Id, section.Status.No, ul.UnitId)
+		log.Printf("parse: input: %q\n", string(section.Status.Text))
 		for _, s := range sh.Settlements {
 			log.Printf("parse: input: settlement %q\n", s.Name)
 		}
@@ -325,14 +328,14 @@ type Section struct {
 
 	Location     *Line
 	TurnInfo     *Line
-	Follows      []byte
+	Follows      *Line
+	FollowsLine  *Line
 	Moves        [][]byte
+	MovementLine *Line
 	Scout        []*ScoutLine
-	Status       []byte
-	FollowsLine  []byte
-	MovementLine []byte
+	Status       *Line
+	StatusLine   *Line
 	ScoutLines   [][]byte
-	StatusLine   []byte
 	Error        error
 }
 
@@ -444,8 +447,14 @@ func Sections(id string, input []byte, showSkippedSections bool) ([]*Section, er
 					section.Error = cerrs.ErrMultipleStatusLines
 					break
 				}
-				section.Status = bdup(ctext.Text)
-				section.StatusLine = bdup(ctext.Text)
+				section.Status = &Line{
+					No:   ctext.No,
+					Text: bdup(ctext.Text),
+				}
+				section.StatusLine = &Line{
+					No:   ctext.No,
+					Text: bdup(ctext.Text),
+				}
 			} else if ctext.MovementType == domain.UMFleet {
 				log.Printf("%s: %d: %d: found fleet movement\n\t%s\n\t\t%s\n", id, chunk.No, ctext.No, chunk.Slug(), ctext.Slug(35))
 			} else if ctext.MovementType == domain.UMFollows {
@@ -453,8 +462,14 @@ func Sections(id string, input []byte, showSkippedSections bool) ([]*Section, er
 					section.Error = cerrs.ErrMultipleFollowsLines
 					break
 				}
-				section.Follows = ctext.Text
-				section.FollowsLine = bdup(ctext.Text)
+				section.Follows = &Line{
+					No:   ctext.No,
+					Text: bdup(ctext.Text),
+				}
+				section.FollowsLine = &Line{
+					No:   ctext.No,
+					Text: bdup(ctext.Text),
+				}
 			} else if ctext.MovementType == domain.UMScouts {
 				if rxScoutLine.Match(ctext.Text) {
 					section.ScoutLines = append(section.ScoutLines, bdup(ctext.Text))
@@ -472,7 +487,10 @@ func Sections(id string, input []byte, showSkippedSections bool) ([]*Section, er
 					}
 				}
 			} else if ctext.MovementType == domain.UMTribe {
-				section.MovementLine = bdup(ctext.Text)
+				section.MovementLine = &Line{
+					No:   ctext.No,
+					Text: bdup(ctext.Text),
+				}
 				// remove the prefix and trim the line
 				text := bytes.TrimSpace(bytes.TrimPrefix(ctext.Text, movesLine))
 				if bytes.HasPrefix(text, []byte{'M', 'o', 'v', 'e'}) {

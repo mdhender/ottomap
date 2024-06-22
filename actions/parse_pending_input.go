@@ -217,7 +217,7 @@ func ParsePendingInput(db *sqlc.DB, pendingRow sqlc.ReadPendingInputMetadataRow)
 			} else if strings.HasPrefix(row.Line, elementStatusPrefix) {
 				// parse the element status line
 				log.Printf("parsePending: name %s: unit %s: element status: %q\n", pendingRow.Name, ul.UnitId, slug)
-				steps, err := lbmoves.ParseMoveResults(turnId, ul.UnitId, []byte(row.Line), showSteps)
+				steps, err := lbmoves.ParseMoveResults(turnId, ul.UnitId, int(row.LineNo), []byte(row.Line), showSteps)
 				if err != nil {
 					log.Fatalf("parsePending: name %s: unit %s: line %d: %v\n", pendingRow.Name, ul.UnitId, row.LineNo, err)
 				} else if len(steps) != 1 {
