@@ -429,7 +429,6 @@ func Sections(id string, input []byte, showSkippedSections bool) ([]*Section, er
 		}
 		statusLine := []byte(fmt.Sprintf("%s Status: ", ul.UnitId))
 		for n, ctext := range chunk.Lines {
-			line := bdup(ctext.Text)
 			if n == 0 {
 				if !ctext.IsLocation {
 					log.Printf("report %s: section %s: line %d: input %q\n", id, section.Id, ctext.No, ctext.Slug(20))
@@ -499,20 +498,20 @@ func Sections(id string, input []byte, showSkippedSections bool) ([]*Section, er
 				// remove the prefix and trim the line
 				text := bytes.TrimSpace(bytes.TrimPrefix(ctext.Text, movesLine))
 				if bytes.HasPrefix(text, []byte{'M', 'o', 'v', 'e'}) {
-					text = bytes.TrimSpace(bytes.TrimPrefix(line, []byte{'M', 'o', 'v', 'e'}))
+					text = bytes.TrimSpace(bytes.TrimPrefix(ctext.Text, []byte{'M', 'o', 'v', 'e'}))
 				}
 				section.Moves = scrubMoves(text)
-			} else if bytes.HasPrefix(line, followsLine) {
+			} else if bytes.HasPrefix(ctext.Text, followsLine) {
 				panic("should not find follows line here")
-			} else if bytes.HasPrefix(line, movesLine) {
+			} else if bytes.HasPrefix(ctext.Text, movesLine) {
 				panic("should not find tribe movement line here")
-			} else if bytes.HasPrefix(line, []byte{'S', 'c', 'o', 'u', 't'}) {
+			} else if bytes.HasPrefix(ctext.Text, []byte{'S', 'c', 'o', 'u', 't'}) {
 				panic("should not find scout line here")
-			} else if bytes.HasPrefix(line, statusLine) {
+			} else if bytes.HasPrefix(ctext.Text, statusLine) {
 				panic("should not find status line here")
 			} else {
 				log.Printf("reports: sections: unexpected line: %q\n", chunk.Slug())
-				log.Printf("reports: sections: unexpected line: %q\n", string(line))
+				log.Printf("reports: sections: unexpected line: %q\n", ctext.Slug(35))
 				panic("unhandled line?")
 			}
 		}
