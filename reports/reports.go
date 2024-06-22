@@ -98,9 +98,11 @@ func (r *Report) parseSection(section *Section) ([]*Move, error) {
 	log.Printf("parse: report %s: unit %s (%s %s)\n", r.Id, ul.UnitId, ul.PrevCoords, ul.CurrCoords)
 
 	var ti *pturn.TurnInfo
-	if v, err := pturn.Parse("turnInfo", section.TurnInfo); err != nil {
-		log.Printf("parse: report %s: unit %s: parsing error\n", r.Id, ul.UnitId)
-		log.Printf("parse: input: %q\n", string(section.TurnInfo))
+	if v, err := pturn.Parse("turnInfo", section.TurnInfo.Text); err != nil {
+		log.Printf("parse: report %s: parsing error\n", r.Id)
+		log.Printf("parse: report %s: section %s: parsing error\n", r.Id, section.Id)
+		log.Printf("parse: report %s: section %s: line %d: parsing error\n", r.Id, section.Id, section.TurnInfo.No)
+		log.Printf("parse: input: %q\n", string(section.TurnInfo.Text))
 		log.Fatalf("parse: error: %v\n", err)
 	} else if ti, ok = v.(*pturn.TurnInfo); !ok {
 		panic(fmt.Sprintf("expected *turns.TurnInfo, got %T", v))
@@ -322,7 +324,7 @@ type Section struct {
 	CurrCoords string // grid coordinates after the unit moved
 
 	Location     *Line
-	TurnInfo     []byte
+	TurnInfo     *Line
 	Follows      []byte
 	Moves        [][]byte
 	Scout        []*ScoutLine
@@ -425,17 +427,18 @@ func Sections(id string, input []byte, showSkippedSections bool) ([]*Section, er
 			line := bdup(ctext.Text)
 			if n == 0 {
 				if !ctext.IsLocation {
-					log.Printf("reports: sections: unexpected line: %q\n", chunk.Slug())
-					log.Printf("reports: sections: unexpected line: %q\n", string(line))
+					log.Printf("report %s: section %s: line %d: input %q\n", id, section.Id, ctext.No, ctext.Slug(20))
 					panic("expected location line")
 				}
 			} else if n == 1 {
 				if !ctext.IsTurnInfo {
-					log.Printf("reports: sections: unexpected line: %q\n", chunk.Slug())
-					log.Printf("reports: sections: unexpected line: %q\n", string(line))
+					log.Printf("report %s: section %s: line %d: input %q\n", id, section.Id, ctext.No, ctext.Slug(20))
 					panic("expected turn info line")
 				}
-				section.TurnInfo = bdup(ctext.Text)
+				section.TurnInfo = &Line{
+					No:   ctext.No,
+					Text: bdup(ctext.Text),
+				}
 			} else if ctext.IsStatus {
 				if section.Status != nil {
 					section.Error = cerrs.ErrMultipleStatusLines
