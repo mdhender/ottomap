@@ -15,4 +15,13 @@ type FleetMovement struct {
 		Strength domain.WindStrength_e
 		From     directions.Direction
 	}
+
+	Steps []bool
 }
+
+type Sighted_e int
+
+const (
+	Land Sighted_e = iota
+	Water
+)

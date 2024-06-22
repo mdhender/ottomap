@@ -211,14 +211,15 @@ var cmdMap = &cobra.Command{
 			}
 
 			// split the report into sections before parsing it
-			rpt.Sections, err = reports.Sections(rpt.Id, data, argsMap.debug.showSectionsSkipped)
+			var secError *reports.Error
+			rpt.Sections, secError = reports.Sections(rpt.Id, data, argsMap.debug.showSectionsSkipped)
 			if argsMap.debug.showSectionData {
 				log.Printf("map: report %s: loaded %8d sections\n", rpt.Id, len(rpt.Sections))
 			}
-			if err != nil {
+			if secError != nil {
 				for _, section := range rpt.Sections {
 					if section.Error != nil {
-						log.Printf("map: report %s: section %s: %v\n", rpt.Id, section.Id, section.Error)
+						log.Printf("map: report %s: section %s: line %d: %v\n", rpt.Id, section.Id, section.Error.Line.No, section.Error.Error)
 					}
 				}
 				log.Fatalf("map: report %s: please fix errors listed above, then restart\n", rpt.Id)

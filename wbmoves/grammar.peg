@@ -17,11 +17,56 @@ func toAnySlice(v any) []any {
 
 }
 
-Step <- w:WIND SP d:DIRECTION SP "Fleet Movement:" SP "Move" SP _ EOF {
+FleetMovement <- "Fleet Movement:" SP Step* _ EOF {
     var fm FleetMovement
     fm.Winds.Strength = w.(domain.WindStrength_e)
     fm.Winds.From = d.(directions.Direction)
 }
+
+Step <- StartStep "(" _ ")" _ "(" _ ")" {
+    return true, nil
+}
+
+StartStep <- "Move" SP {
+    return true, nil
+} / "\\" {
+    return true, nil
+}
+
+SightLand <- "Sight" SP "Land" SP "-" {
+    return Land, nil
+}
+
+SightLand <- "Sight" SP "Water" SP "-" {
+    return Water, nil
+}
+
+CompassPoint <- "NE/NE" {
+    return []directions.Direction{directions.DNorthEast, directions.DNorthEast}, nil
+} / "NE/SE" {
+    return []directions.Direction{directions.DNorthEast, directions.DSouthEast}, nil
+} / "NW/NW" {
+    return []directions.Direction{directions.DNorthWest, directions.DNorthWest}, nil
+} / "SE/SE" {
+    return []directions.Direction{directions.DSouthEast, directions.DSouthEast}, nil
+} / "SW/NW" {
+    return []directions.Direction{directions.DSouthWest, directions.DNorthWest}, nil
+} / "SW/SW" {
+    return []directions.Direction{directions.DSouthWest, directions.DSouthWest}, nil
+} / "N/NE" {
+    return []directions.Direction{directions.DNorth, directions.DNorthEast}, nil
+} / "N/NW" {
+    return []directions.Direction{directions.DNorth, directions.DNorthWest}, nil
+} / "N/N" {
+    return []directions.Direction{directions.DNorth, directions.DNorth}, nil
+} / "S/SE" {
+    return []directions.Direction{directions.DSouth, directions.DSouthEast}, nil
+} / "S/SW" {
+    return []directions.Direction{directions.DSouth, directions.DSouthWest}, nil
+} / "S/S" {
+    return []directions.Direction{directions.DSouth, directions.DSouth}, nil
+}
+
 
 DIRECTION <- "NE" {
     return directions.DNorthEast, nil

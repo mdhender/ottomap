@@ -30,64 +30,37 @@ func toAnySlice(v any) []any {
 var g = &grammar{
 	rules: []*rule{
 		{
-			name: "Step",
+			name: "FleetMovement",
 			pos:  position{line: 20, col: 1, offset: 256},
 			expr: &actionExpr{
-				pos: position{line: 20, col: 9, offset: 264},
-				run: (*parser).callonStep1,
+				pos: position{line: 20, col: 18, offset: 273},
+				run: (*parser).callonFleetMovement1,
 				expr: &seqExpr{
-					pos: position{line: 20, col: 9, offset: 264},
+					pos: position{line: 20, col: 18, offset: 273},
 					exprs: []any{
-						&labeledExpr{
-							pos:   position{line: 20, col: 9, offset: 264},
-							label: "w",
-							expr: &ruleRefExpr{
-								pos:  position{line: 20, col: 11, offset: 266},
-								name: "WIND",
-							},
-						},
-						&ruleRefExpr{
-							pos:  position{line: 20, col: 16, offset: 271},
-							name: "SP",
-						},
-						&labeledExpr{
-							pos:   position{line: 20, col: 19, offset: 274},
-							label: "d",
-							expr: &ruleRefExpr{
-								pos:  position{line: 20, col: 21, offset: 276},
-								name: "DIRECTION",
-							},
-						},
-						&ruleRefExpr{
-							pos:  position{line: 20, col: 31, offset: 286},
-							name: "SP",
-						},
 						&litMatcher{
-							pos:        position{line: 20, col: 34, offset: 289},
+							pos:        position{line: 20, col: 18, offset: 273},
 							val:        "Fleet Movement:",
 							ignoreCase: false,
 							want:       "\"Fleet Movement:\"",
 						},
 						&ruleRefExpr{
-							pos:  position{line: 20, col: 52, offset: 307},
+							pos:  position{line: 20, col: 36, offset: 291},
 							name: "SP",
 						},
-						&litMatcher{
-							pos:        position{line: 20, col: 55, offset: 310},
-							val:        "Move",
-							ignoreCase: false,
-							want:       "\"Move\"",
+						&zeroOrMoreExpr{
+							pos: position{line: 20, col: 39, offset: 294},
+							expr: &ruleRefExpr{
+								pos:  position{line: 20, col: 39, offset: 294},
+								name: "Step",
+							},
 						},
 						&ruleRefExpr{
-							pos:  position{line: 20, col: 62, offset: 317},
-							name: "SP",
-						},
-						&ruleRefExpr{
-							pos:  position{line: 20, col: 65, offset: 320},
+							pos:  position{line: 20, col: 45, offset: 300},
 							name: "_",
 						},
 						&ruleRefExpr{
-							pos:  position{line: 20, col: 67, offset: 322},
+							pos:  position{line: 20, col: 47, offset: 302},
 							name: "EOF",
 						},
 					},
@@ -95,66 +68,364 @@ var g = &grammar{
 			},
 		},
 		{
-			name: "DIRECTION",
-			pos:  position{line: 26, col: 1, offset: 451},
+			name: "Step",
+			pos:  position{line: 26, col: 1, offset: 431},
+			expr: &actionExpr{
+				pos: position{line: 26, col: 9, offset: 439},
+				run: (*parser).callonStep1,
+				expr: &seqExpr{
+					pos: position{line: 26, col: 9, offset: 439},
+					exprs: []any{
+						&ruleRefExpr{
+							pos:  position{line: 26, col: 9, offset: 439},
+							name: "StartStep",
+						},
+						&litMatcher{
+							pos:        position{line: 26, col: 19, offset: 449},
+							val:        "(",
+							ignoreCase: false,
+							want:       "\"(\"",
+						},
+						&ruleRefExpr{
+							pos:  position{line: 26, col: 23, offset: 453},
+							name: "_",
+						},
+						&litMatcher{
+							pos:        position{line: 26, col: 25, offset: 455},
+							val:        ")",
+							ignoreCase: false,
+							want:       "\")\"",
+						},
+						&ruleRefExpr{
+							pos:  position{line: 26, col: 29, offset: 459},
+							name: "_",
+						},
+						&litMatcher{
+							pos:        position{line: 26, col: 31, offset: 461},
+							val:        "(",
+							ignoreCase: false,
+							want:       "\"(\"",
+						},
+						&ruleRefExpr{
+							pos:  position{line: 26, col: 35, offset: 465},
+							name: "_",
+						},
+						&litMatcher{
+							pos:        position{line: 26, col: 37, offset: 467},
+							val:        ")",
+							ignoreCase: false,
+							want:       "\")\"",
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "StartStep",
+			pos:  position{line: 30, col: 1, offset: 497},
 			expr: &choiceExpr{
-				pos: position{line: 26, col: 14, offset: 464},
+				pos: position{line: 30, col: 14, offset: 510},
 				alternatives: []any{
 					&actionExpr{
-						pos: position{line: 26, col: 14, offset: 464},
+						pos: position{line: 30, col: 14, offset: 510},
+						run: (*parser).callonStartStep2,
+						expr: &seqExpr{
+							pos: position{line: 30, col: 14, offset: 510},
+							exprs: []any{
+								&litMatcher{
+									pos:        position{line: 30, col: 14, offset: 510},
+									val:        "Move",
+									ignoreCase: false,
+									want:       "\"Move\"",
+								},
+								&ruleRefExpr{
+									pos:  position{line: 30, col: 21, offset: 517},
+									name: "SP",
+								},
+							},
+						},
+					},
+					&actionExpr{
+						pos: position{line: 32, col: 5, offset: 547},
+						run: (*parser).callonStartStep6,
+						expr: &litMatcher{
+							pos:        position{line: 32, col: 5, offset: 547},
+							val:        "\\",
+							ignoreCase: false,
+							want:       "\"\\\\\"",
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "SightLand",
+			pos:  position{line: 36, col: 1, offset: 578},
+			expr: &actionExpr{
+				pos: position{line: 36, col: 14, offset: 591},
+				run: (*parser).callonSightLand1,
+				expr: &seqExpr{
+					pos: position{line: 36, col: 14, offset: 591},
+					exprs: []any{
+						&litMatcher{
+							pos:        position{line: 36, col: 14, offset: 591},
+							val:        "Sight",
+							ignoreCase: false,
+							want:       "\"Sight\"",
+						},
+						&ruleRefExpr{
+							pos:  position{line: 36, col: 22, offset: 599},
+							name: "SP",
+						},
+						&litMatcher{
+							pos:        position{line: 36, col: 25, offset: 602},
+							val:        "Land",
+							ignoreCase: false,
+							want:       "\"Land\"",
+						},
+						&ruleRefExpr{
+							pos:  position{line: 36, col: 32, offset: 609},
+							name: "SP",
+						},
+						&litMatcher{
+							pos:        position{line: 36, col: 35, offset: 612},
+							val:        "-",
+							ignoreCase: false,
+							want:       "\"-\"",
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "SightLand",
+			pos:  position{line: 40, col: 1, offset: 642},
+			expr: &actionExpr{
+				pos: position{line: 40, col: 14, offset: 655},
+				run: (*parser).callonSightLand1,
+				expr: &seqExpr{
+					pos: position{line: 40, col: 14, offset: 655},
+					exprs: []any{
+						&litMatcher{
+							pos:        position{line: 40, col: 14, offset: 655},
+							val:        "Sight",
+							ignoreCase: false,
+							want:       "\"Sight\"",
+						},
+						&ruleRefExpr{
+							pos:  position{line: 40, col: 22, offset: 663},
+							name: "SP",
+						},
+						&litMatcher{
+							pos:        position{line: 40, col: 25, offset: 666},
+							val:        "Water",
+							ignoreCase: false,
+							want:       "\"Water\"",
+						},
+						&ruleRefExpr{
+							pos:  position{line: 40, col: 33, offset: 674},
+							name: "SP",
+						},
+						&litMatcher{
+							pos:        position{line: 40, col: 36, offset: 677},
+							val:        "-",
+							ignoreCase: false,
+							want:       "\"-\"",
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "CompassPoint",
+			pos:  position{line: 44, col: 1, offset: 708},
+			expr: &choiceExpr{
+				pos: position{line: 44, col: 17, offset: 724},
+				alternatives: []any{
+					&actionExpr{
+						pos: position{line: 44, col: 17, offset: 724},
+						run: (*parser).callonCompassPoint2,
+						expr: &litMatcher{
+							pos:        position{line: 44, col: 17, offset: 724},
+							val:        "NE/NE",
+							ignoreCase: false,
+							want:       "\"NE/NE\"",
+						},
+					},
+					&actionExpr{
+						pos: position{line: 46, col: 5, offset: 823},
+						run: (*parser).callonCompassPoint4,
+						expr: &litMatcher{
+							pos:        position{line: 46, col: 5, offset: 823},
+							val:        "NE/SE",
+							ignoreCase: false,
+							want:       "\"NE/SE\"",
+						},
+					},
+					&actionExpr{
+						pos: position{line: 48, col: 5, offset: 922},
+						run: (*parser).callonCompassPoint6,
+						expr: &litMatcher{
+							pos:        position{line: 48, col: 5, offset: 922},
+							val:        "NW/NW",
+							ignoreCase: false,
+							want:       "\"NW/NW\"",
+						},
+					},
+					&actionExpr{
+						pos: position{line: 50, col: 5, offset: 1021},
+						run: (*parser).callonCompassPoint8,
+						expr: &litMatcher{
+							pos:        position{line: 50, col: 5, offset: 1021},
+							val:        "SE/SE",
+							ignoreCase: false,
+							want:       "\"SE/SE\"",
+						},
+					},
+					&actionExpr{
+						pos: position{line: 52, col: 5, offset: 1120},
+						run: (*parser).callonCompassPoint10,
+						expr: &litMatcher{
+							pos:        position{line: 52, col: 5, offset: 1120},
+							val:        "SW/NW",
+							ignoreCase: false,
+							want:       "\"SW/NW\"",
+						},
+					},
+					&actionExpr{
+						pos: position{line: 54, col: 5, offset: 1219},
+						run: (*parser).callonCompassPoint12,
+						expr: &litMatcher{
+							pos:        position{line: 54, col: 5, offset: 1219},
+							val:        "SW/SW",
+							ignoreCase: false,
+							want:       "\"SW/SW\"",
+						},
+					},
+					&actionExpr{
+						pos: position{line: 56, col: 5, offset: 1318},
+						run: (*parser).callonCompassPoint14,
+						expr: &litMatcher{
+							pos:        position{line: 56, col: 5, offset: 1318},
+							val:        "N/NE",
+							ignoreCase: false,
+							want:       "\"N/NE\"",
+						},
+					},
+					&actionExpr{
+						pos: position{line: 58, col: 5, offset: 1412},
+						run: (*parser).callonCompassPoint16,
+						expr: &litMatcher{
+							pos:        position{line: 58, col: 5, offset: 1412},
+							val:        "N/NW",
+							ignoreCase: false,
+							want:       "\"N/NW\"",
+						},
+					},
+					&actionExpr{
+						pos: position{line: 60, col: 5, offset: 1506},
+						run: (*parser).callonCompassPoint18,
+						expr: &litMatcher{
+							pos:        position{line: 60, col: 5, offset: 1506},
+							val:        "N/N",
+							ignoreCase: false,
+							want:       "\"N/N\"",
+						},
+					},
+					&actionExpr{
+						pos: position{line: 62, col: 5, offset: 1595},
+						run: (*parser).callonCompassPoint20,
+						expr: &litMatcher{
+							pos:        position{line: 62, col: 5, offset: 1595},
+							val:        "S/SE",
+							ignoreCase: false,
+							want:       "\"S/SE\"",
+						},
+					},
+					&actionExpr{
+						pos: position{line: 64, col: 5, offset: 1689},
+						run: (*parser).callonCompassPoint22,
+						expr: &litMatcher{
+							pos:        position{line: 64, col: 5, offset: 1689},
+							val:        "S/SW",
+							ignoreCase: false,
+							want:       "\"S/SW\"",
+						},
+					},
+					&actionExpr{
+						pos: position{line: 66, col: 5, offset: 1783},
+						run: (*parser).callonCompassPoint24,
+						expr: &litMatcher{
+							pos:        position{line: 66, col: 5, offset: 1783},
+							val:        "S/S",
+							ignoreCase: false,
+							want:       "\"S/S\"",
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "DIRECTION",
+			pos:  position{line: 71, col: 1, offset: 1872},
+			expr: &choiceExpr{
+				pos: position{line: 71, col: 14, offset: 1885},
+				alternatives: []any{
+					&actionExpr{
+						pos: position{line: 71, col: 14, offset: 1885},
 						run: (*parser).callonDIRECTION2,
 						expr: &litMatcher{
-							pos:        position{line: 26, col: 14, offset: 464},
+							pos:        position{line: 71, col: 14, offset: 1885},
 							val:        "NE",
 							ignoreCase: false,
 							want:       "\"NE\"",
 						},
 					},
 					&actionExpr{
-						pos: position{line: 28, col: 5, offset: 513},
+						pos: position{line: 73, col: 5, offset: 1934},
 						run: (*parser).callonDIRECTION4,
 						expr: &litMatcher{
-							pos:        position{line: 28, col: 5, offset: 513},
+							pos:        position{line: 73, col: 5, offset: 1934},
 							val:        "SE",
 							ignoreCase: false,
 							want:       "\"SE\"",
 						},
 					},
 					&actionExpr{
-						pos: position{line: 30, col: 5, offset: 562},
+						pos: position{line: 75, col: 5, offset: 1983},
 						run: (*parser).callonDIRECTION6,
 						expr: &litMatcher{
-							pos:        position{line: 30, col: 5, offset: 562},
+							pos:        position{line: 75, col: 5, offset: 1983},
 							val:        "SW",
 							ignoreCase: false,
 							want:       "\"SW\"",
 						},
 					},
 					&actionExpr{
-						pos: position{line: 32, col: 5, offset: 611},
+						pos: position{line: 77, col: 5, offset: 2032},
 						run: (*parser).callonDIRECTION8,
 						expr: &litMatcher{
-							pos:        position{line: 32, col: 5, offset: 611},
+							pos:        position{line: 77, col: 5, offset: 2032},
 							val:        "NW",
 							ignoreCase: false,
 							want:       "\"NW\"",
 						},
 					},
 					&actionExpr{
-						pos: position{line: 34, col: 5, offset: 660},
+						pos: position{line: 79, col: 5, offset: 2081},
 						run: (*parser).callonDIRECTION10,
 						expr: &litMatcher{
-							pos:        position{line: 34, col: 5, offset: 660},
+							pos:        position{line: 79, col: 5, offset: 2081},
 							val:        "N",
 							ignoreCase: false,
 							want:       "\"N\"",
 						},
 					},
 					&actionExpr{
-						pos: position{line: 36, col: 5, offset: 704},
+						pos: position{line: 81, col: 5, offset: 2125},
 						run: (*parser).callonDIRECTION12,
 						expr: &litMatcher{
-							pos:        position{line: 36, col: 5, offset: 704},
+							pos:        position{line: 81, col: 5, offset: 2125},
 							val:        "S",
 							ignoreCase: false,
 							want:       "\"S\"",
@@ -165,28 +436,48 @@ var g = &grammar{
 		},
 		{
 			name: "WIND",
-			pos:  position{line: 40, col: 1, offset: 747},
+			pos:  position{line: 85, col: 1, offset: 2168},
 			expr: &choiceExpr{
-				pos: position{line: 40, col: 9, offset: 755},
+				pos: position{line: 85, col: 9, offset: 2176},
 				alternatives: []any{
 					&actionExpr{
-						pos: position{line: 40, col: 9, offset: 755},
+						pos: position{line: 85, col: 9, offset: 2176},
 						run: (*parser).callonWIND2,
 						expr: &litMatcher{
-							pos:        position{line: 40, col: 9, offset: 755},
+							pos:        position{line: 85, col: 9, offset: 2176},
+							val:        "CALM",
+							ignoreCase: false,
+							want:       "\"CALM\"",
+						},
+					},
+					&actionExpr{
+						pos: position{line: 87, col: 5, offset: 2219},
+						run: (*parser).callonWIND4,
+						expr: &litMatcher{
+							pos:        position{line: 87, col: 5, offset: 2219},
 							val:        "MILD",
 							ignoreCase: false,
 							want:       "\"MILD\"",
 						},
 					},
 					&actionExpr{
-						pos: position{line: 42, col: 5, offset: 798},
-						run: (*parser).callonWIND4,
+						pos: position{line: 89, col: 5, offset: 2262},
+						run: (*parser).callonWIND6,
 						expr: &litMatcher{
-							pos:        position{line: 42, col: 5, offset: 798},
+							pos:        position{line: 89, col: 5, offset: 2262},
 							val:        "STRONG",
 							ignoreCase: false,
 							want:       "\"STRONG\"",
+						},
+					},
+					&actionExpr{
+						pos: position{line: 91, col: 5, offset: 2308},
+						run: (*parser).callonWIND8,
+						expr: &litMatcher{
+							pos:        position{line: 91, col: 5, offset: 2308},
+							val:        "GALE",
+							ignoreCase: false,
+							want:       "\"GALE\"",
 						},
 					},
 				},
@@ -194,11 +485,11 @@ var g = &grammar{
 		},
 		{
 			name: "SP",
-			pos:  position{line: 46, col: 1, offset: 843},
+			pos:  position{line: 95, col: 1, offset: 2350},
 			expr: &oneOrMoreExpr{
-				pos: position{line: 46, col: 10, offset: 852},
+				pos: position{line: 95, col: 10, offset: 2359},
 				expr: &charClassMatcher{
-					pos:        position{line: 46, col: 10, offset: 852},
+					pos:        position{line: 95, col: 10, offset: 2359},
 					val:        "[ \\t]",
 					chars:      []rune{' ', '\t'},
 					ignoreCase: false,
@@ -208,11 +499,11 @@ var g = &grammar{
 		},
 		{
 			name: "_",
-			pos:  position{line: 47, col: 1, offset: 859},
+			pos:  position{line: 96, col: 1, offset: 2366},
 			expr: &zeroOrMoreExpr{
-				pos: position{line: 47, col: 10, offset: 868},
+				pos: position{line: 96, col: 10, offset: 2375},
 				expr: &charClassMatcher{
-					pos:        position{line: 47, col: 10, offset: 868},
+					pos:        position{line: 96, col: 10, offset: 2375},
 					val:        "[ \\t]",
 					chars:      []rune{' ', '\t'},
 					ignoreCase: false,
@@ -223,16 +514,186 @@ var g = &grammar{
 	},
 }
 
-func (c *current) onStep1(w, d any) (any, error) {
+func (c *current) onFleetMovement1() (any, error) {
 	var fm FleetMovement
 	fm.Winds.Strength = w.(domain.WindStrength_e)
 	fm.Winds.From = d.(directions.Direction)
 }
 
+func (p *parser) callonFleetMovement1() (any, error) {
+	stack := p.vstack[len(p.vstack)-1]
+	_ = stack
+	return p.cur.onFleetMovement1()
+}
+
+func (c *current) onStep1() (any, error) {
+	return true, nil
+}
+
 func (p *parser) callonStep1() (any, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
-	return p.cur.onStep1(stack["w"], stack["d"])
+	return p.cur.onStep1()
+}
+
+func (c *current) onStartStep2() (any, error) {
+	return true, nil
+}
+
+func (p *parser) callonStartStep2() (any, error) {
+	stack := p.vstack[len(p.vstack)-1]
+	_ = stack
+	return p.cur.onStartStep2()
+}
+
+func (c *current) onStartStep6() (any, error) {
+	return true, nil
+}
+
+func (p *parser) callonStartStep6() (any, error) {
+	stack := p.vstack[len(p.vstack)-1]
+	_ = stack
+	return p.cur.onStartStep6()
+}
+
+func (c *current) onSightLand1() (any, error) {
+	return Land, nil
+}
+
+func (p *parser) callonSightLand1() (any, error) {
+	stack := p.vstack[len(p.vstack)-1]
+	_ = stack
+	return p.cur.onSightLand1()
+}
+
+func (c *current) onSightLand1() (any, error) {
+	return Water, nil
+}
+
+func (p *parser) callonSightLand1() (any, error) {
+	stack := p.vstack[len(p.vstack)-1]
+	_ = stack
+	return p.cur.onSightLand1()
+}
+
+func (c *current) onCompassPoint2() (any, error) {
+	return []directions.Direction{directions.DNorthEast, directions.DNorthEast}, nil
+}
+
+func (p *parser) callonCompassPoint2() (any, error) {
+	stack := p.vstack[len(p.vstack)-1]
+	_ = stack
+	return p.cur.onCompassPoint2()
+}
+
+func (c *current) onCompassPoint4() (any, error) {
+	return []directions.Direction{directions.DNorthEast, directions.DSouthEast}, nil
+}
+
+func (p *parser) callonCompassPoint4() (any, error) {
+	stack := p.vstack[len(p.vstack)-1]
+	_ = stack
+	return p.cur.onCompassPoint4()
+}
+
+func (c *current) onCompassPoint6() (any, error) {
+	return []directions.Direction{directions.DNorthWest, directions.DNorthWest}, nil
+}
+
+func (p *parser) callonCompassPoint6() (any, error) {
+	stack := p.vstack[len(p.vstack)-1]
+	_ = stack
+	return p.cur.onCompassPoint6()
+}
+
+func (c *current) onCompassPoint8() (any, error) {
+	return []directions.Direction{directions.DSouthEast, directions.DSouthEast}, nil
+}
+
+func (p *parser) callonCompassPoint8() (any, error) {
+	stack := p.vstack[len(p.vstack)-1]
+	_ = stack
+	return p.cur.onCompassPoint8()
+}
+
+func (c *current) onCompassPoint10() (any, error) {
+	return []directions.Direction{directions.DSouthWest, directions.DNorthWest}, nil
+}
+
+func (p *parser) callonCompassPoint10() (any, error) {
+	stack := p.vstack[len(p.vstack)-1]
+	_ = stack
+	return p.cur.onCompassPoint10()
+}
+
+func (c *current) onCompassPoint12() (any, error) {
+	return []directions.Direction{directions.DSouthWest, directions.DSouthWest}, nil
+}
+
+func (p *parser) callonCompassPoint12() (any, error) {
+	stack := p.vstack[len(p.vstack)-1]
+	_ = stack
+	return p.cur.onCompassPoint12()
+}
+
+func (c *current) onCompassPoint14() (any, error) {
+	return []directions.Direction{directions.DNorth, directions.DNorthEast}, nil
+}
+
+func (p *parser) callonCompassPoint14() (any, error) {
+	stack := p.vstack[len(p.vstack)-1]
+	_ = stack
+	return p.cur.onCompassPoint14()
+}
+
+func (c *current) onCompassPoint16() (any, error) {
+	return []directions.Direction{directions.DNorth, directions.DNorthWest}, nil
+}
+
+func (p *parser) callonCompassPoint16() (any, error) {
+	stack := p.vstack[len(p.vstack)-1]
+	_ = stack
+	return p.cur.onCompassPoint16()
+}
+
+func (c *current) onCompassPoint18() (any, error) {
+	return []directions.Direction{directions.DNorth, directions.DNorth}, nil
+}
+
+func (p *parser) callonCompassPoint18() (any, error) {
+	stack := p.vstack[len(p.vstack)-1]
+	_ = stack
+	return p.cur.onCompassPoint18()
+}
+
+func (c *current) onCompassPoint20() (any, error) {
+	return []directions.Direction{directions.DSouth, directions.DSouthEast}, nil
+}
+
+func (p *parser) callonCompassPoint20() (any, error) {
+	stack := p.vstack[len(p.vstack)-1]
+	_ = stack
+	return p.cur.onCompassPoint20()
+}
+
+func (c *current) onCompassPoint22() (any, error) {
+	return []directions.Direction{directions.DSouth, directions.DSouthWest}, nil
+}
+
+func (p *parser) callonCompassPoint22() (any, error) {
+	stack := p.vstack[len(p.vstack)-1]
+	_ = stack
+	return p.cur.onCompassPoint22()
+}
+
+func (c *current) onCompassPoint24() (any, error) {
+	return []directions.Direction{directions.DSouth, directions.DSouth}, nil
+}
+
+func (p *parser) callonCompassPoint24() (any, error) {
+	stack := p.vstack[len(p.vstack)-1]
+	_ = stack
+	return p.cur.onCompassPoint24()
 }
 
 func (c *current) onDIRECTION2() (any, error) {
@@ -296,7 +757,7 @@ func (p *parser) callonDIRECTION12() (any, error) {
 }
 
 func (c *current) onWIND2() (any, error) {
-	return domain.WSMild, nil
+	return domain.WSCalm, nil
 }
 
 func (p *parser) callonWIND2() (any, error) {
@@ -306,13 +767,33 @@ func (p *parser) callonWIND2() (any, error) {
 }
 
 func (c *current) onWIND4() (any, error) {
-	return domain.WStrong, nil
+	return domain.WSMild, nil
 }
 
 func (p *parser) callonWIND4() (any, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
 	return p.cur.onWIND4()
+}
+
+func (c *current) onWIND6() (any, error) {
+	return domain.WStrong, nil
+}
+
+func (p *parser) callonWIND6() (any, error) {
+	stack := p.vstack[len(p.vstack)-1]
+	_ = stack
+	return p.cur.onWIND6()
+}
+
+func (c *current) onWIND8() (any, error) {
+	return domain.WSGale, nil
+}
+
+func (p *parser) callonWIND8() (any, error) {
+	stack := p.vstack[len(p.vstack)-1]
+	_ = stack
+	return p.cur.onWIND8()
 }
 
 var (

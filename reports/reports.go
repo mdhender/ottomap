@@ -342,7 +342,12 @@ type Section struct {
 	ScoutLines    []*Line
 	Status        *Line
 	StatusLine    *Line
-	Error         error
+	Error         *Error
+}
+
+type Error struct {
+	Line  *Line
+	Error error
 }
 
 type Line struct {
@@ -363,7 +368,7 @@ type ScoutLine struct {
 	Moves   []*Line
 }
 
-func Sections(id string, input []byte, showSkippedSections bool) ([]*Section, error) {
+func Sections(id string, input []byte, showSkippedSections bool) ([]*Section, *Error) {
 	// check for bom and remove it if present.
 	for _, bom := range [][]byte{
 		// see https://en.wikipedia.org/wiki/Byte_order_mark for BOM values
@@ -378,7 +383,13 @@ func Sections(id string, input []byte, showSkippedSections bool) ([]*Section, er
 
 	inputSections, ok := xscts.SplitRegEx(id, input, showSkippedSections)
 	if !ok {
-		return nil, fmt.Errorf("regex: no sections found")
+		return nil, &Error{
+			Line: &Line{
+				No:   0,
+				Text: []byte(""),
+			},
+			Error: fmt.Errorf("regex: no sections found"),
+		}
 	}
 	if showSkippedSections {
 		log.Printf("report %s: %d sections\n", id, len(inputSections))
@@ -396,8 +407,23 @@ func Sections(id string, input []byte, showSkippedSections bool) ([]*Section, er
 		sections = append(sections, &Section{Id: fmt.Sprintf("%d", n+1)})
 		section := sections[len(sections)-1]
 
-		if len(chunk.Lines) < 2 || chunk.Id == "" {
-			section.Error = cerrs.ErrNotATurnReport
+		if len(chunk.Lines) == 0 {
+			section.Error = &Error{
+				Line: &Line{
+					No:   0,
+					Text: []byte(""),
+				},
+				Error: cerrs.ErrNotATurnReport,
+			}
+			continue
+		} else if len(chunk.Lines) < 2 || chunk.Id == "" {
+			section.Error = &Error{
+				Line: &Line{
+					No:   chunk.Lines[0].No,
+					Text: bdup(chunk.Lines[0].Text),
+				},
+				Error: cerrs.ErrNotATurnReport,
+			}
 			continue
 		}
 
@@ -412,7 +438,13 @@ func Sections(id string, input []byte, showSkippedSections bool) ([]*Section, er
 		var ok bool
 		if v, err := ploc.Parse("location", section.Location.Text); err != nil {
 			log.Printf("report %s: section %s: line %d: parse error\n\t%v\n", id, section.Id, section.Location.No, err)
-			section.Error = err
+			section.Error = &Error{
+				Line: &Line{
+					No:   section.Location.No,
+					Text: bdup(section.Location.Text),
+				},
+				Error: err,
+			}
 			continue
 		} else if ul, ok = v.(*ploc.Location); !ok {
 			log.Printf("report %s: section %s: parse error\n", id, section.Id)
@@ -453,7 +485,13 @@ func Sections(id string, input []byte, showSkippedSections bool) ([]*Section, er
 				}
 			} else if ctext.IsStatus {
 				if section.Status != nil {
-					section.Error = cerrs.ErrMultipleStatusLines
+					section.Error = &Error{
+						Line: &Line{
+							No:   ctext.No,
+							Text: bdup(ctext.Text),
+						},
+						Error: cerrs.ErrMultipleStatusLines,
+					}
 					break
 				}
 				section.Status = &Line{
@@ -467,7 +505,13 @@ func Sections(id string, input []byte, showSkippedSections bool) ([]*Section, er
 			} else if ctext.MovementType == domain.UMFleet {
 				//log.Printf("%s: %d: %d: found fleet movement\n\t%s\n\t\t%s\n", id, chunk.No, ctext.No, chunk.Slug(), ctext.Slug(35))
 				if section.FleetMovement != nil {
-					section.Error = cerrs.ErrMultipleFleetMovementLines
+					section.Error = &Error{
+						Line: &Line{
+							No:   ctext.No,
+							Text: bdup(ctext.Text),
+						},
+						Error: cerrs.ErrMultipleFleetMovementLines,
+					}
 					break
 				}
 				section.FleetMovement = scrubFleetMoves(&Line{
@@ -476,7 +520,13 @@ func Sections(id string, input []byte, showSkippedSections bool) ([]*Section, er
 				})
 			} else if ctext.MovementType == domain.UMFollows {
 				if section.Follows != nil {
-					section.Error = cerrs.ErrMultipleFollowsLines
+					section.Error = &Error{
+						Line: &Line{
+							No:   ctext.No,
+							Text: bdup(ctext.Text),
+						},
+						Error: cerrs.ErrMultipleFollowsLines,
+					}
 					break
 				}
 				section.Follows = &Line{
@@ -540,13 +590,31 @@ func Sections(id string, input []byte, showSkippedSections bool) ([]*Section, er
 
 		// consistency checks
 		if section.Follows != nil && section.Moves != nil {
-			section.Error = cerrs.ErrUnitMovesAndFollows
+			section.Error = &Error{
+				Line: &Line{
+					No:   section.Follows.No,
+					Text: bdup(section.Follows.Text),
+				},
+				Error: cerrs.ErrUnitMovesAndFollows,
+			}
 			continue
 		} else if len(section.Scout) > 8 {
-			section.Error = cerrs.ErrTooManyScoutLines
+			section.Error = &Error{
+				Line: &Line{
+					No:   section.Scout[0].Line.No,
+					Text: bdup(section.Scout[0].Line.Text),
+				},
+				Error: cerrs.ErrTooManyScoutLines,
+			}
 			continue
 		} else if section.Status == nil {
-			section.Error = cerrs.ErrMissingStatusLine
+			section.Error = &Error{
+				Line: &Line{
+					No:   section.Location.No,
+					Text: bdup(section.Location.Text),
+				},
+				Error: cerrs.ErrMissingStatusLine,
+			}
 			continue
 		}
 	}
