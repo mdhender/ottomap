@@ -262,6 +262,13 @@ var cmdMap = &cobra.Command{
 					}
 					mrl.StatusLine = steps[0]
 				}
+				if section.FleetMovement != nil {
+					slug := string(section.FleetMovement.MovesText)
+					if len(slug) > 55 {
+						slug = slug[:55] + "..."
+					}
+					log.Printf("map: report %s: section %2s: line %d: found fleet movement\n\t%s\n", rpt.Id, section.Id, section.FleetMovement.LineNo, slug)
+				}
 				if section.FollowsLine != nil {
 					//log.Printf("map: report %s: section %2s: follows %q\n", rpt.Id, section.Id, section.FollowsLine)
 					steps, err := lbmoves.ParseMoveResults(turnId, unitId, section.FollowsLine.No, section.FollowsLine.Text, cfg.Inputs.ShowSteps)

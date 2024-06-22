@@ -474,7 +474,7 @@ func (e *WindStrength_e) UnmarshalJSON(data []byte) error {
 	var ok bool
 	if err := json.Unmarshal(data, &s); err != nil {
 		return err
-	} else if *e, ok = windStrengthStringToEnum[s]; !ok {
+	} else if *e, ok = WindStrengthStringToEnum[s]; !ok {
 		return fmt.Errorf("invalid WindStrength %q", s)
 	}
 	return nil
@@ -497,8 +497,8 @@ var (
 		WSStrong:  "STRONG",
 		WSGale:    "GALE",
 	}
-	// helper map for unmarshalling the enum
-	windStrengthStringToEnum = map[string]WindStrength_e{
+	// WindStrengthStringToEnum is a helper map for unmarshalling the enum
+	WindStrengthStringToEnum = map[string]WindStrength_e{
 		"N/A":    WSUnknown,
 		"CALM":   WSCalm,
 		"MILD":   WSMild,

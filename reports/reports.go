@@ -25,6 +25,7 @@ import (
 
 var (
 	rxScoutLine *regexp.Regexp
+	rxWinds     = regexp.MustCompile(`^(CALM|MILD|STRONG|GALE)\s+(NE|SE|SW|NW|N|S)\s`)
 )
 
 func init() {
@@ -330,22 +331,30 @@ type Section struct {
 	PrevCoords string // grid coordinates before the unit moved
 	CurrCoords string // grid coordinates after the unit moved
 
-	Location     *Line
-	TurnInfo     *Line
-	Follows      *Line
-	FollowsLine  *Line
-	Moves        []*Line
-	MovementLine *Line
-	Scout        []*ScoutLine
-	ScoutLines   []*Line
-	Status       *Line
-	StatusLine   *Line
-	Error        error
+	Location      *Line
+	TurnInfo      *Line
+	Follows       *Line
+	FollowsLine   *Line
+	Moves         []*Line
+	MovementLine  *Line
+	FleetMovement *FleetMovement
+	Scout         []*ScoutLine
+	ScoutLines    []*Line
+	Status        *Line
+	StatusLine    *Line
+	Error         error
 }
 
 type Line struct {
 	No   int
 	Text []byte
+}
+
+type FleetMovement struct {
+	LineNo    int
+	Winds     domain.WindStrength_e
+	Dir       directions.Direction
+	MovesText []byte
 }
 
 type ScoutLine struct {
@@ -420,8 +429,8 @@ func Sections(id string, input []byte, showSkippedSections bool) ([]*Section, er
 		section.CurrCoords = ul.CurrCoords
 
 		// now that we know the unit id, we can extract the remaining lines that we are interested in
-		followsLine := []byte("Tribe Follows ")
-		movesLine := []byte("Tribe Movement: ")
+		tribeFollowsLine := []byte("Tribe Follows ")
+		tribeMovesLine := []byte("Tribe Movement: ")
 		var scoutLines [8][]byte
 		for sid := 0; sid < 8; sid++ {
 			scoutLines[sid] = []byte(fmt.Sprintf("Scout %d:Scout ", sid+1))
@@ -456,7 +465,15 @@ func Sections(id string, input []byte, showSkippedSections bool) ([]*Section, er
 					Text: bdup(ctext.Text),
 				}
 			} else if ctext.MovementType == domain.UMFleet {
-				log.Printf("%s: %d: %d: found fleet movement\n\t%s\n\t\t%s\n", id, chunk.No, ctext.No, chunk.Slug(), ctext.Slug(35))
+				//log.Printf("%s: %d: %d: found fleet movement\n\t%s\n\t\t%s\n", id, chunk.No, ctext.No, chunk.Slug(), ctext.Slug(35))
+				if section.FleetMovement != nil {
+					section.Error = cerrs.ErrMultipleFleetMovementLines
+					break
+				}
+				section.FleetMovement = scrubFleetMoves(&Line{
+					No:   ctext.No,
+					Text: ctext.Text,
+				})
 			} else if ctext.MovementType == domain.UMFollows {
 				if section.Follows != nil {
 					section.Error = cerrs.ErrMultipleFollowsLines
@@ -495,17 +512,17 @@ func Sections(id string, input []byte, showSkippedSections bool) ([]*Section, er
 					Text: bdup(ctext.Text),
 				}
 				// remove the prefix and trim the line
-				text := bytes.TrimSpace(bytes.TrimPrefix(ctext.Text, movesLine))
+				text := bytes.TrimSpace(bytes.TrimPrefix(ctext.Text, tribeMovesLine))
 				if bytes.HasPrefix(text, []byte{'M', 'o', 'v', 'e'}) {
 					text = bytes.TrimSpace(bytes.TrimPrefix(ctext.Text, []byte{'M', 'o', 'v', 'e'}))
 				}
-				section.Moves = scrubMoves(&Line{
+				section.Moves = scrubLandMoves(&Line{
 					No:   ctext.No,
 					Text: text,
 				})
-			} else if bytes.HasPrefix(ctext.Text, followsLine) {
+			} else if bytes.HasPrefix(ctext.Text, tribeFollowsLine) {
 				panic("should not find follows line here")
-			} else if bytes.HasPrefix(ctext.Text, movesLine) {
+			} else if bytes.HasPrefix(ctext.Text, tribeMovesLine) {
 				panic("should not find tribe movement line here")
 			} else if bytes.HasPrefix(ctext.Text, []byte{'S', 'c', 'o', 'u', 't'}) {
 				panic("should not find scout line here")
@@ -617,9 +634,9 @@ func isUnitSection(chunk []byte) bool {
 	return false
 }
 
-// scrubMoves splits the line into individual moves and then removes
+// scrubLandMoves splits the line into individual moves and then removes
 // leading and trailing spaces and any trailing commas from the move.
-func scrubMoves(line *Line) []*Line {
+func scrubLandMoves(line *Line) []*Line {
 	var moves []*Line
 	for _, move := range bytes.Split(line.Text, []byte{'\\'}) {
 		move = bytes.TrimSpace(bytes.TrimRight(move, ", \t"))
@@ -639,7 +656,23 @@ func scrubScouts(line *Line) []*Line {
 		No:   line.No,
 		Text: line.Text[len("Scout 8:Scout "):],
 	}
-	return scrubMoves(line)
+	return scrubLandMoves(line)
+}
+
+func scrubFleetMoves(line *Line) *FleetMovement {
+	matches := rxWinds.FindStringSubmatch(string(line.Text))
+	if len(matches) != 3 {
+		panic(fmt.Sprintf("expected 3 matches, got %d", len(matches)))
+	}
+	// strip the winds and direction from the text
+	moves := bytes.TrimSpace(line.Text[len(matches[0]):])
+	// todo: split and scrub the moves
+	return &FleetMovement{
+		LineNo:    line.No,
+		Winds:     domain.WindStrengthStringToEnum[matches[1]],
+		Dir:       directions.DirectionStringToEnum[matches[2]],
+		MovesText: bdup(moves),
+	}
 }
 
 func slug(lines []byte) string {

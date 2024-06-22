@@ -40,7 +40,7 @@ func (d *Direction) UnmarshalJSON(data []byte) error {
 	var ok bool
 	if err := json.Unmarshal(data, &s); err != nil {
 		return err
-	} else if *d, ok = directionStringToEnum[s]; !ok {
+	} else if *d, ok = DirectionStringToEnum[s]; !ok {
 		return fmt.Errorf("invalid Direction %q", s)
 	}
 	return nil
@@ -73,8 +73,8 @@ var (
 		DSouthWest: "SW",
 		DNorthWest: "NW",
 	}
-	// helper map for unmarshalling the enum
-	directionStringToEnum = map[string]Direction{
+	// DirectionStringToEnum is a helper map for unmarshalling the enum
+	DirectionStringToEnum = map[string]Direction{
 		"?":  DUnknown,
 		"N":  DNorth,
 		"NE": DNorthEast,
