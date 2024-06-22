@@ -281,9 +281,9 @@ var cmdMap = &cobra.Command{
 				for _, scoutLine := range section.ScoutLines {
 					if scoutLine != nil {
 						//log.Printf("map: report %s: section %2s: scouts  %q\n", rpt.Id, section.Id, scoutLine)
-						steps, err := lbmoves.ParseMoveResults(turnId, unitId, -42, scoutLine, cfg.Inputs.ShowSteps)
+						steps, err := lbmoves.ParseMoveResults(turnId, unitId, scoutLine.No, scoutLine.Text, cfg.Inputs.ShowSteps)
 						if err != nil {
-							log.Fatalf("map: report %s: section %2s: line %d: %v\n", rpt.Id, section.Id, -42, err)
+							log.Fatalf("map: report %s: section %2s: line %d: %v\n", rpt.Id, section.Id, scoutLine.No, err)
 						}
 						mrl.ScoutReports = append(mrl.ScoutReports, steps)
 					}

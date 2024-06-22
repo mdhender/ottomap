@@ -27,6 +27,10 @@ var (
 	rxScoutLine *regexp.Regexp
 )
 
+func init() {
+	rxScoutLine = regexp.MustCompile(`^Scout [12345678]:Scout `)
+}
+
 type Reports []*Report
 
 // Len implements the sort.Interface interface.
@@ -192,13 +196,13 @@ func (r *Report) parseSection(section *Section) ([]*Move, error) {
 
 	// parse the unit's scouts
 	for _, scouts := range section.Scout {
-		log.Printf("parse: section: scout %q\n", string(scouts.Move))
+		log.Printf("parse: report %s: section %s: line %d: scout %q\n", r.Id, section.Id, scouts.LineNo, scouts.Move)
 		for _, scout := range scouts.Moves {
-			log.Printf("parse: section: scout %q\n", string(scout))
+			log.Printf("parse: report %s: section %s: line %d: scout move %q\n", r.Id, section.Id, scouts.LineNo, string(scout))
 			v, err := pscouts.Parse("scout", scout)
 			if err != nil {
-				log.Printf("parse: section: scout %d: %q\n", scouts.ScoutId, string(scouts.Move))
-				log.Printf("parse: report %s: unit %s: parsing error\n", r.Id, ul.UnitId)
+				log.Printf("parse: report %s: section %s: line %d: unit %s: parsing error\n", r.Id, section.Id, scouts.LineNo, ul.UnitId)
+				log.Printf("parse: report %s: section %s: line %d: scout %d: move %q\n", r.Id, section.Id, scouts.LineNo, scouts.ScoutId, string(scout))
 				log.Printf("parse: input: %q\n", string(scout))
 				log.Fatalf("parse: error: %v\n", err)
 			}
@@ -333,9 +337,9 @@ type Section struct {
 	Moves        [][]byte
 	MovementLine *Line
 	Scout        []*ScoutLine
+	ScoutLines   []*Line
 	Status       *Line
 	StatusLine   *Line
-	ScoutLines   [][]byte
 	Error        error
 }
 
@@ -346,6 +350,7 @@ type Line struct {
 
 type ScoutLine struct {
 	ScoutId int
+	LineNo  int // line number
 	Move    []byte
 	Moves   [][]byte
 }
@@ -418,9 +423,6 @@ func Sections(id string, input []byte, showSkippedSections bool) ([]*Section, er
 		// now that we know the unit id, we can extract the remaining lines that we are interested in
 		followsLine := []byte("Tribe Follows ")
 		movesLine := []byte("Tribe Movement: ")
-		if rxScoutLine == nil {
-			rxScoutLine = regexp.MustCompile(`^Scout [12345678]:Scout `)
-		}
 		var scoutLines [8][]byte
 		for sid := 0; sid < 8; sid++ {
 			scoutLines[sid] = []byte(fmt.Sprintf("Scout %d:Scout ", sid+1))
@@ -472,11 +474,14 @@ func Sections(id string, input []byte, showSkippedSections bool) ([]*Section, er
 				}
 			} else if ctext.MovementType == domain.UMScouts {
 				if rxScoutLine.Match(ctext.Text) {
-					section.ScoutLines = append(section.ScoutLines, bdup(ctext.Text))
+					section.ScoutLines = append(section.ScoutLines, &Line{
+						No:   ctext.No,
+						Text: bdup(ctext.Text),
+					})
 				}
 				for sid := 0; sid < 8; sid++ {
 					if bytes.HasPrefix(ctext.Text, scoutLines[sid]) {
-						scoutLine := &ScoutLine{ScoutId: sid + 1, Move: bdup(ctext.Text)}
+						scoutLine := &ScoutLine{ScoutId: sid + 1, LineNo: ctext.No, Move: bdup(ctext.Text)}
 						for _, jo := range scrubScouts(ctext.Text) {
 							if len(jo) != 0 {
 								scoutLine.Moves = append(scoutLine.Moves, jo)
