@@ -34,12 +34,12 @@ func ParseMoveResults(turnId, unitId string, lineNo int, line []byte, showDebug 
 	if bytes.HasPrefix(line, []byte("Tribe Follows")) {
 		return parseTribeFollows(turnId, unitId, line)
 	} else if bytes.HasPrefix(line, []byte("Tribe Movement: Move ")) {
-		return parseSteps(turnId, unitId, line, bytes.TrimPrefix(line, []byte("Tribe Movement: Move ")), showDebug)
+		return parseSteps(turnId, unitId, lineNo, line, bytes.TrimPrefix(line, []byte("Tribe Movement: Move ")), showDebug)
 	} else if rxScoutLine.Match(line) {
-		return parseSteps(turnId, unitId, line, line[len("Scout ?:Scout "):], showDebug)
+		return parseSteps(turnId, unitId, lineNo, line, line[len("Scout ?:Scout "):], showDebug)
 	} else if rxStatusLine.Match(line) {
 		_, b, _ := bytes.Cut(line, []byte{':'})
-		return parseSteps(turnId, unitId, line, b, showDebug)
+		return parseSteps(turnId, unitId, lineNo, line, b, showDebug)
 	}
 	return nil, cerrs.ErrNotMovementResults
 }
@@ -58,11 +58,11 @@ func parseTribeFollows(turnId, unitId string, line []byte) ([]*Step, error) {
 }
 
 // parseSteps parses all the steps from the results of a Land Based Movement.
-func parseSteps(turnId, unitId string, line, steps []byte, showDebug bool) (results []*Step, err error) {
+func parseSteps(turnId, unitId string, lineNo int, line, steps []byte, showDebug bool) (results []*Step, err error) {
 	// split the steps into single steps, which are backslash-separated, and
 	// parse each step individually after trimming spaces and trailing commas.
 	for _, step := range bytes.Split(steps, []byte{'\\'}) {
-		if result, err := parseStep(turnId, unitId, step, showDebug); err != nil {
+		if result, err := parseStep(turnId, unitId, lineNo, step, showDebug); err != nil {
 			log.Printf("parser: step: %q\n", step)
 			log.Printf("parser: line: %q\n", line)
 			return nil, err
@@ -74,7 +74,8 @@ func parseSteps(turnId, unitId string, line, steps []byte, showDebug bool) (resu
 }
 
 // parseStep parses a single step from the results of a Land Based Movement.
-func parseStep(turnId, unitId string, step []byte, showDebug bool) (result *Step, err error) {
+func parseStep(turnId, unitId string, lineNo int, step []byte, showDebug bool) (result *Step, err error) {
+	// showDebug = true
 	//log.Printf("parser: step: %q\n", step)
 	step = bytes.TrimSpace(step)
 	//log.Printf("parser: step: %q\n", step)
@@ -235,8 +236,8 @@ func parseStep(turnId, unitId string, step []byte, showDebug bool) (result *Step
 				Terrain: v,
 			}
 		default:
-			log.Printf("parser:  sub: %q\n", subStep)
-			panic(fmt.Sprintf("unexpected %T", v))
+			log.Printf("parser: turn %s: unit %s: line %d: sub: %q\n", turnId, unitId, lineNo, subStep)
+			panic(fmt.Sprintf("unexpected %T\nplease report this", v))
 		}
 	}
 

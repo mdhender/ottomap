@@ -17,6 +17,10 @@ type Grid struct {
 	tiles [columnsPerGrid][rowsPerGrid]Tile
 }
 
+func gridRowColumnToId(row, column int) string {
+	return fmt.Sprintf("%c%c", row+'A', column+'A')
+}
+
 func (w *WXX) newGrid(id string) *Grid {
 	if len(id) != 2 {
 		panic(fmt.Sprintf("assert(len(id) == 2)"))

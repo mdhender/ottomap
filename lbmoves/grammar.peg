@@ -124,6 +124,8 @@ EdgeType <- "Ford" {
 
 ObviousNeighboringTerrainCode <- "Lcm" {
     return domain.TLowConiferMountains, nil
+} / "LJm" {
+    return domain.TLowJungleMountains, nil
 } / "L" {
     return domain.TLake, nil
 } / "O" {
@@ -171,10 +173,44 @@ NUMBER <- [0-9]+ {
 
 RESOURCE <- "Coal" {
     return domain.RCoal, nil
+} / "Copper Ore" {
+    return domain.RCopperOre, nil
+} / "Diamond" {
+    return domain.RDiamond, nil
+} / "Frankincense" {
+    return domain.RFrankincense, nil
+} / "Gold" {
+    return domain.RGold, nil
 } / "Iron Ore" {
     return domain.RIronOre, nil
+} / "Jade" {
+    return domain.RJade, nil
+} / "Kaolin" {
+    return domain.RKaolin, nil
+} / "Lead Ore" {
+    return domain.RLeadOre, nil
+} / "Limestone" {
+    return domain.RLimestone, nil
+} / "Nickel Ore" {
+    return domain.RNickelOre, nil
+} / "Pearls" {
+    return domain.RPearls, nil
+} / "Pyrite" {
+    return domain.RPyrite, nil
+} / "Rubies" {
+    return domain.RRubies, nil
 } / "Salt" {
     return domain.RSalt, nil
+} / "Silver" {
+    return domain.RSilver, nil
+} / "Sulphur" {
+    return domain.RSulphur, nil
+} / "Tin Ore" {
+    return domain.RTinOre, nil
+} / "Vanadium Ore" {
+    return domain.RVanadiumOre, nil
+} / "Zinc Ore" {
+    return domain.RZincOre, nil
 }
 
 TERRAIN <- "ALPS" {

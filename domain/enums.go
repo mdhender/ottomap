@@ -175,24 +175,75 @@ type Resource int
 const (
 	RNone Resource = iota
 	RCoal
+	RCopperOre
+	RDiamond
+	RFrankincense
+	RGold
 	RIronOre
+	RJade
+	RKaolin
+	RLeadOre
+	RLimestone
+	RNickelOre
+	RPearls
+	RPyrite
+	RRubies
 	RSalt
+	RSilver
+	RSulphur
+	RTinOre
+	RVanadiumOre
+	RZincOre
 )
 
 var (
 	// helper map for marshalling the enum
 	resourceEnumToString = map[Resource]string{
-		RNone:    "",
-		RCoal:    "Coal",
-		RIronOre: "Iron Ore",
-		RSalt:    "Salt",
+		RNone:         "",
+		RCoal:         "Coal",
+		RCopperOre:    "Copper Ore",
+		RDiamond:      "Diamond",
+		RFrankincense: "Frankincense",
+		RGold:         "Gold",
+		RIronOre:      "Iron Ore",
+		RJade:         "Jade",
+		RKaolin:       "Kaolin",
+		RLeadOre:      "Lead Ore",
+		RLimestone:    "Limestone",
+		RNickelOre:    "Nickel Ore",
+		RPearls:       "Pearls",
+		RPyrite:       "Pyrite",
+		RRubies:       "Rubies",
+		RSalt:         "Salt",
+		RSilver:       "Silver",
+		RSulphur:      "Sulphur",
+		RTinOre:       "Tin Ore",
+		RVanadiumOre:  "Vanadium Ore",
+		RZincOre:      "Zinc Ore",
 	}
 	// helper map for unmarshalling the enum
 	resourceStringToEnum = map[string]Resource{
-		"":         RNone,
-		"Coal":     RCoal,
-		"Iron Ore": RIronOre,
-		"Salt":     RSalt,
+		"":             RNone,
+		"Coal":         RCoal,
+		"Copper Ore":   RCopperOre,
+		"Diamond":      RDiamond,
+		"Frankincense": RFrankincense,
+		"Gold":         RGold,
+		"Iron Ore":     RIronOre,
+		"Jade":         RJade,
+		"Kaolin":       RKaolin,
+		"Lead Ore":     RLeadOre,
+		"Limestone":    RLimestone,
+		"Nickel Ore":   RNickelOre,
+		"Pearls":       RPearls,
+		"Pyrite":       RPyrite,
+		"Rubies":       RRubies,
+		"Salt":         RSalt,
+		"Silver":       RSilver,
+		"Sulphur":      RSulphur,
+		"Tin Ore":      RTinOre,
+		"Vanadium Ore": RVanadiumOre,
+		"Zinc Ore":     RZincOre,
 	}
 )
 

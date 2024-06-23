@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/mdhender/ottomap/directions"
 	"github.com/mdhender/ottomap/domain"
+	"log"
 	"os"
 	"unicode/utf16"
 	"unicode/utf8"
@@ -109,7 +110,7 @@ func (w *WXX) Create(path string, showGridCenters bool) error {
 				continue
 			}
 			// create a new grid
-			gridId := fmt.Sprintf("%c%c", gridRow+'A', gridColumn+'A')
+			gridId := gridRowColumnToId(gridRow, gridColumn)
 			w.newGrid(gridId)
 		}
 	}
@@ -194,7 +195,14 @@ func (w *WXX) Create(path string, showGridCenters bool) error {
 				g := w.grids[gridRow][gridColumn]
 				if g == nil {
 					// todo: this could be updated to punch out blank tiles instead of panicking.
-					panic("assert(g != nil)")
+					//log.Printf("bug: minGridColumn %d: gridColumn %d: maxGridColumn %d\n", w.minGridColumn, gridColumn, w.maxGridColumn)
+					//log.Printf("bug: tileColumn %d\n", tileColumn)
+					//log.Printf("bug: minGridRow %d: gridRow %d: maxGridRow %d\n", w.minGridRow, gridRow, w.maxGridRow)
+					gridId := gridRowColumnToId(gridRow, gridColumn)
+					log.Printf("bug: gridId %q is missing\n", gridId)
+					g = w.newGrid(gridId)
+					//panic("assert(g != nil)\nplease report this bug")
+					w.grids[gridRow][gridColumn] = g
 				}
 				for tileRow := 0; tileRow < rowsPerGrid; tileRow++ {
 					// process all the tiles in this row of this grid.

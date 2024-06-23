@@ -59,6 +59,11 @@ func hexReportToNodes(hexReport []byte, showDebug bool) (root *node) {
 				tmp.addText(tmp.next)
 				tmp.next = tmp.next.next
 			}
+		} else if tmp.isLowJungleMountainsEdge() {
+			for tmp.next.isDirection() {
+				tmp.addText(tmp.next)
+				tmp.next = tmp.next.next
+			}
 		} else if tmp.isOceanEdge() {
 			for tmp.next.isDirection() {
 				tmp.addText(tmp.next)
@@ -196,6 +201,13 @@ func (n *node) isLowConiferMountainsEdge() bool {
 		return false
 	}
 	return bytes.HasPrefix(n.text, []byte{'L', 'c', 'm', ' '})
+}
+
+func (n *node) isLowJungleMountainsEdge() bool {
+	if n == nil {
+		return false
+	}
+	return bytes.HasPrefix(bytes.ToUpper(n.text), []byte{'L', 'J', 'M', ' '})
 }
 
 func (n *node) isOceanEdge() bool {
