@@ -23,7 +23,7 @@ import (
 // the log is updated.
 // If everything worked, the status is set to "complete" and the transaction
 // is committed.
-func ParsePendingInput(db *sqlc.DB, pendingRow sqlc.ReadPendingInputMetadataRow) (err error) {
+func ParsePendingInput(db *sqlc.DB, pendingRow sqlc.ReadPendingInputMetadataRow, debugSteps, debugNodes bool) (err error) {
 	// this could be a race condition
 	log.Printf("parsePending: name %s: id %d\n", pendingRow.Name, pendingRow.ID)
 
@@ -194,7 +194,6 @@ func ParsePendingInput(db *sqlc.DB, pendingRow sqlc.ReadPendingInputMetadataRow)
 		}
 		turnId := fmt.Sprintf("%04d-%02d", ti.TurnDate.Year, ti.TurnDate.Month)
 
-		showSteps := true
 		// remaining rows are movement or status lines; process them
 		for n, row := range rows {
 			if n == 0 || n == 1 { // already processed these rows
@@ -217,7 +216,7 @@ func ParsePendingInput(db *sqlc.DB, pendingRow sqlc.ReadPendingInputMetadataRow)
 			} else if strings.HasPrefix(row.Line, elementStatusPrefix) {
 				// parse the element status line
 				log.Printf("parsePending: name %s: unit %s: element status: %q\n", pendingRow.Name, ul.UnitId, slug)
-				steps, err := lbmoves.ParseMoveResults(turnId, ul.UnitId, int(row.LineNo), []byte(row.Line), showSteps)
+				steps, err := lbmoves.ParseMoveResults(turnId, ul.UnitId, int(row.LineNo), []byte(row.Line), debugSteps, debugNodes)
 				if err != nil {
 					log.Fatalf("parsePending: name %s: unit %s: line %d: %v\n", pendingRow.Name, ul.UnitId, row.LineNo, err)
 				} else if len(steps) != 1 {

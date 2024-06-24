@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	version = semver.Version{Major: 0, Minor: 12, Patch: 10}
+	version = semver.Version{Major: 0, Minor: 12, Patch: 11}
 )
 
 func main() {
@@ -78,14 +78,17 @@ func Execute() error {
 		log.Fatalf("list: db: mark required: %v\n", err)
 	}
 
+	cmdMap.Flags().BoolVar(&argsMap.debug.nodes, "debug-nodes", false, "enable node debugging")
 	cmdMap.Flags().BoolVar(&argsMap.debug.sectionMaps, "debug-section-maps", false, "save section maps for debugging")
-	cmdMap.Flags().BoolVar(&argsMap.debug.showIgnoredSections, "debug-ignored-sections", false, "show ignored sections")
-	cmdMap.Flags().BoolVar(&argsMap.debug.showSectionData, "debug-show-section-data", false, "show section data")
-	cmdMap.Flags().BoolVar(&argsMap.debug.showSectionsSkipped, "debug-sections-skipped", false, "show ignored sections")
+	cmdMap.Flags().BoolVar(&argsMap.debug.steps, "debug-steps", false, "enable step debugging")
 	cmdMap.Flags().BoolVar(&argsMap.debug.units, "debug-units", false, "enable unit debugging")
 	cmdMap.Flags().BoolVar(&argsMap.show.gridCenters, "show-grid-centers", false, "show grid centers")
 	cmdMap.Flags().BoolVar(&argsMap.show.gridCoords, "show-grid-id-coords", false, "show grid id and coordinates")
 	cmdMap.Flags().BoolVar(&argsMap.show.gridNumbers, "show-grid-coords", false, "show grid coordinates")
+	cmdMap.Flags().BoolVar(&argsMap.show.ignoredSections, "show-ignored-sections", false, "show ignored sections")
+	cmdMap.Flags().BoolVar(&argsMap.show.sectionData, "show-section-data", false, "show section data")
+	cmdMap.Flags().BoolVar(&argsMap.show.skippedSections, "show-skipped-sections", false, "show skipped sections")
+	cmdMap.Flags().BoolVar(&argsMap.show.steps, "show-steps", false, "show all steps")
 	cmdMap.Flags().StringVar(&argsMap.clanId, "clan", "", "clan id to process")
 	if err := cmdMap.MarkFlagRequired("clan"); err != nil {
 		log.Fatalf("map: clan: mark required: %v\n", err)

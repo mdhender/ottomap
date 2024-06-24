@@ -13,8 +13,8 @@ import (
 // hexReportToNodes converts a hex report into a linked list of nodes
 // where each node contains all the arguments for each component of
 // the hex report.
-func hexReportToNodes(hexReport []byte, showDebug bool) (root *node) {
-	if showDebug {
+func hexReportToNodes(hexReport []byte, debugNodes bool) (root *node) {
+	if debugNodes {
 		log.Printf("parser: root: before split %s\n", string(hexReport))
 	}
 
@@ -31,7 +31,7 @@ func hexReportToNodes(hexReport []byte, showDebug bool) (root *node) {
 		}
 	}
 
-	if showDebug {
+	if debugNodes {
 		log.Printf("parser: root: after split %s\n", printNodes(root))
 	}
 
@@ -98,7 +98,7 @@ func hexReportToNodes(hexReport []byte, showDebug bool) (root *node) {
 		tmp = tmp.next
 	}
 
-	if showDebug {
+	if debugNodes {
 		log.Printf("parser: root: after consolidating %s\n", printNodes(root))
 	}
 

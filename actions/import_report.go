@@ -16,33 +16,17 @@ import (
 	"regexp"
 )
 
+var (
+	rxCourierSection  = regexp.MustCompile(`^Courier \d{4}c\d, ,`)
+	rxElementSection  = regexp.MustCompile(`^Element \d{4}e\d, ,`)
+	rxFleetSection    = regexp.MustCompile(`^Fleet \d{4}f\d, ,`)
+	rxGarrisonSection = regexp.MustCompile(`^Garrison \d{4}g\d, ,`)
+	rxScoutLine       = regexp.MustCompile(`^Scout \d:Scout `)
+	rxTribeSection    = regexp.MustCompile(`^Tribe \d{4}, ,`)
+)
+
 // ImportReport imports a report from a file into the database.
 func ImportReport(db *sqlc.DB, path string, debug bool) (id int, err error) {
-	rxCourierSection, err := regexp.Compile(`^Courier \d{4}c\d, ,`)
-	if err != nil {
-		panic(err)
-	}
-	rxElementSection, err := regexp.Compile(`^Element \d{4}e\d, ,`)
-	if err != nil {
-		panic(err)
-	}
-	rxFleetSection, err := regexp.Compile(`^Fleet \d{4}f\d, ,`)
-	if err != nil {
-		panic(err)
-	}
-	rxGarrisonSection, err := regexp.Compile(`^Garrison \d{4}g\d, ,`)
-	if err != nil {
-		panic(err)
-	}
-	rxScoutLine, err := regexp.Compile(`^Scout \d:Scout `)
-	if err != nil {
-		panic(err)
-	}
-	rxTribeSection, err := regexp.Compile(`^Tribe \d{4}, ,`)
-	if err != nil {
-		panic(err)
-	}
-
 	debugf := func(format string, args ...any) {
 		if debug {
 			log.Printf(format, args...)

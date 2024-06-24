@@ -26,7 +26,7 @@ var (
 // Handles Tribe Follows, Tribe Movement, and Scout lines.
 //
 // Returns the steps and the first error encountered.
-func ParseMoveResults(turnId, unitId string, lineNo int, line []byte, showDebug bool) ([]*Step, error) {
+func ParseMoveResults(turnId, unitId string, lineNo int, line []byte, debugSteps, debugNodes bool) ([]*Step, error) {
 	if rxScoutLine == nil {
 		rxScoutLine = regexp.MustCompile(`^Scout [12345678]:Scout `)
 		rxStatusLine = regexp.MustCompile(`^[0-9][[0-9][0-9][0-9]([cefg][0-9])? Status: `)
@@ -34,12 +34,40 @@ func ParseMoveResults(turnId, unitId string, lineNo int, line []byte, showDebug 
 	if bytes.HasPrefix(line, []byte("Tribe Follows")) {
 		return parseTribeFollows(turnId, unitId, line)
 	} else if bytes.HasPrefix(line, []byte("Tribe Movement: Move ")) {
-		return parseSteps(turnId, unitId, lineNo, line, bytes.TrimPrefix(line, []byte("Tribe Movement: Move ")), showDebug)
-	} else if rxScoutLine.Match(line) {
-		return parseSteps(turnId, unitId, lineNo, line, line[len("Scout ?:Scout "):], showDebug)
-	} else if rxStatusLine.Match(line) {
+		return parseSteps(turnId, unitId, lineNo, line, bytes.TrimPrefix(line, []byte("Tribe Movement: Move ")), debugSteps, debugNodes)
+	}
+	return nil, cerrs.ErrNotMovementResults
+}
+
+// ParseScoutLine parses the results of a Land Based Movement scout line.
+//
+// The line should be the text as extracted directly from the turn report.
+//
+// Returns the steps and the first error encountered.
+func ParseScoutLine(turnId, unitId string, lineNo int, line []byte, debugSteps, debugNodes bool) ([]*Step, error) {
+	if rxScoutLine == nil {
+		rxScoutLine = regexp.MustCompile(`^Scout [12345678]:Scout `)
+		rxStatusLine = regexp.MustCompile(`^[0-9][[0-9][0-9][0-9]([cefg][0-9])? Status: `)
+	}
+	if rxScoutLine.Match(line) {
+		return parseSteps(turnId, unitId, lineNo, line, line[len("Scout ?:Scout "):], debugSteps, debugNodes)
+	}
+	return nil, cerrs.ErrNotMovementResults
+}
+
+// ParseStatusLine parses the status line of a Land Based Movement.
+//
+// The line should be the text as extracted directly from the turn report.
+//
+// Returns the steps and the first error encountered.
+func ParseStatusLine(turnId, unitId string, lineNo int, line []byte, debugSteps, debugNodes bool) ([]*Step, error) {
+	if rxStatusLine == nil {
+		rxStatusLine = regexp.MustCompile(`^[0-9][[0-9][0-9][0-9]([cefg][0-9])? Status: `)
+	}
+	if rxStatusLine.Match(line) {
 		_, b, _ := bytes.Cut(line, []byte{':'})
-		return parseSteps(turnId, unitId, lineNo, line, b, showDebug)
+		b = bytes.TrimSpace(b)
+		return parseSteps(turnId, unitId, lineNo, line, b, debugSteps, debugNodes)
 	}
 	return nil, cerrs.ErrNotMovementResults
 }
@@ -58,11 +86,11 @@ func parseTribeFollows(turnId, unitId string, line []byte) ([]*Step, error) {
 }
 
 // parseSteps parses all the steps from the results of a Land Based Movement.
-func parseSteps(turnId, unitId string, lineNo int, line, steps []byte, showDebug bool) (results []*Step, err error) {
+func parseSteps(turnId, unitId string, lineNo int, line, steps []byte, debugSteps, debugNodes bool) (results []*Step, err error) {
 	// split the steps into single steps, which are backslash-separated, and
 	// parse each step individually after trimming spaces and trailing commas.
 	for _, step := range bytes.Split(steps, []byte{'\\'}) {
-		if result, err := parseStep(turnId, unitId, lineNo, step, showDebug); err != nil {
+		if result, err := parseStep(turnId, unitId, lineNo, step, debugSteps, debugNodes); err != nil {
 			log.Printf("parser: step: %q\n", step)
 			log.Printf("parser: line: %q\n", line)
 			return nil, err
@@ -74,13 +102,14 @@ func parseSteps(turnId, unitId string, lineNo int, line, steps []byte, showDebug
 }
 
 // parseStep parses a single step from the results of a Land Based Movement.
-func parseStep(turnId, unitId string, lineNo int, step []byte, showDebug bool) (result *Step, err error) {
-	// showDebug = true
-	//log.Printf("parser: step: %q\n", step)
+func parseStep(turnId, unitId string, lineNo int, step []byte, debugSteps, debugNodes bool) (result *Step, err error) {
+	if debugSteps {
+		log.Printf("parser: step: %q\n", step)
+	}
 	step = bytes.TrimSpace(step)
 	//log.Printf("parser: step: %q\n", step)
 
-	root := hexReportToNodes(step, showDebug)
+	root := hexReportToNodes(step, debugNodes)
 	steps, err := nodesToSteps(root)
 	if err != nil {
 		log.Printf("parser: step: %q\n", step)
@@ -88,7 +117,10 @@ func parseStep(turnId, unitId string, lineNo int, step []byte, showDebug bool) (
 	}
 
 	// parse each sub-step separately.
-	for _, subStep := range steps {
+	for n, subStep := range steps {
+		if debugSteps {
+			log.Printf("parser: step %d: sub %q\n", n+1, subStep)
+		}
 		var obj any
 		if obj, err = Parse("step", subStep); err != nil {
 			// hack - an unrecognized step might be a settlement name
@@ -232,7 +264,7 @@ func parseStep(turnId, unitId string, lineNo int, step []byte, showDebug bool) (
 			result = &Step{
 				TurnId:  turnId,
 				UnitId:  unitId,
-				Result:  Status,
+				Result:  StatusLine,
 				Terrain: v,
 			}
 		default:

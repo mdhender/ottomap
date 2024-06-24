@@ -73,10 +73,11 @@ var cmdParse = &cobra.Command{
 		}
 
 		started, parsed := time.Now(), 0
+		debugSteps, debugNodes := false, false
 		for n, pendingRow := range pendingRows {
 			startedThisRow := time.Now()
 			log.Printf("parsePending: name %s: id %d: row %d of %d\n", pendingRow.Name, pendingRow.ID, n+1, len(pendingRows))
-			if err = actions.ParsePendingInput(db, pendingRow); err != nil {
+			if err = actions.ParsePendingInput(db, pendingRow, debugSteps, debugNodes); err != nil {
 				log.Fatalf("parsePending: name %s: id %d: %v\n", pendingRow.Name, pendingRow.ID, err)
 			}
 			parsed++
