@@ -1,0 +1,237 @@
+{
+package parser
+
+// NB: including all the imports make the parser generator run a bit more quickly.
+import (
+	"bytes"
+	"errors"
+	"fmt"
+	"io"
+	"math"
+	"os"
+	"sort"
+	"strconv"
+	"strings"
+	"sync"
+	"unicode"
+	"unicode/utf8"
+
+	"github.com/mdhender/ottomap/internal/compass"
+	"github.com/mdhender/ottomap/internal/direction"
+	"github.com/mdhender/ottomap/internal/unit_movement"
+	"github.com/mdhender/ottomap/internal/winds"
+)
+
+type Date_t struct {
+    Year  int
+    Month int
+    Day   int
+}
+
+func (d Date_t) IsZero() bool {
+    return d == Date_t{}
+}
+
+type Location_t struct {
+    UnitId      string
+    Message     string
+    CurrentHex  string
+    PreviousHex string
+}
+
+type CrowsNestObservation_t struct {
+    Point   compass.Point_e
+    Terrain string
+}
+
+type TurnInfo_t struct {
+    CurrentTurn Date_t
+    NextTurn    Date_t
+}
+
+func bdup(src []byte) []byte {
+    dst := make([]byte, len(src))
+    copy(dst, src)
+    return dst
+}
+
+}
+
+Noop <- EOF {
+    return true, nil
+}
+
+CrowsNestObservation <- cs:CROWSIGHTING SP "-" SP cp:COMPASSPOINT EOF{
+    return CrowsNestObservation_t{
+        Point: cp.(compass.Point_e),
+        Terrain: cs.(string),
+    }, nil
+}
+
+
+FleetMovement <- ws:WINDSTRENGTH SP d:DIRECTION SP "Fleet Movement:" _ results:ToEOL EOF {
+    mt := Movement_t {Type: unit_movement.Fleet}
+    mt.Winds.Strength = ws.(winds.Strength_e)
+    mt.Winds.From = d.(direction.Direction_e)
+    if results != nil {
+        mt.Text = bdup(results.([]byte))
+    }
+    return mt, nil
+}
+
+Location <- ("Courier" / "Element" / "Fleet" / "Garrison" / "Tribe") SP u:UNIT_ID "," SP "," SP "Current Hex =" SP ch:COORDS "," SP "(Previous Hex =" SP ph:COORDS ")" _ EOF {
+    return Location_t {
+        UnitId:      u.(string),
+        CurrentHex:  ch.(string),
+        PreviousHex: ph.(string),
+    }, nil
+}
+
+TribeFollows <- "Tribe Follows" SP u:UNIT_ID _ EOF {
+    return u, nil
+}
+
+TribeGoes <- "Tribe Goes to" SP h:COORDS _ EOF {
+    return h, nil
+}
+
+TribeMovement <- "Tribe Movement:" _ results:ToEOL EOF {
+    mt := Movement_t {Type: unit_movement.Tribe}
+    if results != nil {
+        mt.Text = bdup(results.([]byte))
+    }
+    return mt, nil
+}
+
+TurnInfo <- cd:CurrentTurn "," SP TurnSeason "," SP TurnWeather nt:NextTurn? _ EOF {
+    if nt != nil {
+        return TurnInfo_t{
+            CurrentTurn: cd.(Date_t),
+            NextTurn: nt.(Date_t),
+        }, nil
+    }
+
+    return TurnInfo_t{
+        CurrentTurn: cd.(Date_t),
+    }, nil
+}
+
+CurrentTurn <- "Current Turn" _ cd:YearMonth _ "(#" DIGIT+ ")" {
+    return cd, nil
+}
+
+NextTurn <- SP "Next Turn" _ nd:YearMonth _ "(#" DIGIT+ ")," _ ReportDate {
+    return nd, nil
+}
+
+ReportDate <- DIGIT DIGIT? "/" DIGIT DIGIT? "/" DIGIT DIGIT DIGIT DIGIT {
+    //log.Printf("reportDate %q\n", c.text)
+    return c.text, nil
+}
+
+ToEOL <- .* EOF {
+    return c.text, nil
+}
+
+TurnSeason <- [A-Z][A-Za-z]+ {
+    //log.Printf("turnSeason %q\n", c.text)
+    return c.text, nil
+}
+
+TurnWeather <- [A-Z][A-Za-z]+ {
+    //log.Printf("turnWeather %q\n", c.text)
+    return c.text, nil
+}
+
+YearMonth <- y:YEAR "-" m:MONTH {
+    return Date_t {
+        Year:  y.(int),
+        Month: m.(int),
+    }, nil
+}
+
+COMPASSPOINT <- "NE/NE" {
+    return compass.NorthEast, nil
+} / "NE/SE" {
+    return compass.East, nil
+} / "NW/NW" {
+    return compass.NorthWest, nil
+} / "N/NE" {
+    return compass.NorthNorthEast, nil
+} / "N/NW" {
+    return compass.NorthNorthWest, nil
+} / "N/N" {
+    return compass.North, nil
+} / "SE/SE" {
+    return compass.SouthEast, nil
+} / "SW/NW" {
+    return compass.West, nil
+} / "SW/SW" {
+    return compass.SouthWest, nil
+} / "S/SE" {
+    return compass.SouthSouthEast, nil
+} / "S/SW" {
+    return compass.SouthSouthWest, nil
+} / "S/S" {
+    return compass.South, nil
+}
+
+COORDS <- "N/A" {
+    return "", nil
+} / "##" SP DIGIT DIGIT DIGIT DIGIT {
+    return string(c.text), nil
+} / LETTER LETTER SP DIGIT DIGIT DIGIT DIGIT {
+    return string(c.text), nil
+}
+
+CROWSIGHTING <- "Sight Land" {
+    return "Land", nil
+} / "Sight Water" {
+    return "Water", nil
+}
+
+
+DIRECTION <- "NE" {
+    return direction.NorthEast, nil
+} / "SE" {
+    return direction.SouthEast, nil
+} / "SW" {
+    return direction.SouthWest, nil
+} / "NW" {
+    return direction.NorthWest, nil
+} / "N" {
+    return direction.North, nil
+} / "S" {
+    return direction.South, nil
+}
+
+MONTH <- DIGIT DIGIT? {
+    n, _ := strconv.Atoi(string(c.text))
+    return int(n), nil
+}
+
+UNIT_ID <- DIGIT DIGIT DIGIT DIGIT ([cefg] [1-9])? {
+    return string(c.text), nil
+}
+
+WINDSTRENGTH <- "CALM" {
+    return winds.Calm, nil
+} / "MILD" {
+    return winds.Mild, nil
+} / "STRONG" {
+    return winds.Strong, nil
+} / "GALE" {
+    return winds.Gale, nil
+}
+
+YEAR <- DIGIT DIGIT DIGIT DIGIT? {
+    n, _ := strconv.Atoi(string(c.text))
+    return int(n), nil
+}
+
+
+EOF    = !.
+DIGIT  = [0-9]
+LETTER = [A-Z]
+SP     = [ \t]+
+_      = [ \t]*

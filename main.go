@@ -27,7 +27,7 @@ func main() {
 }
 
 func Execute() error {
-	cmdRoot.AddCommand(cmdImport, cmdIndex, cmdInitialize, cmdList, cmdMap, cmdParse, cmdOldParse, cmdServe, cmdSetup, cmdVersion)
+	cmdRoot.AddCommand(cmdImport, cmdIndex, cmdInitialize, cmdList, cmdMap, cmdParse, cmdOldParse, cmdSammy, cmdServe, cmdSetup, cmdVersion)
 
 	cmdImport.Flags().StringVar(&argsImport.paths.db, "db", "", "path to database files")
 	if err := cmdImport.MarkFlagRequired("db"); err != nil {
@@ -108,6 +108,14 @@ func Execute() error {
 	cmdOldParseReports.Flags().BoolVar(&argsOldParseReports.debug.captureRawText, "capture-raw-text", false, "capture raw text")
 	cmdOldParseReports.Flags().StringVarP(&argsOldParseReports.gridOrigin, "grid-origin", "g", "OO", "initial grid value for '##'")
 	cmdOldParse.AddCommand(cmdOldParseReports, cmdOldParseUnits)
+
+	cmdSammy.Flags().BoolVar(&argsSammy.debug.maps, "debug-maps", false, "enable maps debugging")
+	cmdSammy.Flags().BoolVar(&argsSammy.debug.nodes, "debug-nodes", false, "enable node debugging")
+	cmdSammy.Flags().BoolVar(&argsSammy.debug.parser, "debug-parser", false, "enable parser debugging")
+	cmdSammy.Flags().BoolVar(&argsSammy.debug.sections, "debug-sections", false, "enable sections debugging")
+	cmdSammy.Flags().BoolVar(&argsSammy.debug.steps, "debug-steps", false, "enable step debugging")
+	cmdSammy.Flags().StringVar(&argsSammy.paths.data, "data", "data", "path to root of data files")
+	cmdSammy.Flags().StringVar(&argsSammy.turnId, "turn", "", "maximum turn to process (yyyy-mm format)")
 
 	cmdServe.PersistentFlags().StringVar(&argsServe.host, "host", "", "host to serve on")
 	cmdServe.PersistentFlags().StringVar(&argsServe.port, "port", "8080", "port to serve on")

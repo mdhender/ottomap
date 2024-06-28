@@ -504,60 +504,6 @@ var (
 	}
 )
 
-type WindStrength_e int
-
-const (
-	WSUnknown WindStrength_e = iota
-	WSCalm
-	WSMild
-	WSStrong
-	WSGale
-)
-
-// MarshalJSON implements the json.Marshaler interface.
-func (e WindStrength_e) MarshalJSON() ([]byte, error) {
-	return json.Marshal(windStrengthEnumToString[e])
-}
-
-// UnmarshalJSON implements the json.Unmarshaler interface.
-func (e *WindStrength_e) UnmarshalJSON(data []byte) error {
-	var s string
-	var ok bool
-	if err := json.Unmarshal(data, &s); err != nil {
-		return err
-	} else if *e, ok = WindStrengthStringToEnum[s]; !ok {
-		return fmt.Errorf("invalid WindStrength %q", s)
-	}
-	return nil
-}
-
-// String implements the fmt.Stringer interface.
-func (e WindStrength_e) String() string {
-	if str, ok := windStrengthEnumToString[e]; ok {
-		return str
-	}
-	return fmt.Sprintf("WindStrength(%d)", int(e))
-}
-
-var (
-	// helper map for marshalling the enum
-	windStrengthEnumToString = map[WindStrength_e]string{
-		WSUnknown: "N/A",
-		WSCalm:    "CALM",
-		WSMild:    "MILD",
-		WSStrong:  "STRONG",
-		WSGale:    "GALE",
-	}
-	// WindStrengthStringToEnum is a helper map for unmarshalling the enum
-	WindStrengthStringToEnum = map[string]WindStrength_e{
-		"N/A":    WSUnknown,
-		"CALM":   WSCalm,
-		"MILD":   WSMild,
-		"STRONG": WSStrong,
-		"GALE":   WSGale,
-	}
-)
-
 type UnitMovement_e int
 
 const (

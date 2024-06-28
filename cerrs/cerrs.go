@@ -33,6 +33,7 @@ const (
 	ErrMultipleStatusLines        = Error("multiple status lines")
 	ErrNoSeparator                = Error("no separator")
 	ErrNotAFile                   = Error("not a file")
+	ErrNotAFleetMovementLine      = Error("not a fleet movement line")
 	ErrNotATurnReport             = Error("not a turn report")
 	ErrNotDirectory               = Error("not a directory")
 	ErrNotImplemented             = Error("not implemented")

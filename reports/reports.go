@@ -8,7 +8,9 @@ import (
 	"github.com/mdhender/ottomap/cerrs"
 	"github.com/mdhender/ottomap/directions"
 	"github.com/mdhender/ottomap/domain"
+	"github.com/mdhender/ottomap/internal/hexes"
 	"github.com/mdhender/ottomap/lbmoves"
+	"github.com/mdhender/ottomap/wbmoves"
 	"log"
 	"regexp"
 	"time"
@@ -337,7 +339,7 @@ type Section struct {
 	FollowsLine   *Line
 	Moves         []*Line
 	MovementLine  *Line
-	FleetMovement *FleetMovement
+	FleetMovement *wbmoves.Results_t
 	Scout         []*ScoutLine
 	ScoutLines    []*Line
 	Status        *Line
@@ -353,13 +355,6 @@ type Error struct {
 type Line struct {
 	No   int
 	Text []byte
-}
-
-type FleetMovement struct {
-	LineNo    int
-	Winds     domain.WindStrength_e
-	Dir       directions.Direction
-	MovesText []byte
 }
 
 type ScoutLine struct {
@@ -503,7 +498,7 @@ func Sections(id string, input []byte, showSkippedSections bool) ([]*Section, *E
 					Text: bdup(ctext.Text),
 				}
 			} else if ctext.MovementType == domain.UMFleet {
-				//log.Printf("%s: %d: %d: found fleet movement\n\t%s\n\t\t%s\n", id, chunk.No, ctext.No, chunk.Slug(), ctext.Slug(35))
+				log.Printf("%s: %d: %d: found fleet movement\n\t%s\n\t\t%s\n", id, chunk.No, ctext.No, chunk.Slug(), ctext.Slug(35))
 				if section.FleetMovement != nil {
 					section.Error = &Error{
 						Line: &Line{
@@ -514,10 +509,12 @@ func Sections(id string, input []byte, showSkippedSections bool) ([]*Section, *E
 					}
 					break
 				}
-				section.FleetMovement = scrubFleetMoves(&Line{
-					No:   ctext.No,
-					Text: ctext.Text,
-				})
+				var err error
+				var ph hexes.Hex_t
+				section.FleetMovement, err = wbmoves.ParseFleetMovement("?", ph, ctext.No, ctext.Text)
+				if err != nil {
+					log.Fatal(err)
+				}
 			} else if ctext.MovementType == domain.UMFollows {
 				if section.Follows != nil {
 					section.Error = &Error{
@@ -725,22 +722,6 @@ func scrubScouts(line *Line) []*Line {
 		Text: line.Text[len("Scout 8:Scout "):],
 	}
 	return scrubLandMoves(line)
-}
-
-func scrubFleetMoves(line *Line) *FleetMovement {
-	matches := rxWinds.FindStringSubmatch(string(line.Text))
-	if len(matches) != 3 {
-		panic(fmt.Sprintf("expected 3 matches, got %d", len(matches)))
-	}
-	// strip the winds and direction from the text
-	moves := bytes.TrimSpace(line.Text[len(matches[0]):])
-	// todo: split and scrub the moves
-	return &FleetMovement{
-		LineNo:    line.No,
-		Winds:     domain.WindStrengthStringToEnum[matches[1]],
-		Dir:       directions.DirectionStringToEnum[matches[2]],
-		MovesText: bdup(moves),
-	}
 }
 
 func slug(lines []byte) string {

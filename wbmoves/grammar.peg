@@ -3,9 +3,8 @@ package wbmoves
 
 import (
 	"log"
-	"github.com/mdhender/ottomap/directions"
-	"github.com/mdhender/ottomap/domain"
-	"github.com/mdhender/ottomap/items"
+	"github.com/mdhender/ottomap/internal/direction"
+	"github.com/mdhender/ottomap/internal/winds"
 )
 
 func toAnySlice(v any) []any {
@@ -17,10 +16,30 @@ func toAnySlice(v any) []any {
 
 }
 
+Line <- UnitLocation EOF {
+    return true, nil
+}
+
+// Tribe 0138, , Current Hex = ## 0709, (Previous Hex = ## 0709)
+UnitLocation <- "Tribe" SP UnitID "," SP "," SP "Current Hex" SP "=" SP ch:Hex "," SP "(Previous Hex" SP "=" SP ph:Hex ")" _ EOF {
+
+}
+
+Hex <- "N/A" {
+    return string(c.text), nil
+} / "##" SP DIGIT DIGIT DIGIT DIGIT {
+    return string(c.text), nil
+} / LETTER LETTER SP DIGIT DIGIT DIGIT DIGIT
+    return string(c.text), nil
+}
+
 FleetMovement <- "Fleet Movement:" SP Step* _ EOF {
-    var fm FleetMovement
-    fm.Winds.Strength = w.(domain.WindStrength_e)
-    fm.Winds.From = d.(directions.Direction)
+    var fm Results_t
+    fm.Winds = &Winds_t{
+        //Strength: w.(winds.Strength_e),
+        //From: d.(direction.Direction_e),
+    }
+    return &fm, nil
 }
 
 Step <- StartStep "(" _ ")" _ "(" _ ")" {
@@ -37,59 +56,59 @@ SightLand <- "Sight" SP "Land" SP "-" {
     return Land, nil
 }
 
-SightLand <- "Sight" SP "Water" SP "-" {
+SightWater <- "Sight" SP "Water" SP "-" {
     return Water, nil
 }
 
 CompassPoint <- "NE/NE" {
-    return []directions.Direction{directions.DNorthEast, directions.DNorthEast}, nil
+    return []direction.Direction_e{direction.NorthEast, direction.NorthEast}, nil
 } / "NE/SE" {
-    return []directions.Direction{directions.DNorthEast, directions.DSouthEast}, nil
+    return []direction.Direction_e{direction.NorthEast, direction.SouthEast}, nil
 } / "NW/NW" {
-    return []directions.Direction{directions.DNorthWest, directions.DNorthWest}, nil
+    return []direction.Direction_e{direction.NorthWest, direction.NorthWest}, nil
 } / "SE/SE" {
-    return []directions.Direction{directions.DSouthEast, directions.DSouthEast}, nil
+    return []direction.Direction_e{direction.SouthEast, direction.SouthEast}, nil
 } / "SW/NW" {
-    return []directions.Direction{directions.DSouthWest, directions.DNorthWest}, nil
+    return []direction.Direction_e{direction.SouthWest, direction.NorthWest}, nil
 } / "SW/SW" {
-    return []directions.Direction{directions.DSouthWest, directions.DSouthWest}, nil
+    return []direction.Direction_e{direction.SouthWest, direction.SouthWest}, nil
 } / "N/NE" {
-    return []directions.Direction{directions.DNorth, directions.DNorthEast}, nil
+    return []direction.Direction_e{direction.North, direction.NorthEast}, nil
 } / "N/NW" {
-    return []directions.Direction{directions.DNorth, directions.DNorthWest}, nil
+    return []direction.Direction_e{direction.North, direction.NorthWest}, nil
 } / "N/N" {
-    return []directions.Direction{directions.DNorth, directions.DNorth}, nil
+    return []direction.Direction_e{direction.North, direction.North}, nil
 } / "S/SE" {
-    return []directions.Direction{directions.DSouth, directions.DSouthEast}, nil
+    return []direction.Direction_e{direction.South, direction.SouthEast}, nil
 } / "S/SW" {
-    return []directions.Direction{directions.DSouth, directions.DSouthWest}, nil
+    return []direction.Direction_e{direction.South, direction.SouthWest}, nil
 } / "S/S" {
-    return []directions.Direction{directions.DSouth, directions.DSouth}, nil
+    return []direction.Direction_e{direction.South, direction.South}, nil
 }
 
 
 DIRECTION <- "NE" {
-    return directions.DNorthEast, nil
+    return direction.NorthEast, nil
 } / "SE" {
-    return directions.DSouthEast, nil
+    return direction.SouthEast, nil
 } / "SW" {
-    return directions.DSouthWest, nil
+    return direction.SouthWest, nil
 } / "NW" {
-    return directions.DNorthWest, nil
+    return direction.NorthWest, nil
 } / "N" {
-    return directions.DNorth, nil
+    return direction.North, nil
 } / "S" {
-    return directions.DSouth, nil
+    return direction.South, nil
 }
 
 WIND <- "CALM" {
-    return domain.WSCalm, nil
+    return winds.Calm, nil
 } / "MILD" {
-    return domain.WSMild, nil
+    return winds.Mild, nil
 } / "STRONG" {
-    return domain.WStrong, nil
+    return winds.Strong, nil
 } / "GALE" {
-    return domain.WSGale, nil
+    return winds.Gale, nil
 }
 
 SP     = [ \t]+
