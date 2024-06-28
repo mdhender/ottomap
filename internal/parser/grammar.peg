@@ -16,8 +16,12 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/mdhender/ottomap/domain"
 	"github.com/mdhender/ottomap/internal/compass"
 	"github.com/mdhender/ottomap/internal/direction"
+	"github.com/mdhender/ottomap/internal/edges"
+	"github.com/mdhender/ottomap/internal/items"
+	"github.com/mdhender/ottomap/internal/resources"
 	"github.com/mdhender/ottomap/internal/unit_movement"
 	"github.com/mdhender/ottomap/internal/winds"
 )
@@ -30,13 +34,6 @@ type Date_t struct {
 
 func (d Date_t) IsZero() bool {
     return d == Date_t{}
-}
-
-type Location_t struct {
-    UnitId      string
-    Message     string
-    CurrentHex  string
-    PreviousHex string
 }
 
 type CrowsNestObservation_t struct {
@@ -55,6 +52,13 @@ func bdup(src []byte) []byte {
     return dst
 }
 
+func toAnySlice(v any) []any {
+    if v == nil {
+        return nil
+    }
+    return v.([]any)
+}
+
 }
 
 Noop <- EOF {
@@ -68,9 +72,18 @@ CrowsNestObservation <- cs:CROWSIGHTING SP "-" SP cp:COMPASSPOINT EOF{
     }, nil
 }
 
+EdgeType <- "Ford" {
+    return edges.Ford, nil
+} / "Pass" {
+    return edges.Pass, nil
+} / "River" {
+    return edges.River, nil
+} / "Stone Road" {
+    return edges.StoneRoad, nil
+}
 
 FleetMovement <- ws:WINDSTRENGTH SP d:DIRECTION SP "Fleet Movement:" _ results:ToEOL EOF {
-    mt := Movement_t {Type: unit_movement.Fleet}
+    mt := Movement_t{Type: unit_movement.Fleet}
     mt.Winds.Strength = ws.(winds.Strength_e)
     mt.Winds.From = d.(direction.Direction_e)
     if results != nil {
@@ -81,22 +94,168 @@ FleetMovement <- ws:WINDSTRENGTH SP d:DIRECTION SP "Fleet Movement:" _ results:T
 
 Location <- ("Courier" / "Element" / "Fleet" / "Garrison" / "Tribe") SP u:UNIT_ID "," SP "," SP "Current Hex =" SP ch:COORDS "," SP "(Previous Hex =" SP ph:COORDS ")" _ EOF {
     return Location_t {
-        UnitId:      u.(string),
+        UnitId:      u.(UnitId_t),
         CurrentHex:  ch.(string),
         PreviousHex: ph.(string),
     }, nil
 }
 
-TribeFollows <- "Tribe Follows" SP u:UNIT_ID _ EOF {
+ObviousNeighboringTerrainCode <- "Lcm" {
+    return domain.TLowConiferMountains, nil
+} / "LJm" {
+    return domain.TLowJungleMountains, nil
+} / "L" {
+    return domain.TLake, nil
+} / "O" {
+    return domain.TOcean, nil
+}
+
+ProhibitedBy <- "Lake" {
+    return domain.TLake, nil
+} / "Ocean" {
+    return domain.TOcean, nil
+}
+
+ScoutMovement <- "Scout" SP no:[1-8] ":" _ results:ToEOL EOF {
+    mt := Movement_t{Type: unit_movement.Scouts}
+    switch v := no.(type) {
+    case []uint8:
+        if len(v) != 1 {
+            return nil, fmt.Errorf("invalid scout number")
+        }
+        mt.ScoutNo = int(v[0] - '0')
+    default:
+        panic(fmt.Errorf("scoutMovement: unknown type %T", v))
+    }
+    if results != nil {
+        mt.Text = bdup(results.([]byte))
+    }
+    return mt, nil
+}
+
+SpaceDirection <- SP d:DIRECTION {
+    return d, nil
+}
+
+SpaceUnitID <- SP u:UNIT_ID {
     return u, nil
 }
 
-TribeGoes <- "Tribe Goes to" SP h:COORDS _ EOF {
-    return h, nil
+StatusLine <- u:UNIT_ID SP "Status:" _ results:ToEOL EOF {
+    mt := Movement_t{Type: unit_movement.Status}
+    if results != nil {
+        mt.Text = bdup(results.([]byte))
+    }
+    return mt, nil
+}
+
+Step <- d:DIRECTION "-" t:TERRAIN_CODE EOF {
+    return DirectionTerrain_t{
+        Direction: d.(direction.Direction_e),
+        Terrain:   t.(domain.Terrain),
+    }, nil
+} / [Cc] "an't Move on" SP t:ProhibitedBy SP "to" SP d:DIRECTION SP "of HEX" EOF {
+    return &ProhibitedFrom_t{
+        Direction: d.(direction.Direction_e),
+        Terrain:   t.(domain.Terrain),
+    }, nil
+} / "Group did not return" EOF {
+    return DidNotReturn_t{}, nil
+} / "Find" SP r:RESOURCE EOF {
+    return r, nil
+} / "Find" SP n:NUMBER SP i:ITEMS EOF {
+    return RandomEncounter_t{
+        Quantity: n.(int),
+        Item :    i.(items.Item_e),
+    }, nil
+} / [Nn] "o Ford on River to" SP d:DIRECTION SP "of HEX" EOF {
+    return &BlockedByEdge_t{
+        Direction: d.(direction.Direction_e),
+        Edge:      edges.River,
+    }, nil
+} / "No groups found" EOF {
+    return NoGroupsFound_t{}, nil
+} / [Nn] "ot enough M.P's to move to" SP d:DIRECTION SP "into" SP t:TERRAIN EOF {
+    return &Exhausted_t{
+        Direction: d.(direction.Direction_e),
+        Terrain:   t.(domain.Terrain),
+    }, nil
+} / [Nn] "othing of interest found" EOF {
+    return FoundNothing_t{}, nil
+} / "Patrolled and found" SP u:UNIT_ID sui:SpaceUnitID* EOF {
+    found := []FoundUnit_t{{Id: u.(UnitId_t)}}
+    for _, su := range toAnySlice(sui) {
+        switch v := su.(type) {
+        case UnitId_t:
+            found = append(found, FoundUnit_t{Id: v})
+        default:
+            panic(fmt.Errorf("unexpected type %T", v))
+        }
+    }
+    return found, nil
+} / t:ObviousNeighboringTerrainCode SP+ d:DIRECTION sdi:SpaceDirection* EOF {
+    kind := t.(domain.Terrain)
+    neighbors := []*Neighbor_t{{
+        Direction: d.(direction.Direction_e),
+        Terrain:   kind,
+    }}
+    for _, sd := range toAnySlice(sdi) {
+        switch v := sd.(type) {
+        case direction.Direction_e:
+            neighbors = append(neighbors, &Neighbor_t{Direction: v, Terrain: kind})
+        default:
+            panic(fmt.Errorf("unexpected type %T", v))
+        }
+    }
+    return neighbors, nil
+} / et:EdgeType SP d:DIRECTION edi:SpaceDirection* EOF {
+    kind := et.(edges.Edge_e)
+    edges := []*Edge_t{&Edge_t{Direction: d.(direction.Direction_e), Edge: kind}}
+    for _, ed := range toAnySlice(edi) {
+        switch v := ed.(type) {
+        case direction.Direction_e:
+            edges = append(edges, &Edge_t{Direction: v, Edge: kind})
+        default:
+            panic(fmt.Errorf("unexpected type %T", v))
+        }
+    }
+    return edges, nil
+} / n:NUMBER SP i:ITEM EOF {
+    return RandomEncounter_t{
+        Quantity: n.(int),
+        Item:     i.(items.Item_e),
+    }, nil
+} / u:UNIT_ID sui:SpaceUnitID* EOF {
+    found := []FoundUnit_t{{Id: u.(UnitId_t)}}
+    for _, su := range toAnySlice(sui) {
+        switch v := su.(type) {
+        case UnitId_t:
+            found = append(found, FoundUnit_t{Id: v})
+        default:
+            panic(fmt.Errorf("unexpected type %T", v))
+        }
+    }
+    return found, nil
+} / r:RESOURCE EOF {
+    return r, nil
+} / d:DIRECTION EOF {
+    return d, nil
+} / t:TERRAIN EOF {
+    return t, nil
+}
+
+TribeFollows <- "Tribe Follows" SP u:UNIT_ID _ EOF {
+    mt := Movement_t{Type: unit_movement.Follows, Follows: u.(UnitId_t)}
+    return mt, nil
+}
+
+TribeGoesTo <- "Tribe Goes to" SP h:COORDS _ EOF {
+    mt := Movement_t{Type: unit_movement.GoesTo, GoesTo: h.(string)}
+    return mt, nil
 }
 
 TribeMovement <- "Tribe Movement:" _ results:ToEOL EOF {
-    mt := Movement_t {Type: unit_movement.Tribe}
+    mt := Movement_t{Type: unit_movement.Tribe}
     if results != nil {
         mt.Text = bdup(results.([]byte))
     }
@@ -177,7 +336,7 @@ COMPASSPOINT <- "NE/NE" {
 }
 
 COORDS <- "N/A" {
-    return "", nil
+    return "N/A", nil
 } / "##" SP DIGIT DIGIT DIGIT DIGIT {
     return string(c.text), nil
 } / LETTER LETTER SP DIGIT DIGIT DIGIT DIGIT {
@@ -189,7 +348,6 @@ CROWSIGHTING <- "Sight Land" {
 } / "Sight Water" {
     return "Water", nil
 }
-
 
 DIRECTION <- "NE" {
     return direction.NorthEast, nil
@@ -205,13 +363,154 @@ DIRECTION <- "NE" {
     return direction.South, nil
 }
 
+ITEM <- "Diamond" {
+    return items.Diamond, nil
+} / "HORSES" {
+    return items.Horses, nil
+}
+
 MONTH <- DIGIT DIGIT? {
     n, _ := strconv.Atoi(string(c.text))
     return int(n), nil
 }
 
+NUMBER <- [0-9]+ {
+    n, _ := strconv.Atoi(string(c.text))
+    return int(n), nil
+}
+
+RESOURCE <- "Coal" {
+    return resources.Coal, nil
+} / "Copper Ore" {
+    return resources.CopperOre, nil
+} / "Diamond" {
+    return resources.Diamond, nil
+} / "Frankincense" {
+    return resources.Frankincense, nil
+} / "Gold" {
+    return resources.Gold, nil
+} / "Iron Ore" {
+    return resources.IronOre, nil
+} / "Jade" {
+    return resources.Jade, nil
+} / "Kaolin" {
+    return resources.Kaolin, nil
+} / "Lead Ore" {
+    return resources.LeadOre, nil
+} / "Limestone" {
+    return resources.Limestone, nil
+} / "Nickel Ore" {
+    return resources.NickelOre, nil
+} / "Pearls" {
+    return resources.Pearls, nil
+} / "Pyrite" {
+    return resources.Pyrite, nil
+} / "Rubies" {
+    return resources.Rubies, nil
+} / "Salt" {
+    return resources.Salt, nil
+} / "Silver" {
+    return resources.Silver, nil
+} / "Sulphur" {
+    return resources.Sulphur, nil
+} / "Tin Ore" {
+    return resources.TinOre, nil
+} / "Vanadium Ore" {
+    return resources.VanadiumOre, nil
+} / "Zinc Ore" {
+    return resources.ZincOre, nil
+}
+
+TERRAIN <- "ALPS" {
+    return domain.TAlps, nil
+} / "ARID TUNDRA" {
+    return domain.TAridTundra, nil
+} / "ARID" {
+    return domain.TAridHills, nil
+} / "BRUSH HILLS" {
+    return domain.TBrushHills, nil
+} / "BRUSH" {
+    return domain.TBrush, nil
+} / "CONIFER HILLS" {
+    return domain.TConiferHills, nil
+} / "DECIDUOUS FOREST" {
+    return domain.TDeciduous, nil
+} / "DECIDUOUS HILLS" {
+    return domain.TDeciduousHills, nil
+} / "DECIDUOUS" {
+    return domain.TDeciduous, nil
+} / "DESERT" {
+    return domain.TDesert, nil
+} / "GRASSY HILLS PLATEAU" {
+    return domain.TGrassyHillsPlateau, nil
+} / "GRASSY HILLS" {
+    return domain.TGrassyHills, nil
+} / "JUNGLE HILLS" {
+    return domain.TJungleHills, nil
+} / "JUNGLE" {
+    return domain.TJungle, nil
+} / "LAKE" {
+    return domain.TLake, nil
+} / "LOW ARID MOUNTAINS" {
+    return domain.TLowAridMountains, nil
+} / "LOW CONIFER MOUNTAINS" {
+    return domain.TLowConiferMountains, nil
+} / "LOW JUNGLE MOUNTAINS" {
+    return domain.TLowJungleMountains, nil
+} / "LOW SNOWY MOUNTAINS" {
+    return domain.TLowSnowyMountains, nil
+} / "LOW VOLCANIC MOUNTAINS" {
+    return domain.TLowVolcanicMountains, nil
+} / "OCEAN" {
+    return domain.TOcean, nil
+} / "POLAR ICE" {
+    return domain.TPolarIce, nil
+} / "PRAIRIE PLATEAU" {
+    return domain.TPrairiePlateau, nil
+} / "PRAIRIE" {
+    return domain.TPrairie, nil
+} / "ROCKY HILLS" {
+    return domain.TRockyHills, nil
+} / "SNOWY HILLS" {
+    return domain.TSnowyHills, nil
+} / "SWAMP" {
+    return domain.TSwamp, nil
+} / "TUNDRA" {
+    return domain.TTundra, nil
+}
+
+TERRAIN_CODE <- "ALPS" {    return domain.TAlps, nil
+} / "GHP" { return domain.TGrassyHillsPlateau, nil
+} / "HSM" { return domain.TAridTundra, nil
+} / "LAM" { return domain.TLowAridMountains, nil
+} / "LCM" { return domain.TLowConiferMountains, nil
+} / "LJM" { return domain.TLowJungleMountains, nil
+} / "LSM" { return domain.TLowSnowyMountains, nil
+} / "LVM" { return domain.TLowVolcanicMountains, nil
+} / "PPR" { return domain.TPrairiePlateau, nil
+} / "AH" { return domain.TAridHills, nil
+} / "AR" { return domain.TAridTundra, nil
+} / "BH" { return domain.TBrushHills, nil
+} / "BR" { return domain.TBrush, nil
+} / "CH" { return domain.TConiferHills, nil
+} / "DE" { return domain.TDesert, nil
+} / "DH" { return domain.TDeciduousHills, nil
+} / "GH" { return domain.TGrassyHills, nil
+} / "JG" { return domain.TJungle, nil
+} / "JH" { return domain.TJungleHills, nil
+} / "PI" { return domain.TPolarIce, nil
+} / "PR" { return domain.TPrairie, nil
+} / "RH" { return domain.TRockyHills, nil
+} / "SH" { return domain.TSnowyHills, nil
+} / "SW" { return domain.TSwamp, nil
+} / "TU" { return domain.TTundra, nil
+} / "D" { return domain.TDeciduous, nil
+} / "L" { return domain.TLake, nil
+} / "O" { return domain.TOcean, nil
+}
+
 UNIT_ID <- DIGIT DIGIT DIGIT DIGIT ([cefg] [1-9])? {
-    return string(c.text), nil
+    return UnitId_t(c.text), nil
 }
 
 WINDSTRENGTH <- "CALM" {

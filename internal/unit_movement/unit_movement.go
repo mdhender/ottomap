@@ -13,7 +13,7 @@ const (
 	Unknown Type_e = iota
 	Fleet
 	Follows
-	Goto
+	GoesTo
 	Scouts
 	Status
 	Still
@@ -51,7 +51,7 @@ var (
 		Unknown: "N/A",
 		Fleet:   "Fleet",
 		Follows: "Follows",
-		Goto:    "Goto",
+		GoesTo:  "GoesTo",
 		Scouts:  "Scout",
 		Status:  "Status",
 		Still:   "Still",
@@ -62,7 +62,7 @@ var (
 		"N/A":     Unknown,
 		"Fleet":   Fleet,
 		"Follows": Follows,
-		"Goto":    Goto,
+		"GoesTo":  GoesTo,
 		"Scout":   Scouts,
 		"Status":  Status,
 		"Still":   Still,

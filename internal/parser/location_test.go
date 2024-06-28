@@ -8,7 +8,6 @@ import (
 	"github.com/mdhender/ottomap/internal/parser"
 	"github.com/mdhender/ottomap/internal/unit_movement"
 	"github.com/mdhender/ottomap/internal/winds"
-	"log"
 	"testing"
 )
 
@@ -124,43 +123,12 @@ func TestFleetMovementParse(t *testing.T) {
 	}
 }
 
-func TestTribeMovementParse(t *testing.T) {
-	for _, tc := range []struct {
-		id    string
-		line  string
-		debug bool
-	}{
-		{id: "1",
-			line:  `Tribe Movement: Move \`,
-			debug: true,
-		},
-		{id: "2",
-			line:  "Tribe Movement: Move NW-GH,",
-			debug: true,
-		},
-		{id: "3",
-			line:  `Tribe Movement: Move SW-PR The Dirty Squirrel\N-LCM,  Lcm NE, SE,  Ensalada sin Tomate\`,
-			debug: true,
-		},
-	} {
-		log.Printf("id %q\n", tc.id)
-		tm, err := parser.ParseTribeMovementLine(tc.id, 1, []byte(tc.line), tc.debug)
-		if err != nil {
-			t.Errorf("id %q: parse failed: %v\n", tc.id, err)
-			continue
-		}
-		if unit_movement.Tribe != tm.Type {
-			t.Errorf("id %q: movement: want %q, got %q\n", tc.id, unit_movement.Tribe, tm.Type)
-		}
-	}
-}
-
 func TestLocationParse(t *testing.T) {
 	var lt parser.Location_t
 	for _, tc := range []struct {
 		id      string
 		line    string
-		unitId  string
+		unitId  parser.UnitId_t
 		msg     string
 		currHex string
 		prevHex string
@@ -194,7 +162,7 @@ func TestLocationParse(t *testing.T) {
 			continue
 		}
 		if tc.unitId != location.UnitId {
-			t.Errorf("id %q: unitId: want %q, got %q\n", tc.id, tc.unitId, location.UnitId)
+			t.Errorf("id %q: follows: want %q, got %q\n", tc.id, tc.unitId, location.UnitId)
 		}
 		if tc.msg != location.Message {
 			t.Errorf("id %q: message: want %q, got %q\n", tc.id, tc.msg, location.Message)
@@ -208,27 +176,75 @@ func TestLocationParse(t *testing.T) {
 	}
 }
 
+func TestScoutMovementParse(t *testing.T) {
+	for _, tc := range []struct {
+		id      string
+		line    string
+		scoutNo int
+		debug   bool
+	}{
+		{id: "900-05.0138e1s1", line: `Scout 1:Scout N-PR,  \N-GH,  \N-RH,  O NW,  N, Find Iron Ore, 1190,  0138c2,  0138c3\ Can't Move on Ocean to N of HEX,  Patrolled and found 1190,  0138c2,  0138c3`, scoutNo: 1},
+		{id: "900-05.0138e1s2", line: `Scout 2:Scout NE-RH,  \N-PR,  \N-CH,  O NE\ Not enough M.P's to move to N into CONIFER HILLS,  Nothing of interest found`, scoutNo: 2},
+		{id: "900-05.0138e1s3", line: `Scout 3:Scout SE-PR,  \SE-RH,  \SE-PR,  River S, 0190\ Not enough M.P's to move to SE into ROCKY HILLS,  Patrolled and found 0190`, scoutNo: 3},
+		{id: "900-05.0138e1s4", line: `Scout 4:Scout SE-PR,  \SE-RH,  \NE-PR,  \NE-PR,  \ Not enough M.P's to move to NE into PRAIRIE,  Nothing of interest found`, scoutNo: 4},
+		{id: "900-05.0138e1s5", line: `Scout 5:Scout SE-PR,  \SE-RH,  \SE-PR,  River S, 0190\N-PR,  \ Not enough M.P's to move to N into PRAIRIE,  Nothing of interest found`, scoutNo: 5},
+		{id: "900-05.0138e1s6", line: `Scout 6:Scout SE-PR,  \SE-RH,  \N-PR,  \N-PR,  \ Not enough M.P's to move to N into PRAIRIE,  Nothing of interest found`, scoutNo: 6},
+		{id: "900-05.0138e1s7", line: `Scout 7:Scout NW-RH,  \N-GH,  \N-PR,  O NW,  N, 3138\ Can't Move on Ocean to N of HEX,  Patrolled and found 3138`, scoutNo: 7},
+		{id: "900-05.0138e1s8", line: `Scout 8:Scout SW-GH,  \NW-PR,  \NW-PR,  \NW-PR,  \ Not enough M.P's to move to NW into PRAIRIE,  Nothing of interest found`, scoutNo: 8},
+	} {
+		tm, err := parser.ParseScoutMovementLine(tc.id, 1, []byte(tc.line), tc.debug)
+		if err != nil {
+			t.Errorf("id %q: parse failed: %v\n", tc.id, err)
+			continue
+		}
+		if unit_movement.Scouts != tm.Type {
+			t.Errorf("id %q: movement: want %q, got %q\n", tc.id, unit_movement.Scouts, tm.Type)
+		}
+		if tc.scoutNo != tm.ScoutNo {
+			t.Errorf("id %q: scoutNo: want %d, got %d\n", tc.id, tc.scoutNo, tm.ScoutNo)
+		}
+	}
+}
+
+func TestStatusLine(t *testing.T) {
+	for _, tc := range []struct {
+		id    string
+		line  string
+		debug bool
+	}{
+		{id: "899-12.0138.0138", line: `0138 Status: PRAIRIE, 0138`},
+	} {
+		tm, err := parser.ParseStatusLine(tc.id, 1, []byte(tc.line), tc.debug)
+		if err != nil {
+			t.Errorf("id %q: parse failed: %v\n", tc.id, err)
+			continue
+		}
+		if unit_movement.Status != tm.Type {
+			t.Errorf("id %q: movement: want %q, got %q\n", tc.id, unit_movement.Status, tm.Type)
+		}
+	}
+}
+
 func TestTribeFollowsParse(t *testing.T) {
 	for _, tc := range []struct {
-		id     string
-		line   string
-		unitId string
+		id      string
+		line    string
+		follows parser.UnitId_t
+		debug   bool
 	}{
-		{id: "1812", line: "Tribe Follows 1812", unitId: "1812"},
-		{id: "1812f3", line: "Tribe Follows 1812f3", unitId: "1812f3"},
+		{id: "1812", line: "Tribe Follows 1812", follows: "1812"},
+		{id: "1812f3", line: "Tribe Follows 1812f3", follows: "1812f3"},
 	} {
-		va, err := parser.Parse(tc.id, []byte(tc.line), parser.Entrypoint("TribeFollows"))
+		tm, err := parser.ParseTribeFollowsLine(tc.id, 1, []byte(tc.line), tc.debug)
 		if err != nil {
-			t.Errorf("id %q: parse failed %v\n", tc.id, err)
+			t.Errorf("id %q: parse failed: %v\n", tc.id, err)
 			continue
 		}
-		unitId, ok := va.(string)
-		if !ok {
-			t.Errorf("id %q: type: want %T, got %T\n", tc.id, "", va)
-			continue
+		if unit_movement.Follows != tm.Type {
+			t.Errorf("id %q: movement: want %q, got %q\n", tc.id, unit_movement.GoesTo, tm.Type)
 		}
-		if tc.unitId != unitId {
-			t.Errorf("id %q: unitId: want %q, got %q\n", tc.id, tc.unitId, unitId)
+		if tc.follows != tm.Follows {
+			t.Errorf("id %q: follows: want %q, got %q\n", tc.id, tc.follows, tm.Follows)
 		}
 	}
 }
@@ -237,22 +253,50 @@ func TestTribeGoesParse(t *testing.T) {
 	for _, tc := range []struct {
 		id     string
 		line   string
-		coords string
+		goesTo string
+		debug  bool
 	}{
-		{id: "1", line: "Tribe Goes to DT 1812", coords: "DT 1812"},
+		{id: "1", line: "Tribe Goes to DT 1812", goesTo: "DT 1812"},
+		{id: "2", line: "Tribe Goes to ## 1812", goesTo: "## 1812"},
+		{id: "3", line: "Tribe Goes to N/A", goesTo: "N/A"},
 	} {
-		va, err := parser.Parse(tc.id, []byte(tc.line), parser.Entrypoint("TribeGoes"))
+		tm, err := parser.ParseTribeGoesToLine(tc.id, 1, []byte(tc.line), tc.debug)
 		if err != nil {
-			t.Errorf("id %q: parse failed %v\n", tc.id, err)
+			t.Errorf("id %q: parse failed: %v\n", tc.id, err)
 			continue
 		}
-		coords, ok := va.(string)
-		if !ok {
-			t.Errorf("id %q: type: want %T, got %T\n", tc.id, "", va)
+		if unit_movement.GoesTo != tm.Type {
+			t.Errorf("id %q: movement: want %q, got %q\n", tc.id, unit_movement.GoesTo, tm.Type)
+		}
+		if tc.goesTo != tm.GoesTo {
+			t.Errorf("id %q: goesTo: want %q, got %q\n", tc.id, tc.goesTo, tm.GoesTo)
+		}
+	}
+}
+
+func TestTribeMovementParse(t *testing.T) {
+	for _, tc := range []struct {
+		id    string
+		line  string
+		debug bool
+	}{
+		{id: "1",
+			line: `Tribe Movement: Move \`,
+		},
+		{id: "2",
+			line: "Tribe Movement: Move NW-GH,",
+		},
+		{id: "3",
+			line: `Tribe Movement: Move SW-PR The Dirty Squirrel\N-LCM,  Lcm NE, SE,  Ensalada sin Tomate\`,
+		},
+	} {
+		tm, err := parser.ParseTribeMovementLine(tc.id, 1, []byte(tc.line), tc.debug)
+		if err != nil {
+			t.Errorf("id %q: parse failed: %v\n", tc.id, err)
 			continue
 		}
-		if tc.coords != coords {
-			t.Errorf("id %q: coords: want %q, got %q\n", tc.id, tc.coords, coords)
+		if unit_movement.Tribe != tm.Type {
+			t.Errorf("id %q: movement: want %q, got %q\n", tc.id, unit_movement.Tribe, tm.Type)
 		}
 	}
 }
