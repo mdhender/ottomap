@@ -614,13 +614,9 @@ func (s *Step_t) parse(m *Movement_t, unitId string, line []byte, debugSteps, de
 		if obj, err = Parse("step", subStep, Entrypoint("Step")); err != nil {
 			// hack - an unrecognized step might be a settlement name
 			if s.Settlement == nil {
+				// if it is the first thing after the direction-terrain code
 				if s.Result != results.Unknown {
-					// this is a settlement name that starts right after the dir-terr code
 					if r, _ := utf8.DecodeRune(subStep); unicode.IsUpper(r) {
-						obj, err = &Settlement_t{Name: string(subStep)}, nil
-					} else if unicode.IsDigit(r) {
-						// this is a bad hack; it just jams unknown items into settlements
-						//log.Printf("warning: assuming %q is a settlement\n", subStep)
 						obj, err = &Settlement_t{Name: string(subStep)}, nil
 					}
 				}
@@ -665,8 +661,7 @@ func (s *Step_t) parse(m *Movement_t, unitId string, line []byte, debugSteps, de
 			s.Result = results.ExhaustedMovementPoints
 			s.Terrain = v.Terrain
 			s.Exhausted = v
-		case FoundNothing_t:
-			// ignore
+		case FoundNothing_t: // ignore
 		case FoundUnit_t:
 			if s.Result == results.Unknown {
 				log.Printf("parser: %s: %s: %d: step %d: sub %d: %q\n", m.TurnReportId, m.UnitId, m.LineNo, s.No, subStepNo, subStep)
@@ -681,6 +676,8 @@ func (s *Step_t) parse(m *Movement_t, unitId string, line []byte, debugSteps, de
 			for _, unit := range v { // todo: de-duplicate units
 				s.Units = append(s.Units, unit.Id)
 			}
+		case Longhouse_t: // ignore
+		case MissingEdge_t: // ignore
 		case []*Neighbor_t:
 			if s.Result == results.Unknown {
 				log.Printf("parser: %s: %s: %d: step %d: sub %d: %q\n", m.TurnReportId, m.UnitId, m.LineNo, s.No, subStepNo, subStep)
@@ -836,6 +833,14 @@ type Location_t struct {
 	CurrentHex  string
 	PreviousHex string
 }
+
+type Longhouse_t struct {
+	Id       string
+	Capacity int
+}
+
+// MissingEdge_t is returned for "No River Adjacent to Hex"
+type MissingEdge_t struct{}
 
 // Neighbor_t is the terrain in a neighboring hex that the unit from the current hex.
 type Neighbor_t struct {

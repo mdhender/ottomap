@@ -100,6 +100,42 @@ Location <- ("Courier" / "Element" / "Fleet" / "Garrison" / "Tribe") SP u:UNIT_I
     }, nil
 }
 
+Longhouse <- szi:(DIGIT+) SP+ "Longhouse" SP+ idi:(LETTER DIGIT+) {
+    if szi == nil || idi == nil {
+        return nil, fmt.Errorf("longhouse: szi and idi are nil")
+    }
+    var lh Longhouse_t
+
+    for _, digitsi := range toAnySlice(szi) {
+        switch digits := digitsi.(type) {
+        case []uint8:
+            lh.Capacity = lh.Capacity * 10 + int(digits[0]-'0')
+        default:
+            panic(fmt.Errorf("longhouse: capacity: digits: unknown type %T", digits))
+        }
+    }
+
+    var idBuf []byte
+    id := idi.([]any)
+    switch letters := id[0].(type) {
+        case []uint8:
+            idBuf = append(idBuf, letters...)
+        default:
+            panic(fmt.Errorf("longhouse: id: letters: unknown type %T", letters))
+    }
+    for _, digitsi := range toAnySlice(id[1]) {
+        switch digits := digitsi.(type) {
+            case []uint8:
+                idBuf = append(idBuf, digits...)
+            default:
+                panic(fmt.Errorf("longhouse: id: digits: unknown type %T", digits))
+        }
+    }
+    lh.Id = string(idBuf)
+
+    return lh, nil
+}
+
 ObviousNeighboringTerrainCode <- "Lcm" {
     return domain.TLowConiferMountains, nil
 } / "LJm" {
@@ -179,7 +215,7 @@ Step <- d:DIRECTION "-" t:TERRAIN_CODE EOF {
 } / "No groups found" EOF {
     return NoGroupsFound_t{}, nil
 } / "No River Adjacent to Hex to" SP DIRECTION SP "of HEX" {
-    return FoundNothing_t{}, nil
+    return MissingEdge_t{}, nil
 } / [Nn] "ot enough M.P's to move to" SP d:DIRECTION SP "into" SP t:TERRAIN EOF {
     return &Exhausted_t{
         Direction: d.(direction.Direction_e),
@@ -241,6 +277,8 @@ Step <- d:DIRECTION "-" t:TERRAIN_CODE EOF {
         }
     }
     return found, nil
+} / lh:Longhouse EOF {
+    return lh, nil
 } / r:RESOURCE EOF {
     return r, nil
 } / d:DIRECTION EOF {
