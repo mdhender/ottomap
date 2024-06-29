@@ -11,13 +11,15 @@ type Result_e int
 
 const (
 	Unknown Result_e = iota
-	StayedInPlace
 	Blocked
 	ExhaustedMovementPoints
-	Follows
+	Failed
+	Followed
 	Prohibited
 	StatusLine
+	StayedInPlace
 	Succeeded
+	Teleported
 	Vanished
 )
 
@@ -25,25 +27,29 @@ var (
 	// EnumToString is a helper map for marshalling the enum
 	EnumToString = map[Result_e]string{
 		Unknown:                 "?",
-		StayedInPlace:           "N/A",
 		Blocked:                 "Blocked",
 		ExhaustedMovementPoints: "Exhausted MPs",
-		Follows:                 "Follows",
+		Failed:                  "Failed",
+		Followed:                "Followed",
 		Prohibited:              "Prohibited",
 		StatusLine:              "Status Line",
+		StayedInPlace:           "N/A",
 		Succeeded:               "Succeeded",
+		Teleported:              "Teleported",
 		Vanished:                "Vanished",
 	}
 	// StringToEnum is a helper map for unmarshalling the enum
 	StringToEnum = map[string]Result_e{
 		"?":             Unknown,
-		"N/A":           StayedInPlace,
 		"Blocked":       Blocked,
 		"Exhausted MPs": ExhaustedMovementPoints,
-		"Follows":       Follows,
+		"Failed":        Failed,
+		"Follows":       Followed,
+		"N/A":           StayedInPlace,
 		"Prohibited":    Prohibited,
 		"Status Line":   StatusLine,
 		"Succeeded":     Succeeded,
+		"Teleported":    Teleported,
 		"Vanished":      Vanished,
 	}
 )

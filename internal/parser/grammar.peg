@@ -203,7 +203,7 @@ Step <- d:DIRECTION "-" t:TERRAIN_CODE EOF {
 } / "Find" SP r:RESOURCE EOF {
     return r, nil
 } / "Find" SP n:NUMBER SP i:ITEMS EOF {
-    return RandomEncounter_t{
+    return FoundItem_t{
         Quantity: n.(int),
         Item :    i.(items.Item_e),
     }, nil
@@ -262,7 +262,7 @@ Step <- d:DIRECTION "-" t:TERRAIN_CODE EOF {
     }
     return edges, nil
 } / n:NUMBER SP i:ITEM EOF {
-    return RandomEncounter_t{
+    return FoundItem_t{
         Quantity: n.(int),
         Item:     i.(items.Item_e),
     }, nil

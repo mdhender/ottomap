@@ -8,7 +8,6 @@ import (
 	"github.com/mdhender/ottomap/domain"
 	"github.com/mdhender/ottomap/internal/direction"
 	"github.com/mdhender/ottomap/internal/edges"
-	"github.com/mdhender/ottomap/internal/items"
 	"github.com/mdhender/ottomap/internal/resources"
 	"github.com/mdhender/ottomap/internal/results"
 	"github.com/mdhender/ottomap/internal/unit_movement"
@@ -868,30 +867,6 @@ func (p *ProhibitedFrom_t) String() string {
 		return ""
 	}
 	return fmt.Sprintf("p(%s-%s)", p.Direction, p.Terrain)
-}
-
-type RandomEncounter_t struct {
-	Quantity int
-	Item     items.Item_e
-}
-
-func (r *RandomEncounter_t) String() string {
-	if r == nil {
-		return ""
-	}
-	return fmt.Sprintf("r(%d-%s)", r.Quantity, r.Item)
-}
-
-// Settlement_t is a settlement that the unit sees in the current hex.
-type Settlement_t struct {
-	Name string
-}
-
-func (s *Settlement_t) String() string {
-	if s == nil {
-		return ""
-	}
-	return s.Name
 }
 
 type UnitId_t string
