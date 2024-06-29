@@ -142,7 +142,10 @@ SpaceUnitID <- SP u:UNIT_ID {
 }
 
 StatusLine <- u:UNIT_ID SP "Status:" _ results:ToEOL EOF {
-    mt := Movement_t{Type: unit_movement.Status}
+    mt := Movement_t{
+        Type: unit_movement.Status,
+        UnitId: u.(UnitId_t),
+    }
     if results != nil {
         mt.Text = bdup(results.([]byte))
     }
@@ -175,6 +178,8 @@ Step <- d:DIRECTION "-" t:TERRAIN_CODE EOF {
     }, nil
 } / "No groups found" EOF {
     return NoGroupsFound_t{}, nil
+} / "No River Adjacent to Hex to" SP DIRECTION SP "of HEX" {
+    return FoundNothing_t{}, nil
 } / [Nn] "ot enough M.P's to move to" SP d:DIRECTION SP "into" SP t:TERRAIN EOF {
     return &Exhausted_t{
         Direction: d.(direction.Direction_e),
@@ -363,11 +368,143 @@ DIRECTION <- "NE" {
     return direction.South, nil
 }
 
-ITEM <- "Diamond" {
-    return items.Diamond, nil
-} / "HORSES" {
-    return items.Horses, nil
-}
+ITEM <- "adze"i         { return items.Adze, nil
+} /		"arbalest"i     { return items.Arbalest, nil
+} /		"arrows"i       { return items.Arrows, nil
+} /		"axes"i         { return items.Axes, nil
+} /		"backpack"i     { return items.Backpack, nil
+} /		"ballistae"i    { return items.Ballistae, nil
+} /		"bark"i         { return items.Bark, nil
+} /		"barrel"i       { return items.Barrel, nil
+} /		"bladder"i      { return items.Bladder, nil
+} /		"blubber"i      { return items.Blubber, nil
+} /		"boat"i         { return items.Boat, nil
+} /		"bonearmour"i   { return items.BoneArmour, nil
+} /		"bones"i        { return items.Bones, nil
+} /		"bows"i         { return items.Bows, nil
+} /		"bread"i        { return items.Bread, nil
+} /		"breastplate"i  { return items.Breastplate, nil
+} /		"candle"i       { return items.Candle, nil
+} /		"canoes"i       { return items.Canoes, nil
+} /		"carpets"i      { return items.Carpets, nil
+} /		"catapult"i     { return items.Catapult, nil
+} /		"cattle"i       { return items.Cattle, nil
+} /		"cauldrons"i    { return items.Cauldrons, nil
+} /		"chain"i        { return items.Chain, nil
+} /		"china"i        { return items.China, nil
+} /		"clay"i         { return items.Clay, nil
+} /		"cloth"i        { return items.Cloth, nil
+} /		"clubs"i        { return items.Clubs, nil
+} /		"coal"i         { return items.Coal, nil
+} /		"coffee"i       { return items.Coffee, nil
+} /		"coins"i        { return items.Coins, nil
+} /		"cotton"i       { return items.Cotton, nil
+} /		"cuirass"i      { return items.Cuirass, nil
+} /		"cuirboilli"i   { return items.Cuirboilli, nil
+} /		"diamond"i      { return items.Diamond, nil
+} /		"diamonds"i     { return items.Diamonds, nil
+} /		"drum"i         { return items.Drum, nil
+} /		"elephant"i     { return items.Elephant, nil
+} /		"falchion"i     { return items.Falchion, nil
+} /		"fish"i         { return items.Fish, nil
+} /		"flax"i         { return items.Flax, nil
+} /		"flour"i        { return items.Flour, nil
+} /		"flute"i        { return items.Flute, nil
+} /		"fodder"i       { return items.Fodder, nil
+} /		"frame"i        { return items.Frame, nil
+} /		"frankincense"i { return items.Frankincense, nil
+} /		"fur"i          { return items.Fur, nil
+} /		"glasspipe"i    { return items.Glasspipe, nil
+} /		"goats"i        { return items.Goats, nil
+} /		"gold"i         { return items.Gold, nil
+} /		"grain"i        { return items.Grain, nil
+} /		"grape"i        { return items.Grape, nil
+} /		"gut"i          { return items.Gut, nil
+} /		"hbow"i         { return items.HBow, nil
+} /		"harp"i         { return items.Harp, nil
+} /		"haube"i        { return items.Haube, nil
+} /		"heaters"i      { return items.Heaters, nil
+} /		"helm"i         { return items.Helm, nil
+} /		"herbs"i        { return items.Herbs, nil
+} /		"hive"i         { return items.Hive, nil
+} /		"hoe"i          { return items.Hoe, nil
+} /		"honey"i        { return items.Honey, nil
+} /		"hood"i         { return items.Hood, nil
+} /		"horn"i         { return items.Horn, nil
+} /		"horses"i       { return items.Horses, nil
+} /		"jade"i         { return items.Jade, nil
+} /		"jerkin"i       { return items.Jerkin, nil
+} /		"kayak"i        { return items.Kayak, nil
+} /		"ladder"i       { return items.Ladder, nil
+} /		"leather"i      { return items.Leather, nil
+} /		"logs"i         { return items.Logs, nil
+} /		"lute"i         { return items.Lute, nil
+} /		"mace"i         { return items.Mace, nil
+} /		"mattock"i      { return items.Mattock, nil
+} /		"metal"i        { return items.Metal, nil
+} /		"millstone"i    { return items.MillStone, nil
+} /		"musk"i         { return items.Musk, nil
+} /		"net"i          { return items.Net, nil
+} /		"oar"i          { return items.Oar, nil
+} /		"oil"i          { return items.Oil, nil
+} /		"olives"i       { return items.Olives, nil
+} /		"opium"i        { return items.Opium, nil
+} /		"ores"i         { return items.Ores, nil
+} /		"paddle"i       { return items.Paddle, nil
+} /		"palanquin"i    { return items.Palanquin, nil
+} /		"parchment"i    { return items.Parchment, nil
+} /		"pavis"i        { return items.Pavis, nil
+} /		"pearls"i       { return items.Pearls, nil
+} /		"pellets"i      { return items.Pellets, nil
+} /		"people"i       { return items.People, nil
+} /		"pewter"i       { return items.Pewter, nil
+} /		"picks"i        { return items.Picks, nil
+} /		"plows"i        { return items.Plows, nil
+} /		"provisions"i   { return items.Provisions, nil
+} /		"quarrel"i      { return items.Quarrel, nil
+} /		"rake"i         { return items.Rake, nil
+} /		"ram"i          { return items.Ram, nil
+} /		"ramp"i         { return items.Ramp, nil
+} /		"ring"i         { return items.Ring, nil
+} /		"rope"i         { return items.Rope, nil
+} /		"rug"i          { return items.Rug, nil
+} /		"saddle"i       { return items.Saddle, nil
+} /		"saddlebag"i    { return items.Saddlebag, nil
+} /		"salt"i         { return items.Salt, nil
+} /		"sand"i         { return items.Sand, nil
+} /		"scale"i        { return items.Scale, nil
+} /		"sculpture"i    { return items.Sculpture, nil
+} /		"scutum"i       { return items.Scutum, nil
+} /		"scythe"i       { return items.Scythe, nil
+} /		"shackle"i      { return items.Shackle, nil
+} /		"shaft"i        { return items.Shaft, nil
+} /		"shield"i       { return items.Shield, nil
+} /		"shovel"i       { return items.Shovel, nil
+} /		"silk"i         { return items.Silk, nil
+} /		"silver"i       { return items.Silver, nil
+} /		"skin"i         { return items.Skin, nil
+} /		"slaves"i       { return items.Slaves, nil
+} /		"slings"i       { return items.Slings, nil
+} /		"snare"i        { return items.Snare, nil
+} /		"spear"i        { return items.Spear, nil
+} /		"spetum"i       { return items.Spetum, nil
+} /		"spice"i        { return items.Spice, nil
+} /		"statue"i       { return items.Statue, nil
+} /		"stave"i        { return items.Stave, nil
+} /		"stones"i       { return items.Stones, nil
+} /		"string"i       { return items.String, nil
+} /		"sugar"i        { return items.Sugar, nil
+} /		"sword"i        { return items.Sword, nil
+} /		"tapestries"i   { return items.Tapestries, nil
+} /		"tea"i          { return items.Tea, nil
+} /		"tobacco"i      { return items.Tobacco, nil
+} /		"trap"i         { return items.Trap, nil
+} /		"trews"i        { return items.Trews, nil
+} /		"trinket"i      { return items.Trinket, nil
+} /		"trumpet"i      { return items.Trumpet, nil
+} /		"urn"i          { return items.Urn, nil
+} /		"wagons"i       { return items.Wagons, nil
+} /		"wax"i          { return items.Wax, nil}
 
 MONTH <- DIGIT DIGIT? {
     n, _ := strconv.Atoi(string(c.text))

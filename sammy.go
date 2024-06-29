@@ -4,6 +4,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/mdhender/ottomap/internal/parser"
 	"github.com/mdhender/ottomap/internal/turns"
 	"github.com/spf13/cobra"
 	"log"
@@ -87,16 +88,24 @@ var cmdSammy = &cobra.Command{
 		}
 		log.Printf("inputs: found %d turn reports\n", len(inputs))
 
-		// collect all the sections
-		allSections, err := turns.CollectSections(inputs, argsSammy.debug.sections)
-		log.Printf("inputs: %8d total sections: elapsed %v\n", len(allSections), time.Since(started))
-
-		// collect all the section parses
-		allParses, err := turns.CollectParses(allSections, argsSammy.debug.parser)
-		log.Printf("parses: %8d total nodes: elapsed %v\n", len(allParses), time.Since(started))
+		var allMoves []*parser.Movement_t
+		for _, i := range inputs {
+			started := time.Now()
+			data, err := os.ReadFile(i.Path)
+			if err != nil {
+				log.Fatalf("error: read: %v\n", err)
+			}
+			mt, err := parser.ParseInput(i.Id, data, argsSammy.debug.parser, argsSammy.debug.sections, argsSammy.debug.steps, argsSammy.debug.nodes)
+			if err != nil {
+				log.Fatal(err)
+			}
+			allMoves = append(allMoves, mt...)
+			log.Printf("%q: parsed %6d moves in %v\n", i.Id, len(mt), time.Since(started))
+		}
+		log.Printf("parsed %d inputs in %v\n", len(inputs), time.Since(started))
 
 		// map all the sections
-		err = turns.Map(allParses, argsSammy.debug.maps)
+		err = turns.Map(allMoves, argsSammy.debug.maps)
 		if err != nil {
 			log.Fatalf("error: %v\n", err)
 		}

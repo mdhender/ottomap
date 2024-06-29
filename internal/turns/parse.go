@@ -81,7 +81,7 @@ func ParseSection(section *Section_t, debug bool) (*ParseResults_t, error) {
 				panic(fmt.Sprintf("unexpected %T", va))
 			} else {
 				debugf("parse: %s: %s: %d: %+v\n", section.TurnReportId, section.Unit.Id, section.LineNo, location)
-				r.Id = location.UnitId
+				r.Id = location.UnitId.String()
 				r.PrevCoords, r.CurrCoords = location.PreviousHex, location.CurrentHex
 			}
 		} else if line.HasPrefix("Tribe Movement: ") {

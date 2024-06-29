@@ -81,38 +81,46 @@ func TestFleetMovementParse(t *testing.T) {
 	for _, tc := range []struct {
 		id           string
 		line         string
+		unitId       parser.UnitId_t
 		windStrength winds.Strength_e
 		windFrom     direction.Direction_e
 		debug        bool
 	}{
 		{id: "900-06.0138f4",
 			line:         `MILD NW Fleet Movement: Move NE-LCM,  Lcm NE, SE, S,\NE-LCM,  Lcm NE, SE, SW, S,\NE-LCM,  Lcm NE, SE, SW, S,\`,
+			unitId:       "0138f4",
 			windStrength: winds.Mild,
 			windFrom:     direction.NorthWest,
 		},
 		{id: "900-06.0138f1",
 			line:         "MILD NW Fleet Movement: Move SE-O,-(NE O,  SE LCM,  N O,  S LCM,  SW O,  NW O,  )(Sight Water - N/N, Sight Land - N/NE)",
+			unitId:       "0138f1",
 			windStrength: winds.Mild,
 			windFrom:     direction.NorthWest,
 		},
 		{id: "900-06.0138f2",
 			line:         "STRONG S Fleet Movement: Move NW-GH,",
+			unitId:       "0138f2",
 			windStrength: winds.Strong,
 			windFrom:     direction.South,
 		},
 		{id: "900-06.1138f2",
 			line:         `MILD N Fleet Movement: Move SW-PR The Dirty Squirrel-(NE GH,  SE O, N GH, S O, SW O, NW O, )(Sight Land - N/N,Sight Land - N/NE,Sight Land - N/NW,Sight Water - NE/NE,Sight Water - NE/SE,Sight Water - SE/SE,Sight Water - S/SE,Sight Water - S/S,Sight Water - S/SW,Sight Water - SW/SW,Sight Water - SW/NW,Sight Water - NW/NW, )\NW-O, -(NE GH, SE PR, N SW, S O, SW O, NW O, )(Sight Water - N/N,Sight Land - N/NE,Sight Water - N/NW,Sight Land - NE/NE,Sight Land - NE/SE,Sight Water - SE/SE,Sight Water - S/SE,Sight Water - S/S,Sight Water - S/SW,Sight Water - SW/SW,Sight Water - SW/NW,Sight Water - NW/NW, )\NW-O, -(NE SW, SE O, N O, S O, SW O, NW O, )(Sight Water - N/N,Sight Water - N/NE,Sight Water - N/NW,Sight Land - NE/NE,Sight Land - NE/SE,Sight Land - SE/SE,Sight Water - S/SE,Sight Water - S/S,Sight Water - S/SW,Sight Water - SW/SW,Sight Water - SW/NW,Sight Water - NW/NW, )\N-O, -(NE O, SE SW, N O, S O, SW O, NW O, )(Sight Land - N/N,Sight Land - N/NE,Sight Water - N/NW,Sight Land - NE/NE,Sight Land - NE/SE,Sight Land - SE/SE,Sight Water - S/SE,Sight Water - S/S,Sight Water - S/SW,Sight Water - SW/SW,Sight Water - SW/NW,Sight Water - NW/NW, )\N-O,  Lcm NE, N,-(NE LCM, SE O, N LCM, S O, SW O, NW O, )(Sight Land - N/N,Sight Land - N/NE,Sight Water - N/NW,Sight Land - NE/NE,Sight Land - NE/SE,Sight Land - SE/SE,Sight Land - S/SE,Sight Water - S/S,Sight Water - S/SW,Sight Water - SW/SW,Sight Water - SW/NW,Sight Water - NW/NW, )\N-LCM,  Lcm NE, SE,  Ensalada sin Tomate\`,
+			unitId:       "0138f2",
 			windStrength: winds.Mild,
 			windFrom:     direction.North,
 		},
 	} {
-		fm, err := parser.ParseFleetMovementLine(tc.id, 1, []byte(tc.line), tc.debug)
+		fm, err := parser.ParseFleetMovementLine(tc.id, tc.unitId, 1, []byte(tc.line), tc.debug, tc.debug)
 		if err != nil {
 			t.Errorf("id %q: parse failed: %v\n", tc.id, err)
 			continue
 		}
 		if unit_movement.Fleet != fm.Type {
 			t.Errorf("id %q: movement: want %q, got %q\n", tc.id, unit_movement.Fleet, fm.Type)
+		}
+		if tc.unitId != fm.UnitId {
+			t.Errorf("id %q: unitId: want %q, got %q\n", tc.id, tc.unitId, fm.UnitId)
 		}
 		if tc.windStrength != fm.Winds.Strength {
 			t.Errorf("id %q: wind.strength: want %q, got %q\n", tc.id, tc.windStrength, fm.Winds.Strength)
@@ -192,7 +200,7 @@ func TestScoutMovementParse(t *testing.T) {
 		{id: "900-05.0138e1s7", line: `Scout 7:Scout NW-RH,  \N-GH,  \N-PR,  O NW,  N, 3138\ Can't Move on Ocean to N of HEX,  Patrolled and found 3138`, scoutNo: 7},
 		{id: "900-05.0138e1s8", line: `Scout 8:Scout SW-GH,  \NW-PR,  \NW-PR,  \NW-PR,  \ Not enough M.P's to move to NW into PRAIRIE,  Nothing of interest found`, scoutNo: 8},
 	} {
-		tm, err := parser.ParseScoutMovementLine(tc.id, 1, []byte(tc.line), tc.debug)
+		tm, err := parser.ParseScoutMovementLine(tc.id, 1, []byte(tc.line), tc.debug, tc.debug)
 		if err != nil {
 			t.Errorf("id %q: parse failed: %v\n", tc.id, err)
 			continue
@@ -208,19 +216,23 @@ func TestScoutMovementParse(t *testing.T) {
 
 func TestStatusLine(t *testing.T) {
 	for _, tc := range []struct {
-		id    string
-		line  string
-		debug bool
+		id     string
+		line   string
+		unitId parser.UnitId_t
+		debug  bool
 	}{
-		{id: "899-12.0138.0138", line: `0138 Status: PRAIRIE, 0138`},
+		{id: "899-12.0138.0138", line: `0138 Status: PRAIRIE, 0138`, unitId: "0138"},
 	} {
-		tm, err := parser.ParseStatusLine(tc.id, 1, []byte(tc.line), tc.debug)
+		tm, err := parser.ParseStatusLine(tc.id, 1, []byte(tc.line), tc.debug, tc.debug)
 		if err != nil {
 			t.Errorf("id %q: parse failed: %v\n", tc.id, err)
 			continue
 		}
 		if unit_movement.Status != tm.Type {
 			t.Errorf("id %q: movement: want %q, got %q\n", tc.id, unit_movement.Status, tm.Type)
+		}
+		if tc.unitId != tm.UnitId {
+			t.Errorf("id %q: unitId: want %q, got %q\n", tc.id, tc.unitId, tm.UnitId)
 		}
 	}
 }
@@ -290,7 +302,7 @@ func TestTribeMovementParse(t *testing.T) {
 			line: `Tribe Movement: Move SW-PR The Dirty Squirrel\N-LCM,  Lcm NE, SE,  Ensalada sin Tomate\`,
 		},
 	} {
-		tm, err := parser.ParseTribeMovementLine(tc.id, 1, []byte(tc.line), tc.debug)
+		tm, err := parser.ParseTribeMovementLine(tc.id, 1, []byte(tc.line), tc.debug, tc.debug)
 		if err != nil {
 			t.Errorf("id %q: parse failed: %v\n", tc.id, err)
 			continue
