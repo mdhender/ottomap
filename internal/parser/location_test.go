@@ -3,6 +3,7 @@
 package parser_test
 
 import (
+	"github.com/go-test/deep"
 	"github.com/mdhender/ottomap/internal/compass"
 	"github.com/mdhender/ottomap/internal/direction"
 	"github.com/mdhender/ottomap/internal/edges"
@@ -350,20 +351,50 @@ func TestTribeGoesParse(t *testing.T) {
 
 func TestTribeMovementParse(t *testing.T) {
 	for _, tc := range []struct {
-		id        string
-		line      string
-		unitId    parser.UnitId_t
-		moveCount int
-		debug     bool
+		id     string
+		line   string
+		unitId parser.UnitId_t
+		moves  []*parser.Move_t
+		debug  bool
 	}{
-		{id: "1",
+		{id: "900-01.0138",
 			line: `Tribe Movement: Move \`,
+			moves: []*parser.Move_t{
+				{LineNo: 1, StepNo: 1, Line: []byte{},
+					Result: results.Succeeded, Still: true, Report: &parser.Report_t{},
+				},
+			},
 		},
-		{id: "2",
+		{id: "900-02.0138",
 			line: "Tribe Movement: Move NW-GH,",
+			moves: []*parser.Move_t{
+				{LineNo: 1, StepNo: 1, Line: []byte("NW-GH"),
+					Result: results.Succeeded, Advance: direction.NorthWest, Report: &parser.Report_t{
+						Terrain: terrain.GrassyHills,
+					},
+				},
+			},
 		},
-		{id: "3",
+		{id: "900-02.0138f1",
 			line: `Tribe Movement: Move SW-PR The Dirty Squirrel\N-LCM,  Lcm NE, SE,  Ensalada sin Tomate\`,
+			moves: []*parser.Move_t{
+				{LineNo: 1, StepNo: 1, Line: []byte("SW-PR The Dirty Squirrel"),
+					Result: results.Succeeded, Advance: direction.SouthWest, Report: &parser.Report_t{
+						Terrain:     terrain.Prairie,
+						Settlements: []*parser.Settlement_t{{Name: "The Dirty Squirrel"}},
+					},
+				},
+				{LineNo: 1, StepNo: 2, Line: []byte("N-LCM,  Lcm NE, SE,  Ensalada sin Tomate"),
+					Result: results.Succeeded, Advance: direction.North, Report: &parser.Report_t{
+						Terrain: terrain.LowConiferMountains,
+						Borders: []*parser.Border_t{
+							{Direction: direction.NorthEast, Terrain: terrain.LowConiferMountains},
+							{Direction: direction.SouthEast, Terrain: terrain.LowConiferMountains},
+						},
+						Settlements: []*parser.Settlement_t{{Name: "Ensalada sin Tomate"}},
+					},
+				},
+			},
 		},
 	} {
 		tm, err := parser.ParseTribeMovementLine(tc.id, tc.unitId, 1, []byte(tc.line), tc.debug, tc.debug)
@@ -371,8 +402,26 @@ func TestTribeMovementParse(t *testing.T) {
 			t.Errorf("id %q: parse failed: %v\n", tc.id, err)
 			continue
 		}
-		if tc.moveCount != len(tm) {
-			t.Errorf("id %q: moveCount: want %d, got %d\n", tc.id, tc.moveCount, len(tm))
+		for i1, i2 := 0, 0; i1 < len(tc.moves) || i2 < len(tm); i1, i2 = i1+1, i2+1 {
+			var m1, m2 *parser.Move_t
+			if i1 < len(tc.moves) {
+				m1 = tc.moves[i1]
+			}
+			if i2 < len(tm) {
+				m2 = tm[i2]
+			}
+			if m1 != nil && m2 != nil {
+				//t.Errorf("id: %q: step %3d: %d %q %d %q\n", tc.id, m1.StepNo, i1, m1.Line, i2, m2.Line)
+				if diff := deep.Equal(m1, m2); diff != nil {
+					for _, d := range diff {
+						t.Errorf("id: %q: step %3d: %s\n", tc.id, m1.StepNo, d)
+					}
+				}
+			} else if m1 != nil && m2 == nil {
+				t.Errorf("id: %q: step %3d: missing step %q\n", tc.id, m1.StepNo, m1.Line)
+			} else if m1 == nil && m2 != nil {
+				t.Errorf("id: %q: step %3d: extra   step %q\n", tc.id, m2.StepNo, m2.Line)
+			}
 		}
 	}
 }

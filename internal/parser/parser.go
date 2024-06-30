@@ -446,7 +446,17 @@ func ParseTribeMovementLine(id string, unitId UnitId_t, lineNo int, line []byte,
 func parseMovementLine(id string, unitId UnitId_t, lineNo int, line []byte, debugSteps, debugNodes bool) ([]*Move_t, error) {
 	var moves []*Move_t
 
+	line = bytes.TrimSpace(line)
+
 	// we've done this over and over. movement results look like step (\ step)*.
+	if bytes.Equal(line, []byte{'\\'}) {
+		// "Move \" should be treated as a stay in place
+		return []*Move_t{
+			{LineNo: lineNo, StepNo: 1, Line: []byte{},
+				Still: true, Result: results.Succeeded, Report: &Report_t{}},
+		}, nil
+	}
+
 	for _, move := range splitMoves(lineNo, line) {
 		// move is the current step in the line
 
@@ -724,6 +734,10 @@ func parseMove(id string, unitId UnitId_t, lineNo, stepNo int, line []byte, debu
 // splitMoves splits the line into individual moves. moves are separated by backslashes.
 // leading and trailing spaces and any trailing commas are from each move.
 func splitMoves(lineNo int, line []byte) (moves []*Move_t) {
+	line = bytes.TrimSpace(bytes.TrimRight(line, " \t\\,"))
+	if len(line) == 0 {
+		return nil
+	}
 	for n, text := range bytes.Split(line, []byte{'\\'}) {
 		text = bytes.TrimSpace(bytes.TrimRight(text, ", \t"))
 		moves = append(moves, &Move_t{LineNo: lineNo, StepNo: n + 1, Line: bdup(text), Report: &Report_t{}})
