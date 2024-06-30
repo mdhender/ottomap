@@ -572,6 +572,39 @@ func parseMovementLine(id string, unitId UnitId_t, lineNo int, line []byte, debu
 				}
 			}
 		}
+
+		if len(move.Report.Borders) != 0 {
+			sort.Slice(move.Report.Borders, func(i, j int) bool {
+				a, b := move.Report.Borders[i], move.Report.Borders[j]
+				if a.Direction < b.Direction {
+					return true
+				} else if a.Direction == b.Direction {
+					if a.Edge < b.Edge {
+						return true
+					} else if a.Edge == b.Edge {
+						return a.Terrain < b.Terrain
+					}
+				}
+				return false
+			})
+		}
+		if len(move.Report.Encounters) != 0 {
+			sort.Slice(move.Report.Encounters, func(i, j int) bool {
+				return move.Report.Encounters[i] < move.Report.Encounters[j]
+			})
+		}
+		if len(move.Report.FarHorizons) != 0 {
+			sort.Slice(move.Report.FarHorizons, func(i, j int) bool {
+				a, b := move.Report.FarHorizons[i], move.Report.FarHorizons[j]
+				if a.Point < b.Point {
+					return true
+				} else if a.Point == b.Point {
+					return a.IsLand
+				}
+				return false
+			})
+		}
+
 		moves = append(moves, move)
 	}
 
@@ -727,27 +760,6 @@ func parseMove(id string, unitId UnitId_t, lineNo, stepNo int, line []byte, debu
 			log.Printf("please report this error\n")
 			panic(fmt.Sprintf("unexpected %T", v))
 		}
-	}
-
-	if len(m.Report.Borders) != 0 {
-		sort.Slice(m.Report.Borders, func(i, j int) bool {
-			a, b := m.Report.Borders[i], m.Report.Borders[j]
-			if a.Direction < b.Direction {
-				return true
-			} else if a.Direction == b.Direction {
-				if a.Edge < b.Edge {
-					return true
-				} else if a.Edge == b.Edge {
-					return a.Terrain < b.Terrain
-				}
-			}
-			return false
-		})
-	}
-	if len(m.Report.Encounters) != 0 {
-		sort.Slice(m.Report.Encounters, func(i, j int) bool {
-			return m.Report.Encounters[i] < m.Report.Encounters[j]
-		})
 	}
 
 	return m, nil

@@ -81,31 +81,235 @@ func TestCrowsNestObservation(t *testing.T) {
 
 func TestFleetMovementParse(t *testing.T) {
 	for _, tc := range []struct {
-		id        string
-		line      string
-		unitId    parser.UnitId_t
-		moveCount int
-		debug     bool
+		id     string
+		line   string
+		unitId parser.UnitId_t
+		moves  []*parser.Move_t
+		debug  bool
 	}{
+		{id: "900-05.0138f2",
+			line:   "STRONG S Fleet Movement: Move NW-GH,",
+			unitId: "0138f2",
+			moves: []*parser.Move_t{
+				{LineNo: 1, StepNo: 1, Line: []byte("NW-GH"),
+					Result: results.Succeeded, Advance: direction.NorthWest, Report: &parser.Report_t{
+						Terrain: terrain.GrassyHills,
+					},
+				},
+			},
+		},
 		{id: "900-06.0138f4",
-			line:      `MILD NW Fleet Movement: Move NE-LCM,  Lcm NE, SE, S,\NE-LCM,  Lcm NE, SE, SW, S,\NE-LCM,  Lcm NE, SE, SW, S,\`,
-			unitId:    "0138f4",
-			moveCount: 3,
+			line:   `MILD NW Fleet Movement: Move NE-LCM,  Lcm NE, SE, S,\NE-LCM,  Lcm NE, SE, SW, S,\NE-LCM,  Lcm NE, SE, SW, S,\`,
+			unitId: "0138f4",
+			moves: []*parser.Move_t{
+				{LineNo: 1, StepNo: 1, Line: []byte("NE-LCM,  Lcm NE, SE, S"),
+					Result: results.Succeeded, Advance: direction.NorthEast, Report: &parser.Report_t{
+						Terrain: terrain.LowConiferMountains,
+						Borders: []*parser.Border_t{
+							{Direction: direction.NorthEast, Terrain: terrain.LowConiferMountains},
+							{Direction: direction.SouthEast, Terrain: terrain.LowConiferMountains},
+							{Direction: direction.South, Terrain: terrain.LowConiferMountains},
+						},
+					},
+				},
+				{LineNo: 1, StepNo: 2, Line: []byte("NE-LCM,  Lcm NE, SE, SW, S"),
+					Result: results.Succeeded, Advance: direction.NorthEast, Report: &parser.Report_t{
+						Terrain: terrain.LowConiferMountains,
+						Borders: []*parser.Border_t{
+							{Direction: direction.NorthEast, Terrain: terrain.LowConiferMountains},
+							{Direction: direction.SouthEast, Terrain: terrain.LowConiferMountains},
+							{Direction: direction.South, Terrain: terrain.LowConiferMountains},
+							{Direction: direction.SouthWest, Terrain: terrain.LowConiferMountains},
+						},
+					},
+				},
+				{LineNo: 1, StepNo: 3, Line: []byte("NE-LCM,  Lcm NE, SE, SW, S"),
+					Result: results.Succeeded, Advance: direction.NorthEast, Report: &parser.Report_t{
+						Terrain: terrain.LowConiferMountains,
+						Borders: []*parser.Border_t{
+							{Direction: direction.NorthEast, Terrain: terrain.LowConiferMountains},
+							{Direction: direction.SouthEast, Terrain: terrain.LowConiferMountains},
+							{Direction: direction.South, Terrain: terrain.LowConiferMountains},
+							{Direction: direction.SouthWest, Terrain: terrain.LowConiferMountains},
+						},
+					},
+				},
+			},
 		},
 		{id: "900-06.0138f1",
-			line:      "MILD NW Fleet Movement: Move SE-O,-(NE O,  SE LCM,  N O,  S LCM,  SW O,  NW O,  )(Sight Water - N/N, Sight Land - N/NE)",
-			unitId:    "0138f1",
-			moveCount: 3,
-		},
-		{id: "900-06.0138f2",
-			line:      "STRONG S Fleet Movement: Move NW-GH,",
-			unitId:    "0138f2",
-			moveCount: 3,
+			line:   "MILD NW Fleet Movement: Move SE-O,-(NE O,  SE LCM,  N O,  S LCM,  SW O,  NW O,  )(Sight Water - N/N, Sight Land - N/NE)",
+			unitId: "0138f1",
+			moves: []*parser.Move_t{
+				{LineNo: 1, StepNo: 1, Line: []byte("SE-O,-(NE O,  SE LCM,  N O,  S LCM,  SW O,  NW O,  )(Sight Water - N/N, Sight Land - N/NE)"),
+					Result: results.Succeeded, Advance: direction.SouthEast, Report: &parser.Report_t{
+						Terrain: terrain.Ocean,
+						Borders: []*parser.Border_t{
+							{Direction: direction.North, Terrain: terrain.Ocean},
+							{Direction: direction.NorthEast, Terrain: terrain.Ocean},
+							{Direction: direction.SouthEast, Terrain: terrain.LowConiferMountains},
+							{Direction: direction.South, Terrain: terrain.LowConiferMountains},
+							{Direction: direction.SouthWest, Terrain: terrain.Ocean},
+							{Direction: direction.NorthWest, Terrain: terrain.Ocean},
+						},
+						FarHorizons: []*parser.FarHorizon_t{
+							{Point: compass.North, IsLand: false},
+							{Point: compass.NorthNorthEast, IsLand: true},
+						},
+					},
+				},
+			},
 		},
 		{id: "900-06.1138f2",
-			line:      `MILD N Fleet Movement: Move SW-PR The Dirty Squirrel-(NE GH,  SE O, N GH, S O, SW O, NW O, )(Sight Land - N/N,Sight Land - N/NE,Sight Land - N/NW,Sight Water - NE/NE,Sight Water - NE/SE,Sight Water - SE/SE,Sight Water - S/SE,Sight Water - S/S,Sight Water - S/SW,Sight Water - SW/SW,Sight Water - SW/NW,Sight Water - NW/NW, )\NW-O, -(NE GH, SE PR, N SW, S O, SW O, NW O, )(Sight Water - N/N,Sight Land - N/NE,Sight Water - N/NW,Sight Land - NE/NE,Sight Land - NE/SE,Sight Water - SE/SE,Sight Water - S/SE,Sight Water - S/S,Sight Water - S/SW,Sight Water - SW/SW,Sight Water - SW/NW,Sight Water - NW/NW, )\NW-O, -(NE SW, SE O, N O, S O, SW O, NW O, )(Sight Water - N/N,Sight Water - N/NE,Sight Water - N/NW,Sight Land - NE/NE,Sight Land - NE/SE,Sight Land - SE/SE,Sight Water - S/SE,Sight Water - S/S,Sight Water - S/SW,Sight Water - SW/SW,Sight Water - SW/NW,Sight Water - NW/NW, )\N-O, -(NE O, SE SW, N O, S O, SW O, NW O, )(Sight Land - N/N,Sight Land - N/NE,Sight Water - N/NW,Sight Land - NE/NE,Sight Land - NE/SE,Sight Land - SE/SE,Sight Water - S/SE,Sight Water - S/S,Sight Water - S/SW,Sight Water - SW/SW,Sight Water - SW/NW,Sight Water - NW/NW, )\N-O,  Lcm NE, N,-(NE LCM, SE O, N LCM, S O, SW O, NW O, )(Sight Land - N/N,Sight Land - N/NE,Sight Water - N/NW,Sight Land - NE/NE,Sight Land - NE/SE,Sight Land - SE/SE,Sight Land - S/SE,Sight Water - S/S,Sight Water - S/SW,Sight Water - SW/SW,Sight Water - SW/NW,Sight Water - NW/NW, )\N-LCM,  Lcm NE, SE,  Ensalada sin Tomate\`,
-			unitId:    "0138f2",
-			moveCount: 3,
+			line:   `MILD N Fleet Movement: Move SW-PR The Dirty Squirrel-(NE GH,  SE O, N GH, S O, SW O, NW O, )(Sight Land - N/N,Sight Land - N/NE,Sight Land - N/NW,Sight Water - NE/NE,Sight Water - NE/SE,Sight Water - SE/SE,Sight Water - S/SE,Sight Water - S/S,Sight Water - S/SW,Sight Water - SW/SW,Sight Water - SW/NW,Sight Water - NW/NW, )\NW-O, -(NE GH, SE PR, N SW, S O, SW O, NW O, )(Sight Water - N/N,Sight Land - N/NE,Sight Water - N/NW,Sight Land - NE/NE,Sight Land - NE/SE,Sight Water - SE/SE,Sight Water - S/SE,Sight Water - S/S,Sight Water - S/SW,Sight Water - SW/SW,Sight Water - SW/NW,Sight Water - NW/NW, )\NW-O, -(NE SW, SE O, N O, S O, SW O, NW O, )(Sight Water - N/N,Sight Water - N/NE,Sight Water - N/NW,Sight Land - NE/NE,Sight Land - NE/SE,Sight Land - SE/SE,Sight Water - S/SE,Sight Water - S/S,Sight Water - S/SW,Sight Water - SW/SW,Sight Water - SW/NW,Sight Water - NW/NW, )\N-O, -(NE O, SE SW, N O, S O, SW O, NW O, )(Sight Land - N/N,Sight Land - N/NE,Sight Water - N/NW,Sight Land - NE/NE,Sight Land - NE/SE,Sight Land - SE/SE,Sight Water - S/SE,Sight Water - S/S,Sight Water - S/SW,Sight Water - SW/SW,Sight Water - SW/NW,Sight Water - NW/NW, )\N-O,  Lcm NE, N,-(NE LCM, SE O, N LCM, S O, SW O, NW O, )(Sight Land - N/N,Sight Land - N/NE,Sight Water - N/NW,Sight Land - NE/NE,Sight Land - NE/SE,Sight Land - SE/SE,Sight Land - S/SE,Sight Water - S/S,Sight Water - S/SW,Sight Water - SW/SW,Sight Water - SW/NW,Sight Water - NW/NW, )\N-LCM,  Lcm NE, SE,  Ensalada sin Tomate\`,
+			unitId: "0138f2",
+			moves: []*parser.Move_t{
+				{LineNo: 1, StepNo: 1, Line: []byte("SW-PR The Dirty Squirrel-(NE GH,  SE O, N GH, S O, SW O, NW O, )(Sight Land - N/N,Sight Land - N/NE,Sight Land - N/NW,Sight Water - NE/NE,Sight Water - NE/SE,Sight Water - SE/SE,Sight Water - S/SE,Sight Water - S/S,Sight Water - S/SW,Sight Water - SW/SW,Sight Water - SW/NW,Sight Water - NW/NW, )"),
+					Result: results.Succeeded, Advance: direction.SouthWest, Report: &parser.Report_t{
+						Terrain: terrain.Prairie,
+						Borders: []*parser.Border_t{
+							{Direction: direction.North, Terrain: terrain.GrassyHills},
+							{Direction: direction.NorthEast, Terrain: terrain.GrassyHills},
+							{Direction: direction.SouthEast, Terrain: terrain.Ocean},
+							{Direction: direction.South, Terrain: terrain.Ocean},
+							{Direction: direction.SouthWest, Terrain: terrain.Ocean},
+							{Direction: direction.NorthWest, Terrain: terrain.Ocean},
+						},
+						FarHorizons: []*parser.FarHorizon_t{
+							{Point: compass.North, IsLand: true},
+							{Point: compass.NorthNorthEast, IsLand: true},
+							{Point: compass.NorthEast, IsLand: false},
+							{Point: compass.East, IsLand: false},
+							{Point: compass.SouthEast, IsLand: false},
+							{Point: compass.SouthSouthEast, IsLand: false},
+							{Point: compass.South, IsLand: false},
+							{Point: compass.SouthSouthWest, IsLand: false},
+							{Point: compass.SouthWest, IsLand: false},
+							{Point: compass.West, IsLand: false},
+							{Point: compass.NorthWest, IsLand: false},
+							{Point: compass.NorthNorthWest, IsLand: true},
+						},
+						Settlements: []*parser.Settlement_t{{Name: "The Dirty Squirrel"}},
+					},
+				},
+				{LineNo: 1, StepNo: 2, Line: []byte("NW-O, -(NE GH, SE PR, N SW, S O, SW O, NW O, )(Sight Water - N/N,Sight Land - N/NE,Sight Water - N/NW,Sight Land - NE/NE,Sight Land - NE/SE,Sight Water - SE/SE,Sight Water - S/SE,Sight Water - S/S,Sight Water - S/SW,Sight Water - SW/SW,Sight Water - SW/NW,Sight Water - NW/NW, )"),
+					Result: results.Succeeded, Advance: direction.NorthWest, Report: &parser.Report_t{
+						Terrain: terrain.Ocean,
+						Borders: []*parser.Border_t{
+							{Direction: direction.North, Terrain: terrain.Swamp},
+							{Direction: direction.NorthEast, Terrain: terrain.GrassyHills},
+							{Direction: direction.SouthEast, Terrain: terrain.Prairie},
+							{Direction: direction.South, Terrain: terrain.Ocean},
+							{Direction: direction.SouthWest, Terrain: terrain.Ocean},
+							{Direction: direction.NorthWest, Terrain: terrain.Ocean},
+						},
+						FarHorizons: []*parser.FarHorizon_t{
+							{Point: compass.North, IsLand: false},
+							{Point: compass.NorthNorthEast, IsLand: true},
+							{Point: compass.NorthEast, IsLand: true},
+							{Point: compass.East, IsLand: true},
+							{Point: compass.SouthEast, IsLand: false},
+							{Point: compass.SouthSouthEast, IsLand: false},
+							{Point: compass.South, IsLand: false},
+							{Point: compass.SouthSouthWest, IsLand: false},
+							{Point: compass.SouthWest, IsLand: false},
+							{Point: compass.West, IsLand: false},
+							{Point: compass.NorthWest, IsLand: false},
+							{Point: compass.NorthNorthWest, IsLand: false},
+						},
+					},
+				},
+				{LineNo: 1, StepNo: 3, Line: []byte("NW-O, -(NE SW, SE O, N O, S O, SW O, NW O, )(Sight Water - N/N,Sight Water - N/NE,Sight Water - N/NW,Sight Land - NE/NE,Sight Land - NE/SE,Sight Land - SE/SE,Sight Water - S/SE,Sight Water - S/S,Sight Water - S/SW,Sight Water - SW/SW,Sight Water - SW/NW,Sight Water - NW/NW, )"),
+					Result: results.Succeeded, Advance: direction.NorthWest, Report: &parser.Report_t{
+						Terrain: terrain.Ocean,
+						Borders: []*parser.Border_t{
+							{Direction: direction.North, Terrain: terrain.Ocean},
+							{Direction: direction.NorthEast, Terrain: terrain.Swamp},
+							{Direction: direction.SouthEast, Terrain: terrain.Ocean},
+							{Direction: direction.South, Terrain: terrain.Ocean},
+							{Direction: direction.SouthWest, Terrain: terrain.Ocean},
+							{Direction: direction.NorthWest, Terrain: terrain.Ocean},
+						},
+						FarHorizons: []*parser.FarHorizon_t{
+							{Point: compass.North, IsLand: false},
+							{Point: compass.NorthNorthEast, IsLand: false},
+							{Point: compass.NorthEast, IsLand: true},
+							{Point: compass.East, IsLand: true},
+							{Point: compass.SouthEast, IsLand: true},
+							{Point: compass.SouthSouthEast, IsLand: false},
+							{Point: compass.South, IsLand: false},
+							{Point: compass.SouthSouthWest, IsLand: false},
+							{Point: compass.SouthWest, IsLand: false},
+							{Point: compass.West, IsLand: false},
+							{Point: compass.NorthWest, IsLand: false},
+							{Point: compass.NorthNorthWest, IsLand: false},
+						},
+					},
+				},
+				{LineNo: 1, StepNo: 4, Line: []byte("N-O, -(NE O, SE SW, N O, S O, SW O, NW O, )(Sight Land - N/N,Sight Land - N/NE,Sight Water - N/NW,Sight Land - NE/NE,Sight Land - NE/SE,Sight Land - SE/SE,Sight Water - S/SE,Sight Water - S/S,Sight Water - S/SW,Sight Water - SW/SW,Sight Water - SW/NW,Sight Water - NW/NW, )"),
+					Result: results.Succeeded, Advance: direction.North, Report: &parser.Report_t{
+						Terrain: terrain.Ocean,
+						Borders: []*parser.Border_t{
+							{Direction: direction.North, Terrain: terrain.Ocean},
+							{Direction: direction.NorthEast, Terrain: terrain.Ocean},
+							{Direction: direction.SouthEast, Terrain: terrain.Swamp},
+							{Direction: direction.South, Terrain: terrain.Ocean},
+							{Direction: direction.SouthWest, Terrain: terrain.Ocean},
+							{Direction: direction.NorthWest, Terrain: terrain.Ocean},
+						},
+						FarHorizons: []*parser.FarHorizon_t{
+							{Point: compass.North, IsLand: true},
+							{Point: compass.NorthNorthEast, IsLand: true},
+							{Point: compass.NorthEast, IsLand: true},
+							{Point: compass.East, IsLand: true},
+							{Point: compass.SouthEast, IsLand: true},
+							{Point: compass.SouthSouthEast, IsLand: false},
+							{Point: compass.South, IsLand: false},
+							{Point: compass.SouthSouthWest, IsLand: false},
+							{Point: compass.SouthWest, IsLand: false},
+							{Point: compass.West, IsLand: false},
+							{Point: compass.NorthWest, IsLand: false},
+							{Point: compass.NorthNorthWest, IsLand: false},
+						},
+					},
+				},
+				{LineNo: 1, StepNo: 5, Line: []byte("N-O,  Lcm NE, N,-(NE LCM, SE O, N LCM, S O, SW O, NW O, )(Sight Land - N/N,Sight Land - N/NE,Sight Water - N/NW,Sight Land - NE/NE,Sight Land - NE/SE,Sight Land - SE/SE,Sight Land - S/SE,Sight Water - S/S,Sight Water - S/SW,Sight Water - SW/SW,Sight Water - SW/NW,Sight Water - NW/NW, )"),
+					Result: results.Succeeded, Advance: direction.North, Report: &parser.Report_t{
+						Terrain: terrain.Ocean,
+						Borders: []*parser.Border_t{
+							{Direction: direction.North, Terrain: terrain.LowConiferMountains},
+							{Direction: direction.NorthEast, Terrain: terrain.LowConiferMountains},
+							{Direction: direction.SouthEast, Terrain: terrain.Ocean},
+							{Direction: direction.South, Terrain: terrain.Ocean},
+							{Direction: direction.SouthWest, Terrain: terrain.Ocean},
+							{Direction: direction.NorthWest, Terrain: terrain.Ocean},
+						},
+						FarHorizons: []*parser.FarHorizon_t{
+							{Point: compass.North, IsLand: true},
+							{Point: compass.NorthNorthEast, IsLand: true},
+							{Point: compass.NorthEast, IsLand: true},
+							{Point: compass.East, IsLand: true},
+							{Point: compass.SouthEast, IsLand: true},
+							{Point: compass.SouthSouthEast, IsLand: true},
+							{Point: compass.South, IsLand: false},
+							{Point: compass.SouthSouthWest, IsLand: false},
+							{Point: compass.SouthWest, IsLand: false},
+							{Point: compass.West, IsLand: false},
+							{Point: compass.NorthWest, IsLand: false},
+							{Point: compass.NorthNorthWest, IsLand: false},
+						},
+					},
+				},
+				{LineNo: 1, StepNo: 6, Line: []byte("N-LCM,  Lcm NE, SE,  Ensalada sin Tomate"),
+					Result: results.Succeeded, Advance: direction.North, Report: &parser.Report_t{
+						Terrain: terrain.LowConiferMountains,
+						Borders: []*parser.Border_t{
+							{Direction: direction.NorthEast, Terrain: terrain.LowConiferMountains},
+							{Direction: direction.SouthEast, Terrain: terrain.LowConiferMountains},
+						},
+						Settlements: []*parser.Settlement_t{{Name: "Ensalada sin Tomate"}},
+					},
+				},
+			},
 		},
 	} {
 		fm, err := parser.ParseFleetMovementLine(tc.id, tc.unitId, 1, []byte(tc.line), tc.debug, tc.debug)
@@ -113,8 +317,26 @@ func TestFleetMovementParse(t *testing.T) {
 			t.Errorf("id %q: parse failed: %v\n", tc.id, err)
 			continue
 		}
-		if tc.moveCount != len(fm) {
-			t.Errorf("id %q: moveCount: want %d, got %d\n", tc.id, tc.moveCount, len(fm))
+		i1, i2 := 0, 0
+		for i1 < len(tc.moves) && i2 < len(fm) {
+			m1, m2 := tc.moves[i1], fm[i2]
+			//t.Errorf("id: %q: step %3d: %q %q\n", tc.id, m1.StepNo, m1.Line, m2.Line)
+			if diff := deep.Equal(m1, m2); diff != nil {
+				for _, d := range diff {
+					t.Errorf("id: %q: step %3d: %s\n", tc.id, m1.StepNo, d)
+				}
+			}
+			i1, i2 = i1+1, i2+1
+		}
+		for i1 < len(tc.moves) {
+			m1 := tc.moves[i1]
+			t.Errorf("id: %q: step %3d: missing step %q\n", tc.id, m1.StepNo, m1.Line)
+			i1 = i1 + 1
+		}
+		for i2 < len(fm) {
+			m2 := fm[i2]
+			t.Errorf("id: %q: step %3d: extra   step %q\n", tc.id, m2.StepNo, m2.Line)
+			i2 = i2 + 1
 		}
 	}
 }
@@ -174,12 +396,12 @@ func TestLocationParse(t *testing.T) {
 
 func TestScoutMovementParse(t *testing.T) {
 	for _, tc := range []struct {
-		id        string
-		line      string
-		unitId    parser.UnitId_t
-		scoutNo   int
-		moveCount int
-		debug     bool
+		id      string
+		line    string
+		unitId  parser.UnitId_t
+		scoutNo int
+		moves   []*parser.Move_t
+		debug   bool
 	}{
 		{id: "900-05.0138e1s1", line: `Scout 1:Scout N-PR,  \N-GH,  \N-RH,  O NW,  N, Find Iron Ore, 1190,  0138c2,  0138c3\ Can't Move on Ocean to N of HEX,  Patrolled and found 1190,  0138c2,  0138c3`, unitId: "0138e1s1", scoutNo: 1},
 		{id: "900-05.0138e1s2", line: `Scout 2:Scout NE-RH,  \N-PR,  \N-CH,  O NE\ Not enough M.P's to move to N into CONIFER HILLS,  Nothing of interest found`, unitId: "0138e1s2", scoutNo: 2},
@@ -198,22 +420,19 @@ func TestScoutMovementParse(t *testing.T) {
 		if tc.scoutNo != sm.No {
 			t.Errorf("id %q: scoutNo: want %d, got %d\n", tc.id, tc.scoutNo, sm.No)
 		}
-		if tc.moveCount != len(sm.Moves) {
-			t.Errorf("id %q: moveCount: want %d, got %d\n", tc.id, tc.moveCount, len(sm.Moves))
+		if len(tc.moves) != len(sm.Moves) {
+			t.Errorf("id %q: moveCount: want %d, got %d\n", tc.id, len(tc.moves), len(sm.Moves))
 		}
 	}
 }
 
 func TestStatusLine(t *testing.T) {
 	for _, tc := range []struct {
-		id      string
-		line    string
-		unitId  parser.UnitId_t
-		moves   []*parser.Move_t
-		terrain terrain.Terrain_e
-		borders []*parser.Border_t
-		units   []parser.UnitId_t
-		debug   bool
+		id     string
+		line   string
+		unitId parser.UnitId_t
+		moves  []*parser.Move_t
+		debug  bool
 	}{
 		{id: "899-12.0138.0138",
 			line:   `0138 Status: PRAIRIE, 0138`,
