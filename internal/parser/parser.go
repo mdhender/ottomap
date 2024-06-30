@@ -15,6 +15,7 @@ import (
 	"github.com/mdhender/ottomap/internal/winds"
 	"log"
 	"regexp"
+	"sort"
 	"unicode"
 	"unicode/utf8"
 )
@@ -718,7 +719,7 @@ func parseMove(id string, unitId UnitId_t, lineNo, stepNo int, line []byte, debu
 				log.Printf("%s: %s: %d: step %d: sub %d: %q\n", id, unitId, lineNo, stepNo, subStepNo, subStep)
 				return nil, fmt.Errorf("terrain must start status")
 			}
-			m.Result = results.StayedInPlace
+			m.Result, m.Still = results.Succeeded, true
 			m.Report.Terrain = v
 		default:
 			log.Printf("%s: %s: %d: step %d: sub %d: %q\n", id, unitId, lineNo, stepNo, subStepNo, subStep)
@@ -726,6 +727,27 @@ func parseMove(id string, unitId UnitId_t, lineNo, stepNo int, line []byte, debu
 			log.Printf("please report this error\n")
 			panic(fmt.Sprintf("unexpected %T", v))
 		}
+	}
+
+	if len(m.Report.Borders) != 0 {
+		sort.Slice(m.Report.Borders, func(i, j int) bool {
+			a, b := m.Report.Borders[i], m.Report.Borders[j]
+			if a.Direction < b.Direction {
+				return true
+			} else if a.Direction == b.Direction {
+				if a.Edge < b.Edge {
+					return true
+				} else if a.Edge == b.Edge {
+					return a.Terrain < b.Terrain
+				}
+			}
+			return false
+		})
+	}
+	if len(m.Report.Encounters) != 0 {
+		sort.Slice(m.Report.Encounters, func(i, j int) bool {
+			return m.Report.Encounters[i] < m.Report.Encounters[j]
+		})
 	}
 
 	return m, nil

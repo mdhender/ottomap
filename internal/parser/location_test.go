@@ -209,55 +209,86 @@ func TestStatusLine(t *testing.T) {
 		id      string
 		line    string
 		unitId  parser.UnitId_t
+		moves   []*parser.Move_t
 		terrain terrain.Terrain_e
 		borders []*parser.Border_t
 		units   []parser.UnitId_t
 		debug   bool
 	}{
 		{id: "899-12.0138.0138",
-			line:    `0138 Status: PRAIRIE, 0138`,
-			unitId:  "0138",
-			terrain: terrain.Prairie,
-			units:   []parser.UnitId_t{"0138"},
+			line:   `0138 Status: PRAIRIE, 0138`,
+			unitId: "0138",
+			moves: []*parser.Move_t{
+				{LineNo: 1, StepNo: 1, Line: []byte("PRAIRIE, 0138"),
+					Result: results.Succeeded, Still: true, Report: &parser.Report_t{
+						Terrain:    terrain.Prairie,
+						Encounters: []parser.UnitId_t{"0138"},
+					},
+				},
+			},
 		},
 		{id: "900-01.0138.0138e1",
-			line:    `0138e1 Status: PRAIRIE,River S, 0138e1`,
-			unitId:  "0138e1",
-			terrain: terrain.Prairie,
-			borders: []*parser.Border_t{
-				{Direction: direction.South, Edge: edges.River},
+			line:   `0138e1 Status: PRAIRIE,River S, 0138e1`,
+			unitId: "0138e1",
+			moves: []*parser.Move_t{
+				{LineNo: 1, StepNo: 1, Line: []byte("PRAIRIE,River S, 0138e1"),
+					Result: results.Succeeded, Still: true, Report: &parser.Report_t{
+						Terrain: terrain.Prairie,
+						Borders: []*parser.Border_t{
+							{Direction: direction.South, Edge: edges.River},
+						},
+						Encounters: []parser.UnitId_t{"0138e1"},
+					},
+				},
 			},
-			units: []parser.UnitId_t{"0138e1"},
 		},
 		{id: "900-02.0138.0138",
-			line:    `0138 Status: PRAIRIE, O S,Ford SE, 2138, 0138`,
-			unitId:  "0138",
-			terrain: terrain.Prairie,
-			borders: []*parser.Border_t{
-				{Direction: direction.South, Terrain: terrain.Ocean},
-				{Direction: direction.SouthEast, Edge: edges.Ford},
+			line:   `0138 Status: PRAIRIE, O S,Ford SE, 2138, 0138`,
+			unitId: "0138",
+			moves: []*parser.Move_t{
+				{LineNo: 1, StepNo: 1, Line: []byte("PRAIRIE, O S,Ford SE, 2138, 0138"),
+					Result: results.Succeeded, Still: true, Report: &parser.Report_t{
+						Terrain: terrain.Prairie,
+						Borders: []*parser.Border_t{
+							{Direction: direction.SouthEast, Edge: edges.Ford},
+							{Direction: direction.South, Terrain: terrain.Ocean},
+						},
+						Encounters: []parser.UnitId_t{"0138", "2138"},
+					},
+				},
 			},
-			units: []parser.UnitId_t{"0138", "2138"},
 		},
 		{id: "900-02.0138.0138e1",
-			line:    `0138e1 Status: PRAIRIE, O NW, 0138e1`,
-			unitId:  "0138e1",
-			terrain: terrain.Prairie,
-			borders: []*parser.Border_t{
-				{Direction: direction.NorthWest, Terrain: terrain.Ocean},
+			line:   `0138e1 Status: PRAIRIE, O NW, 0138e1`,
+			unitId: "0138e1",
+			moves: []*parser.Move_t{
+				{LineNo: 1, StepNo: 1, Line: []byte("PRAIRIE, O NW, 0138e1"),
+					Result: results.Succeeded, Still: true, Report: &parser.Report_t{
+						Terrain: terrain.Prairie,
+						Borders: []*parser.Border_t{
+							{Direction: direction.NorthWest, Terrain: terrain.Ocean},
+						},
+						Encounters: []parser.UnitId_t{"0138e1"},
+					},
+				},
 			},
-			units: []parser.UnitId_t{"0138e1"},
 		},
 		{id: "900-04.0138.0138",
-			line:    `0138 Status: CONIFER HILLS, O SW, NW, S, 2138, 0138c1, 0138, 1138`,
-			unitId:  "0138",
-			terrain: terrain.ConiferHills,
-			borders: []*parser.Border_t{
-				{Direction: direction.NorthWest, Terrain: terrain.Ocean},
-				{Direction: direction.South, Terrain: terrain.Ocean},
-				{Direction: direction.SouthWest, Terrain: terrain.Ocean},
+			line:   `0138 Status: CONIFER HILLS, O SW, NW, S, 2138, 0138c1, 0138, 1138`,
+			unitId: "0138",
+			moves: []*parser.Move_t{
+				{LineNo: 1, StepNo: 1, Line: []byte("CONIFER HILLS, O SW, NW, S, 2138, 0138c1, 0138, 1138"),
+					Result: results.Succeeded, Still: true, Report: &parser.Report_t{
+						Terrain: terrain.ConiferHills,
+						Borders: []*parser.Border_t{
+							{Direction: direction.South, Terrain: terrain.Ocean},
+							{Direction: direction.SouthWest, Terrain: terrain.Ocean},
+							{Direction: direction.NorthWest, Terrain: terrain.Ocean},
+						},
+						Encounters: []parser.UnitId_t{"0138", "0138c1", "1138", "2138"},
+					},
+				},
 			},
-			units: []parser.UnitId_t{"0138", "0138c1", "1138", "2138"},
 		},
 	} {
 		sl, err := parser.ParseStatusLine(tc.id, tc.unitId, 1, []byte(tc.line), tc.debug, tc.debug)
@@ -265,41 +296,26 @@ func TestStatusLine(t *testing.T) {
 			t.Errorf("id %q: parse failed: %v\n", tc.id, err)
 			continue
 		}
-		if len(sl) != 1 {
-			t.Errorf("id %q: moveCount: want 1, got %d\n", tc.id, len(sl))
-			if len(sl) == 0 {
-				continue
+		i1, i2 := 0, 0
+		for i1 < len(tc.moves) && i2 < len(sl) {
+			m1, m2 := tc.moves[i1], sl[i2]
+			//t.Errorf("id: %q: step %3d: %d %q %d %q\n", tc.id, m1.StepNo, i1, m1.Line, i2, m2.Line)
+			if diff := deep.Equal(m1, m2); diff != nil {
+				for _, d := range diff {
+					t.Errorf("id: %q: step %3d: %s\n", tc.id, m1.StepNo, d)
+				}
 			}
+			i1, i2 = i1+1, i2+1
 		}
-		move := sl[0]
-		if results.StayedInPlace != move.Result {
-			t.Errorf("id %q: result: want %q, got %q\n", tc.id, results.StayedInPlace, move.Result)
+		for i1 < len(tc.moves) {
+			m1 := tc.moves[i1]
+			t.Errorf("id: %q: step %3d: missing step %q\n", tc.id, m1.StepNo, m1.Line)
+			i1 = i1 + 1
 		}
-		report := move.Report
-		if tc.terrain != report.Terrain {
-			t.Errorf("id %q: terrain: want %q, got %q\n", tc.id, tc.terrain, report.Terrain)
-		}
-		// borders
-		if len(tc.borders) != len(report.Borders) {
-			t.Errorf("id %q: borders: want %d, got %d\n", tc.id, len(tc.borders), len(report.Borders))
-		}
-		b1, b2 := diffBorderSets(tc.borders, report.Borders)
-		for _, b := range b1 {
-			t.Errorf("id %q: borders: want %q, got nil\n", tc.id, b)
-		}
-		for _, b := range b2 {
-			t.Errorf("id %q: borders: want nil, got %q\n", tc.id, b)
-		}
-		// encounters
-		if len(tc.units) != len(report.Encounters) {
-			t.Errorf("id %q: units: want %d, got %d\n", tc.id, len(tc.units), len(report.Encounters))
-		}
-		u1, u2 := diffUnitSets(tc.units, report.Encounters)
-		for _, u := range u1 {
-			t.Errorf("id %q: units: want %q, got nil\n", tc.id, u)
-		}
-		for _, u := range u2 {
-			t.Errorf("id %q: units: want nil, got %q\n", tc.id, u)
+		for i2 < len(sl) {
+			m2 := sl[i2]
+			t.Errorf("id: %q: step %3d: extra   step %q\n", tc.id, m2.StepNo, m2.Line)
+			i2 = i2 + 1
 		}
 	}
 }
@@ -402,26 +418,26 @@ func TestTribeMovementParse(t *testing.T) {
 			t.Errorf("id %q: parse failed: %v\n", tc.id, err)
 			continue
 		}
-		for i1, i2 := 0, 0; i1 < len(tc.moves) || i2 < len(tm); i1, i2 = i1+1, i2+1 {
-			var m1, m2 *parser.Move_t
-			if i1 < len(tc.moves) {
-				m1 = tc.moves[i1]
-			}
-			if i2 < len(tm) {
-				m2 = tm[i2]
-			}
-			if m1 != nil && m2 != nil {
-				//t.Errorf("id: %q: step %3d: %d %q %d %q\n", tc.id, m1.StepNo, i1, m1.Line, i2, m2.Line)
-				if diff := deep.Equal(m1, m2); diff != nil {
-					for _, d := range diff {
-						t.Errorf("id: %q: step %3d: %s\n", tc.id, m1.StepNo, d)
-					}
+		i1, i2 := 0, 0
+		for i1 < len(tc.moves) || i2 < len(tm) {
+			m1, m2 := tc.moves[i1], tm[i2]
+			//t.Errorf("id: %q: step %3d: %d %q %d %q\n", tc.id, m1.StepNo, i1, m1.Line, i2, m2.Line)
+			if diff := deep.Equal(m1, m2); diff != nil {
+				for _, d := range diff {
+					t.Errorf("id: %q: step %3d: %s\n", tc.id, m1.StepNo, d)
 				}
-			} else if m1 != nil && m2 == nil {
-				t.Errorf("id: %q: step %3d: missing step %q\n", tc.id, m1.StepNo, m1.Line)
-			} else if m1 == nil && m2 != nil {
-				t.Errorf("id: %q: step %3d: extra   step %q\n", tc.id, m2.StepNo, m2.Line)
 			}
+			i1, i2 = i1+1, i2+1
+		}
+		for i1 < len(tc.moves) {
+			m1 := tc.moves[i1]
+			t.Errorf("id: %q: step %3d: missing step %q\n", tc.id, m1.StepNo, m1.Line)
+			i1 = i1 + 1
+		}
+		for i2 < len(tm) {
+			m2 := tm[i2]
+			t.Errorf("id: %q: step %3d: extra   step %q\n", tc.id, m2.StepNo, m2.Line)
+			i2 = i2 + 1
 		}
 	}
 }
