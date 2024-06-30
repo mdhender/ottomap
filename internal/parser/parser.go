@@ -352,6 +352,7 @@ func ParseScoutMovementLine(id string, unitId UnitId_t, lineNo int, line []byte,
 
 func ParseStatusLine(id string, unitId UnitId_t, lineNo int, line []byte, debugSteps, debugNodes bool) ([]*Move_t, error) {
 	if va, err := Parse(id, line, Entrypoint("StatusLine")); err != nil {
+		log.Printf("status %v\n", err)
 		return nil, err
 	} else if mt, ok := va.(Movement_t); !ok {
 		log.Printf("%s: %s: %d: %q\n", id, unitId, lineNo, line)
@@ -365,14 +366,7 @@ func ParseStatusLine(id string, unitId UnitId_t, lineNo int, line []byte, debugS
 		log.Printf("%s: %s: %d: %q\n", id, unitId, lineNo, line)
 	}
 
-	// remove the prefix and trim the line
-	_, steps, ok := bytes.Cut(line, []byte{':'})
-	if !ok {
-		log.Printf("%s: %s: %d: %q\n", id, unitId, lineNo, line)
-		return nil, fmt.Errorf("expected 'Status:', found '%s'", slug(line, 8))
-	}
-
-	return parseMovementLine(id, unitId, lineNo, steps, debugSteps, debugNodes)
+	return parseMovementLine(id, unitId, lineNo, line, debugSteps, debugNodes)
 }
 
 func ParseTribeFollowsLine(id string, unitId UnitId_t, lineNo int, line []byte, debug bool) (*Move_t, error) {
@@ -515,24 +509,28 @@ func parseMovementLine(id string, unitId UnitId_t, lineNo int, line []byte, debu
 			if debugSteps {
 				log.Printf("%s: %s: %d: step %d: deck %q\n", id, unitId, lineNo, move.StepNo, slug(innerRing, 44))
 			}
-			log.Printf("%s: %s: %d: step %d: fleet not implemented\n", id, unitId, lineNo, move.StepNo)
 
-			mt, err := parseMove(id, unitId, move.LineNo, move.StepNo, thisHex, debugSteps, debugNodes)
-			if err != nil {
-				return nil, err
-			}
-			if mt.Report == nil {
-				log.Printf("%s: %s: %d: step %d: deck %q\n", id, unitId, lineNo, move.StepNo, slug(innerRing, 44))
-				log.Printf("please report this error")
-				panic("innerRing returned no report")
-			} else if len(mt.Report.Borders) != 6 {
-				log.Printf("%s: %s: %d: step %d: deck %q\n", id, unitId, lineNo, move.StepNo, slug(innerRing, 44))
-				log.Printf("%s: %s: %d: step %d: observations %d\n", id, unitId, lineNo, move.StepNo, len(mt.Report.Borders))
-				log.Printf("please report this error")
-				panic("innerRing expected six observations")
-			}
-			for _, border := range mt.Report.Borders {
-				move.Report.mergeBorders(border)
+			for no, obs := range bytes.Split(innerRing, []byte{','}) {
+				obs = bytes.TrimSpace(obs)
+				if len(obs) == 0 {
+					continue
+				}
+				if va, err := Parse(id, obs, Entrypoint("DeckObservation")); err != nil {
+					log.Printf("%s: %s: %d: step %d: deck %q\n", id, unitId, lineNo, move.StepNo, slug(innerRing, 44))
+					log.Printf("%s: %s: %d: step %d: deck %d: obs %q\n", id, unitId, lineNo, move.StepNo, no+1, obs)
+					return nil, err
+				} else if deckObservation, ok := va.(NearHorizon_t); !ok {
+					log.Printf("%s: %s: %d: step %d: deck %q\n", id, unitId, lineNo, move.StepNo, slug(innerRing, 44))
+					log.Printf("%s: %s: %d: step %d: deck %d: obs %q\n", id, unitId, lineNo, move.StepNo, no+1, obs)
+					log.Printf("error: want NearHorizon_t, got %T\n", va)
+					log.Printf("please report this error\n")
+					panic(fmt.Sprintf("unexpected type %T", va))
+				} else {
+					move.Report.mergeBorders(&Border_t{
+						Direction: deckObservation.Point,
+						Terrain:   deckObservation.Terrain,
+					})
+				}
 			}
 		}
 

@@ -4,7 +4,11 @@ package parser_test
 
 import (
 	"github.com/mdhender/ottomap/internal/compass"
+	"github.com/mdhender/ottomap/internal/direction"
+	"github.com/mdhender/ottomap/internal/edges"
 	"github.com/mdhender/ottomap/internal/parser"
+	"github.com/mdhender/ottomap/internal/results"
+	"github.com/mdhender/ottomap/internal/terrain"
 	"testing"
 )
 
@@ -194,28 +198,107 @@ func TestScoutMovementParse(t *testing.T) {
 			t.Errorf("id %q: scoutNo: want %d, got %d\n", tc.id, tc.scoutNo, sm.No)
 		}
 		if tc.moveCount != len(sm.Moves) {
-			t.Errorf("id %q: scoutNo: want %d, got %d\n", tc.id, tc.scoutNo, len(sm.Moves))
+			t.Errorf("id %q: moveCount: want %d, got %d\n", tc.id, tc.moveCount, len(sm.Moves))
 		}
 	}
 }
 
 func TestStatusLine(t *testing.T) {
 	for _, tc := range []struct {
-		id        string
-		line      string
-		unitId    parser.UnitId_t
-		moveCount int
-		debug     bool
+		id      string
+		line    string
+		unitId  parser.UnitId_t
+		terrain terrain.Terrain_e
+		borders []*parser.Border_t
+		units   []parser.UnitId_t
+		debug   bool
 	}{
-		{id: "899-12.0138.0138", line: `0138 Status: PRAIRIE, 0138`, unitId: "0138"},
+		{id: "899-12.0138.0138",
+			line:    `0138 Status: PRAIRIE, 0138`,
+			unitId:  "0138",
+			terrain: terrain.Prairie,
+			units:   []parser.UnitId_t{"0138"},
+		},
+		{id: "900-01.0138.0138e1",
+			line:    `0138e1 Status: PRAIRIE,River S, 0138e1`,
+			unitId:  "0138e1",
+			terrain: terrain.Prairie,
+			borders: []*parser.Border_t{
+				{Direction: direction.South, Edge: edges.River},
+			},
+			units: []parser.UnitId_t{"0138e1"},
+		},
+		{id: "900-02.0138.0138",
+			line:    `0138 Status: PRAIRIE, O S,Ford SE, 2138, 0138`,
+			unitId:  "0138",
+			terrain: terrain.Prairie,
+			borders: []*parser.Border_t{
+				{Direction: direction.South, Terrain: terrain.Ocean},
+				{Direction: direction.SouthEast, Edge: edges.Ford},
+			},
+			units: []parser.UnitId_t{"0138", "2138"},
+		},
+		{id: "900-02.0138.0138e1",
+			line:    `0138e1 Status: PRAIRIE, O NW, 0138e1`,
+			unitId:  "0138e1",
+			terrain: terrain.Prairie,
+			borders: []*parser.Border_t{
+				{Direction: direction.NorthWest, Terrain: terrain.Ocean},
+			},
+			units: []parser.UnitId_t{"0138e1"},
+		},
+		{id: "900-04.0138.0138",
+			line:    `0138 Status: CONIFER HILLS, O SW, NW, S, 2138, 0138c1, 0138, 1138`,
+			unitId:  "0138",
+			terrain: terrain.ConiferHills,
+			borders: []*parser.Border_t{
+				{Direction: direction.NorthWest, Terrain: terrain.Ocean},
+				{Direction: direction.South, Terrain: terrain.Ocean},
+				{Direction: direction.SouthWest, Terrain: terrain.Ocean},
+			},
+			units: []parser.UnitId_t{"0138", "0138c1", "1138", "2138"},
+		},
 	} {
 		sl, err := parser.ParseStatusLine(tc.id, tc.unitId, 1, []byte(tc.line), tc.debug, tc.debug)
 		if err != nil {
 			t.Errorf("id %q: parse failed: %v\n", tc.id, err)
 			continue
 		}
-		if tc.moveCount != len(sl) {
-			t.Errorf("id %q: moveCount: want %d, got %d\n", tc.id, tc.moveCount, len(sl))
+		if len(sl) != 1 {
+			t.Errorf("id %q: moveCount: want 1, got %d\n", tc.id, len(sl))
+			if len(sl) == 0 {
+				continue
+			}
+		}
+		move := sl[0]
+		if results.StayedInPlace != move.Result {
+			t.Errorf("id %q: result: want %q, got %q\n", tc.id, results.StayedInPlace, move.Result)
+		}
+		report := move.Report
+		if tc.terrain != report.Terrain {
+			t.Errorf("id %q: terrain: want %q, got %q\n", tc.id, tc.terrain, report.Terrain)
+		}
+		// borders
+		if len(tc.borders) != len(report.Borders) {
+			t.Errorf("id %q: borders: want %d, got %d\n", tc.id, len(tc.borders), len(report.Borders))
+		}
+		b1, b2 := diffBorderSets(tc.borders, report.Borders)
+		for _, b := range b1 {
+			t.Errorf("id %q: borders: want %q, got nil\n", tc.id, b)
+		}
+		for _, b := range b2 {
+			t.Errorf("id %q: borders: want nil, got %q\n", tc.id, b)
+		}
+		// encounters
+		if len(tc.units) != len(report.Encounters) {
+			t.Errorf("id %q: units: want %d, got %d\n", tc.id, len(tc.units), len(report.Encounters))
+		}
+		u1, u2 := diffUnitSets(tc.units, report.Encounters)
+		for _, u := range u1 {
+			t.Errorf("id %q: units: want %q, got nil\n", tc.id, u)
+		}
+		for _, u := range u2 {
+			t.Errorf("id %q: units: want nil, got %q\n", tc.id, u)
 		}
 	}
 }
@@ -334,4 +417,71 @@ func TestTurnInfoParse(t *testing.T) {
 			}
 		}
 	}
+}
+
+func diffBorderSets(set1, set2 []*parser.Border_t) ([]*parser.Border_t, []*parser.Border_t) {
+	map1 := map[string]*parser.Border_t{}
+	map2 := map[string]*parser.Border_t{}
+
+	// Fill map1 with elements from set1
+	for _, i := range set1 {
+		map1[i.String()] = i
+	}
+
+	// Fill map2 with elements from set2
+	for _, i := range set2 {
+		map2[i.String()] = i
+	}
+
+	// Find elements in set1 but not in set2
+	var onlyInSet1 []*parser.Border_t
+	for k, v := range map1 {
+		if _, found := map2[k]; !found {
+			onlyInSet1 = append(onlyInSet1, v)
+		}
+	}
+
+	// Find elements in set2 but not in set1
+	var onlyInSet2 []*parser.Border_t
+	for k, v := range map2 {
+		if _, found := map1[k]; !found {
+			onlyInSet2 = append(onlyInSet2, v)
+		}
+	}
+
+	return onlyInSet1, onlyInSet2
+}
+
+func diffUnitSets(set1, set2 []parser.UnitId_t) ([]parser.UnitId_t, []parser.UnitId_t) {
+	// Create maps to store the presence of UnitIDs in each slice
+	map1 := map[parser.UnitId_t]bool{}
+	map2 := map[parser.UnitId_t]bool{}
+
+	// Fill map1 with elements from set1
+	for _, id := range set1 {
+		map1[id] = true
+	}
+
+	// Fill map2 with elements from set2
+	for _, id := range set2 {
+		map2[id] = true
+	}
+
+	// Find elements in set1 but not in set2
+	var onlyInSet1 []parser.UnitId_t
+	for id := range map1 {
+		if _, found := map2[id]; !found {
+			onlyInSet1 = append(onlyInSet1, id)
+		}
+	}
+
+	// Find elements in set2 but not in set1
+	var onlyInSet2 []parser.UnitId_t
+	for id := range map2 {
+		if _, found := map1[id]; !found {
+			onlyInSet2 = append(onlyInSet2, id)
+		}
+	}
+
+	return onlyInSet1, onlyInSet2
 }

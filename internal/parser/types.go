@@ -168,6 +168,13 @@ type Border_t struct {
 	Terrain terrain.Terrain_e
 }
 
+func (b *Border_t) String() string {
+	if b == nil {
+		return "nil"
+	}
+	return fmt.Sprintf("(%s %s %s)", b.Direction, b.Edge, b.Terrain)
+}
+
 // DirectionTerrain_t is the first component returned from a successful step.
 type DirectionTerrain_t struct {
 	Direction direction.Direction_e
@@ -212,6 +219,11 @@ func (f *FoundItem_t) String() string {
 type Longhouse_t struct {
 	Id       string
 	Capacity int
+}
+
+type NearHorizon_t struct {
+	Point   direction.Direction_e
+	Terrain terrain.Terrain_e
 }
 
 // Neighbor_t is the terrain in a neighboring hex that the unit from the current hex.

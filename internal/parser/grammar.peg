@@ -67,6 +67,13 @@ CrowsNestObservation <- cs:CROWSIGHTING SP "-" SP cp:COMPASSPOINT EOF{
     }, nil
 }
 
+DeckObservation <- d:DIRECTION SP t:TERRAIN_CODE {
+    return NearHorizon_t{
+        Point: d.(direction.Direction_e),
+        Terrain: t.(terrain.Terrain_e),
+    }, nil
+}
+
 EdgeType <- "Ford" {
     return edges.Ford, nil
 } / "Pass" {
