@@ -99,8 +99,9 @@ var cmdSammy = &cobra.Command{
 			if err != nil {
 				log.Fatal(err)
 			}
-			allMoves = append(allMoves, mt...)
-			log.Printf("%q: parsed %6d moves in %v\n", i.Id, len(mt), time.Since(started))
+			_, _ = started, mt
+			//allMoves = append(allMoves, mt...)
+			//log.Printf("%q: parsed %6d moves in %v\n", i.Id, len(mt), time.Since(started))
 		}
 		log.Printf("parsed %d inputs in %v\n", len(inputs), time.Since(started))
 

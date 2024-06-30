@@ -16,12 +16,12 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/mdhender/ottomap/domain"
 	"github.com/mdhender/ottomap/internal/compass"
 	"github.com/mdhender/ottomap/internal/direction"
 	"github.com/mdhender/ottomap/internal/edges"
 	"github.com/mdhender/ottomap/internal/items"
 	"github.com/mdhender/ottomap/internal/resources"
+	"github.com/mdhender/ottomap/internal/terrain"
 	"github.com/mdhender/ottomap/internal/unit_movement"
 	"github.com/mdhender/ottomap/internal/winds"
 )
@@ -34,11 +34,6 @@ type Date_t struct {
 
 func (d Date_t) IsZero() bool {
     return d == Date_t{}
-}
-
-type CrowsNestObservation_t struct {
-    Point   compass.Point_e
-    Terrain string
 }
 
 type TurnInfo_t struct {
@@ -66,9 +61,9 @@ Noop <- EOF {
 }
 
 CrowsNestObservation <- cs:CROWSIGHTING SP "-" SP cp:COMPASSPOINT EOF{
-    return CrowsNestObservation_t{
+    return FarHorizon_t{
         Point: cp.(compass.Point_e),
-        Terrain: cs.(string),
+        IsLand: cs.(string) == "land",
     }, nil
 }
 
@@ -137,19 +132,19 @@ Longhouse <- szi:(DIGIT+) SP+ "Longhouse" SP+ idi:(LETTER DIGIT+) {
 }
 
 ObviousNeighboringTerrainCode <- "Lcm" {
-    return domain.TLowConiferMountains, nil
+    return terrain.LowConiferMountains, nil
 } / "LJm" {
-    return domain.TLowJungleMountains, nil
+    return terrain.LowJungleMountains, nil
 } / "L" {
-    return domain.TLake, nil
+    return terrain.Lake, nil
 } / "O" {
-    return domain.TOcean, nil
+    return terrain.Ocean, nil
 }
 
 ProhibitedBy <- "Lake" {
-    return domain.TLake, nil
+    return terrain.Lake, nil
 } / "Ocean" {
-    return domain.TOcean, nil
+    return terrain.Ocean, nil
 }
 
 ScoutMovement <- "Scout" SP no:[1-8] ":" _ results:ToEOL EOF {
@@ -191,12 +186,12 @@ StatusLine <- u:UNIT_ID SP "Status:" _ results:ToEOL EOF {
 Step <- d:DIRECTION "-" t:TERRAIN_CODE EOF {
     return DirectionTerrain_t{
         Direction: d.(direction.Direction_e),
-        Terrain:   t.(domain.Terrain),
+        Terrain:   t.(terrain.Terrain_e),
     }, nil
 } / [Cc] "an't Move on" SP t:ProhibitedBy SP "to" SP d:DIRECTION SP "of HEX" EOF {
     return &ProhibitedFrom_t{
         Direction: d.(direction.Direction_e),
-        Terrain:   t.(domain.Terrain),
+        Terrain:   t.(terrain.Terrain_e),
     }, nil
 } / "Group did not return" EOF {
     return DidNotReturn_t{}, nil
@@ -219,7 +214,7 @@ Step <- d:DIRECTION "-" t:TERRAIN_CODE EOF {
 } / [Nn] "ot enough M.P's to move to" SP d:DIRECTION SP "into" SP t:TERRAIN EOF {
     return &Exhausted_t{
         Direction: d.(direction.Direction_e),
-        Terrain:   t.(domain.Terrain),
+        Terrain:   t.(terrain.Terrain_e),
     }, nil
 } / [Nn] "othing of interest found" EOF {
     return FoundNothing_t{}, nil
@@ -235,7 +230,7 @@ Step <- d:DIRECTION "-" t:TERRAIN_CODE EOF {
     }
     return found, nil
 } / t:ObviousNeighboringTerrainCode SP+ d:DIRECTION sdi:SpaceDirection* EOF {
-    kind := t.(domain.Terrain)
+    kind := t.(terrain.Terrain_e)
     neighbors := []*Neighbor_t{{
         Direction: d.(direction.Direction_e),
         Terrain:   kind,
@@ -387,9 +382,9 @@ COORDS <- "N/A" {
 }
 
 CROWSIGHTING <- "Sight Land" {
-    return "Land", nil
+    return "land", nil
 } / "Sight Water" {
-    return "Water", nil
+    return "water", nil
 }
 
 DIRECTION <- "NE" {
@@ -597,91 +592,91 @@ RESOURCE <- "Coal" {
 }
 
 TERRAIN <- "ALPS" {
-    return domain.TAlps, nil
+    return terrain.Alps, nil
 } / "ARID TUNDRA" {
-    return domain.TAridTundra, nil
+    return terrain.AridTundra, nil
 } / "ARID" {
-    return domain.TAridHills, nil
+    return terrain.AridHills, nil
 } / "BRUSH HILLS" {
-    return domain.TBrushHills, nil
+    return terrain.BrushHills, nil
 } / "BRUSH" {
-    return domain.TBrush, nil
+    return terrain.Brush, nil
 } / "CONIFER HILLS" {
-    return domain.TConiferHills, nil
+    return terrain.ConiferHills, nil
 } / "DECIDUOUS FOREST" {
-    return domain.TDeciduous, nil
+    return terrain.Deciduous, nil
 } / "DECIDUOUS HILLS" {
-    return domain.TDeciduousHills, nil
+    return terrain.DeciduousHills, nil
 } / "DECIDUOUS" {
-    return domain.TDeciduous, nil
+    return terrain.Deciduous, nil
 } / "DESERT" {
-    return domain.TDesert, nil
+    return terrain.Desert, nil
 } / "GRASSY HILLS PLATEAU" {
-    return domain.TGrassyHillsPlateau, nil
+    return terrain.GrassyHillsPlateau, nil
 } / "GRASSY HILLS" {
-    return domain.TGrassyHills, nil
+    return terrain.GrassyHills, nil
 } / "JUNGLE HILLS" {
-    return domain.TJungleHills, nil
+    return terrain.JungleHills, nil
 } / "JUNGLE" {
-    return domain.TJungle, nil
+    return terrain.Jungle, nil
 } / "LAKE" {
-    return domain.TLake, nil
+    return terrain.Lake, nil
 } / "LOW ARID MOUNTAINS" {
-    return domain.TLowAridMountains, nil
+    return terrain.LowAridMountains, nil
 } / "LOW CONIFER MOUNTAINS" {
-    return domain.TLowConiferMountains, nil
+    return terrain.LowConiferMountains, nil
 } / "LOW JUNGLE MOUNTAINS" {
-    return domain.TLowJungleMountains, nil
+    return terrain.LowJungleMountains, nil
 } / "LOW SNOWY MOUNTAINS" {
-    return domain.TLowSnowyMountains, nil
+    return terrain.LowSnowyMountains, nil
 } / "LOW VOLCANIC MOUNTAINS" {
-    return domain.TLowVolcanicMountains, nil
+    return terrain.LowVolcanicMountains, nil
 } / "OCEAN" {
-    return domain.TOcean, nil
+    return terrain.Ocean, nil
 } / "POLAR ICE" {
-    return domain.TPolarIce, nil
+    return terrain.PolarIce, nil
 } / "PRAIRIE PLATEAU" {
-    return domain.TPrairiePlateau, nil
+    return terrain.PrairiePlateau, nil
 } / "PRAIRIE" {
-    return domain.TPrairie, nil
+    return terrain.Prairie, nil
 } / "ROCKY HILLS" {
-    return domain.TRockyHills, nil
+    return terrain.RockyHills, nil
 } / "SNOWY HILLS" {
-    return domain.TSnowyHills, nil
+    return terrain.SnowyHills, nil
 } / "SWAMP" {
-    return domain.TSwamp, nil
+    return terrain.Swamp, nil
 } / "TUNDRA" {
-    return domain.TTundra, nil
+    return terrain.Tundra, nil
 }
 
-TERRAIN_CODE <- "ALPS" {    return domain.TAlps, nil
-} / "GHP" { return domain.TGrassyHillsPlateau, nil
-} / "HSM" { return domain.TAridTundra, nil
-} / "LAM" { return domain.TLowAridMountains, nil
-} / "LCM" { return domain.TLowConiferMountains, nil
-} / "LJM" { return domain.TLowJungleMountains, nil
-} / "LSM" { return domain.TLowSnowyMountains, nil
-} / "LVM" { return domain.TLowVolcanicMountains, nil
-} / "PPR" { return domain.TPrairiePlateau, nil
-} / "AH" { return domain.TAridHills, nil
-} / "AR" { return domain.TAridTundra, nil
-} / "BH" { return domain.TBrushHills, nil
-} / "BR" { return domain.TBrush, nil
-} / "CH" { return domain.TConiferHills, nil
-} / "DE" { return domain.TDesert, nil
-} / "DH" { return domain.TDeciduousHills, nil
-} / "GH" { return domain.TGrassyHills, nil
-} / "JG" { return domain.TJungle, nil
-} / "JH" { return domain.TJungleHills, nil
-} / "PI" { return domain.TPolarIce, nil
-} / "PR" { return domain.TPrairie, nil
-} / "RH" { return domain.TRockyHills, nil
-} / "SH" { return domain.TSnowyHills, nil
-} / "SW" { return domain.TSwamp, nil
-} / "TU" { return domain.TTundra, nil
-} / "D" { return domain.TDeciduous, nil
-} / "L" { return domain.TLake, nil
-} / "O" { return domain.TOcean, nil
+TERRAIN_CODE <- "ALPS" {    return terrain.Alps, nil
+} / "GHP" { return terrain.GrassyHillsPlateau, nil
+} / "HSM" { return terrain.AridTundra, nil
+} / "LAM" { return terrain.LowAridMountains, nil
+} / "LCM" { return terrain.LowConiferMountains, nil
+} / "LJM" { return terrain.LowJungleMountains, nil
+} / "LSM" { return terrain.LowSnowyMountains, nil
+} / "LVM" { return terrain.LowVolcanicMountains, nil
+} / "PPR" { return terrain.PrairiePlateau, nil
+} / "AH" { return terrain.AridHills, nil
+} / "AR" { return terrain.AridTundra, nil
+} / "BH" { return terrain.BrushHills, nil
+} / "BR" { return terrain.Brush, nil
+} / "CH" { return terrain.ConiferHills, nil
+} / "DE" { return terrain.Desert, nil
+} / "DH" { return terrain.DeciduousHills, nil
+} / "GH" { return terrain.GrassyHills, nil
+} / "JG" { return terrain.Jungle, nil
+} / "JH" { return terrain.JungleHills, nil
+} / "PI" { return terrain.PolarIce, nil
+} / "PR" { return terrain.Prairie, nil
+} / "RH" { return terrain.RockyHills, nil
+} / "SH" { return terrain.SnowyHills, nil
+} / "SW" { return terrain.Swamp, nil
+} / "TU" { return terrain.Tundra, nil
+} / "D" { return terrain.Deciduous, nil
+} / "L" { return terrain.Lake, nil
+} / "O" { return terrain.Ocean, nil
 }
 
 UNIT_ID <- DIGIT DIGIT DIGIT DIGIT ([cefg] [1-9])? {

@@ -4,6 +4,7 @@ package parser
 
 import (
 	"fmt"
+	"github.com/mdhender/ottomap/internal/compass"
 	"github.com/mdhender/ottomap/internal/direction"
 	"github.com/mdhender/ottomap/internal/edges"
 	"github.com/mdhender/ottomap/internal/items"
@@ -17,18 +18,17 @@ import (
 
 // Turn_t represents a single turn identified by year and month.
 type Turn_t struct {
-	Id    string // YYYY-MM
 	Year  int
 	Month int
 
 	// UnitMoves holds the units that moved in this turn
-	UnitMoves map[string]*Moves_t
+	UnitMoves map[UnitId_t]*Moves_t
 }
 
 // Moves_t represents the results for a unit that moves and reports in a turn.
 // There will be one instance of this struct for each turn the unit moves in.
 type Moves_t struct {
-	Id int // unit that is moving
+	Id UnitId_t // unit that is moving
 
 	// all the moves made this turn
 	Moves []*Move_t
@@ -53,7 +53,7 @@ type Moves_t struct {
 type Move_t struct {
 	// the types of movement that a unit can make.
 	Advance direction.Direction_e // set only if the unit is advancing
-	Follows string                // id of the unit being followed
+	Follows UnitId_t              // id of the unit being followed
 	GoesTo  string                // hex teleporting to
 	Still   bool                  // true if the unit is not moving (garrison) or a status entry
 
@@ -61,6 +61,10 @@ type Move_t struct {
 	Result results.Result_e
 
 	Report *Report_t // all observations made by the unit at the end of this move
+
+	LineNo int
+	StepNo int
+	Line   []byte
 }
 
 // Report_t represents the observations made by a unit.
@@ -71,10 +75,88 @@ type Report_t struct {
 	Borders []*Border_t
 
 	// transient items in this hex
-	Encounters  []string // other units in the hex
+	Encounters  []UnitId_t // other units in the hex
 	Items       []*FoundItem_t
 	Resources   []resources.Resource_e
 	Settlements []*Settlement_t
+	FarHorizons []*FarHorizon_t
+}
+
+// mergeBorders adds a new border to the list if it's not already in the list
+func (r *Report_t) mergeBorders(b *Border_t) bool {
+	for _, l := range r.Borders {
+		if l.Direction == b.Direction && l.Edge == b.Edge && l.Terrain == b.Terrain {
+			return false
+		}
+	}
+	r.Borders = append(r.Borders, b)
+	return true
+}
+
+// mergeEncounters adds a new encounter to the list if it's not already in the list
+func (r *Report_t) mergeEncounters(e UnitId_t) bool {
+	for _, l := range r.Encounters {
+		if l == e {
+			return false
+		}
+	}
+	r.Encounters = append(r.Encounters, e)
+	return true
+}
+
+// mergeFarHorizons adds a new far horizon observation to the list if it's not already in the list
+func (r *Report_t) mergeFarHorizons(p compass.Point_e, isLand bool) bool {
+	for _, l := range r.FarHorizons {
+		if l.Point == p && l.IsLand == isLand {
+			return false
+		}
+	}
+	r.FarHorizons = append(r.FarHorizons, &FarHorizon_t{Point: p, IsLand: isLand})
+	return true
+}
+
+// mergeItems adds an item to the list. If it is already in the list, the quantity is updated.
+func (r *Report_t) mergeItems(list []*FoundItem_t, f *FoundItem_t) []*FoundItem_t {
+	if f == nil {
+		return list
+	} else if list == nil {
+		return []*FoundItem_t{f}
+	}
+	for _, l := range list {
+		if l.Item != f.Item {
+			l.Quantity += f.Quantity
+			return list
+		}
+	}
+	return append(list, f)
+}
+
+// mergeResources adds a new resource to the list if it's not already in the list
+func (r *Report_t) mergeResources(rs resources.Resource_e) bool {
+	if rs == resources.None {
+		return false
+	}
+	for _, l := range r.Resources {
+		if l == rs {
+			return false
+		}
+	}
+	r.Resources = append(r.Resources, rs)
+	return true
+}
+
+// mergeSettlements adds a new settlement to the list if it's not already in the list
+func (r *Report_t) mergeSettlements(s *Settlement_t) bool {
+	if s == nil {
+		return false
+	}
+	for _, l := range r.Settlements {
+		if strings.ToLower(l.Name) == strings.ToLower(s.Name) {
+			return false
+		}
+	}
+	r.Settlements = append(r.Settlements, s)
+	return true
 }
 
 // Border_t represents details about the hex border.
@@ -84,6 +166,34 @@ type Border_t struct {
 	Edge edges.Edge_e
 	// Terrain is set if the neighbor is observable from this hex
 	Terrain terrain.Terrain_e
+}
+
+// DirectionTerrain_t is the first component returned from a successful step.
+type DirectionTerrain_t struct {
+	Direction direction.Direction_e
+	Terrain   terrain.Terrain_e
+}
+
+func (d DirectionTerrain_t) String() string {
+	return fmt.Sprintf("%s-%s", d.Direction, d.Terrain)
+}
+
+// Exhausted_t is returned when a step fails because the unit was exhausted.
+type Exhausted_t struct {
+	Direction direction.Direction_e
+	Terrain   terrain.Terrain_e
+}
+
+func (e *Exhausted_t) String() string {
+	if e == nil {
+		return ""
+	}
+	return fmt.Sprintf("x(%s-%s)", e.Direction, e.Terrain)
+}
+
+type FarHorizon_t struct {
+	Point  compass.Point_e
+	IsLand bool // land if true, water if false
 }
 
 // FoundItem_t represents items discovered by Scouts as they pass through a hex.
@@ -99,10 +209,44 @@ func (f *FoundItem_t) String() string {
 	return fmt.Sprintf("found(%d-%s)", f.Quantity, f.Item)
 }
 
+type Longhouse_t struct {
+	Id       string
+	Capacity int
+}
+
+// Neighbor_t is the terrain in a neighboring hex that the unit from the current hex.
+type Neighbor_t struct {
+	Direction direction.Direction_e
+	Terrain   terrain.Terrain_e
+}
+
+func (n *Neighbor_t) String() string {
+	if n == nil {
+		return ""
+	}
+	return fmt.Sprintf("%s-%s", n.Direction, n.Terrain)
+}
+
+// ProhibitedFrom_t is returned when a step fails because the unit is not allowed to enter the terrain.
+type ProhibitedFrom_t struct {
+	Direction direction.Direction_e
+	Terrain   terrain.Terrain_e
+}
+
+func (p *ProhibitedFrom_t) String() string {
+	if p == nil {
+		return ""
+	}
+	return fmt.Sprintf("p(%s-%s)", p.Direction, p.Terrain)
+}
+
 // Scout_t represents a scout sent out by a unit.
 type Scout_t struct {
 	No    int // usually from 1..8
 	Moves []*Move_t
+
+	LineNo int
+	Line   []byte
 }
 
 // Settlement_t is a settlement that the unit sees in the current hex.
@@ -118,81 +262,3 @@ func (s *Settlement_t) String() string {
 }
 
 // helper functions
-
-// MergeBorders adds a new border to the list if it's not already in the list
-func MergeBorders(list []*Border_t, b *Border_t) []*Border_t {
-	if b == nil {
-		return list
-	} else if list == nil {
-		return []*Border_t{b}
-	}
-	for _, l := range list {
-		if l.Direction != b.Direction {
-			continue
-		} else if l.Edge == b.Edge && l.Terrain == b.Terrain {
-			return list
-		}
-	}
-	return append(list, b)
-}
-
-// MergeEncounters adds a new encounter to the list if it's not already in the list
-func MergeEncounters(list []string, e string) []string {
-	if e == "" {
-		return list
-	} else if list == nil {
-		return []string{e}
-	}
-	for _, l := range list {
-		if l == e {
-			return list
-		}
-	}
-	return append(list, e)
-}
-
-// MergeItems adds an item to the list. If it is already in the list, the quantity is updated.
-func MergeItems(list []*FoundItem_t, f *FoundItem_t) []*FoundItem_t {
-	if f == nil {
-		return list
-	} else if list == nil {
-		return []*FoundItem_t{f}
-	}
-	for _, l := range list {
-		if l.Item != f.Item {
-			l.Quantity += f.Quantity
-			return list
-		}
-	}
-	return append(list, f)
-}
-
-// MergeResources adds a new resource to the list if it's not already in the list
-func MergeResources(list []resources.Resource_e, r resources.Resource_e) []resources.Resource_e {
-	if r == resources.None {
-		return list
-	} else if list == nil {
-		return []resources.Resource_e{r}
-	}
-	for _, l := range list {
-		if l == r {
-			return list
-		}
-	}
-	return append(list, r)
-}
-
-// MergeSettlements adds a new settlement to the list if it's not already in the list
-func MergeSettlements(list []*Settlement_t, s *Settlement_t) []*Settlement_t {
-	if s == nil {
-		return list
-	} else if list == nil {
-		return []*Settlement_t{s}
-	}
-	for _, l := range list {
-		if strings.ToLower(l.Name) == strings.ToLower(s.Name) {
-			return list
-		}
-	}
-	return append(list, s)
-}
