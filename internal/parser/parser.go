@@ -604,6 +604,11 @@ func parseMovementLine(id string, unitId UnitId_t, lineNo int, line []byte, debu
 				return false
 			})
 		}
+		if len(move.Report.Resources) != 0 {
+			sort.Slice(move.Report.Resources, func(i, j int) bool {
+				return move.Report.Resources[i] < move.Report.Resources[j]
+			})
+		}
 
 		moves = append(moves, move)
 	}

@@ -8,6 +8,7 @@ import (
 	"github.com/mdhender/ottomap/internal/direction"
 	"github.com/mdhender/ottomap/internal/edges"
 	"github.com/mdhender/ottomap/internal/parser"
+	"github.com/mdhender/ottomap/internal/resources"
 	"github.com/mdhender/ottomap/internal/results"
 	"github.com/mdhender/ottomap/internal/terrain"
 	"testing"
@@ -403,14 +404,118 @@ func TestScoutMovementParse(t *testing.T) {
 		moves   []*parser.Move_t
 		debug   bool
 	}{
-		{id: "900-05.0138e1s1", line: `Scout 1:Scout N-PR,  \N-GH,  \N-RH,  O NW,  N, Find Iron Ore, 1190,  0138c2,  0138c3\ Can't Move on Ocean to N of HEX,  Patrolled and found 1190,  0138c2,  0138c3`, unitId: "0138e1s1", scoutNo: 1},
-		{id: "900-05.0138e1s2", line: `Scout 2:Scout NE-RH,  \N-PR,  \N-CH,  O NE\ Not enough M.P's to move to N into CONIFER HILLS,  Nothing of interest found`, unitId: "0138e1s2", scoutNo: 2},
-		{id: "900-05.0138e1s3", line: `Scout 3:Scout SE-PR,  \SE-RH,  \SE-PR,  River S, 0190\ Not enough M.P's to move to SE into ROCKY HILLS,  Patrolled and found 0190`, unitId: "0138e1s3", scoutNo: 3},
-		{id: "900-05.0138e1s4", line: `Scout 4:Scout SE-PR,  \SE-RH,  \NE-PR,  \NE-PR,  \ Not enough M.P's to move to NE into PRAIRIE,  Nothing of interest found`, unitId: "0138e1s4", scoutNo: 4},
-		{id: "900-05.0138e1s5", line: `Scout 5:Scout SE-PR,  \SE-RH,  \SE-PR,  River S, 0190\N-PR,  \ Not enough M.P's to move to N into PRAIRIE,  Nothing of interest found`, unitId: "0138e1s5", scoutNo: 5},
-		{id: "900-05.0138e1s6", line: `Scout 6:Scout SE-PR,  \SE-RH,  \N-PR,  \N-PR,  \ Not enough M.P's to move to N into PRAIRIE,  Nothing of interest found`, unitId: "0138e1s6", scoutNo: 6},
-		{id: "900-05.0138e1s7", line: `Scout 7:Scout NW-RH,  \N-GH,  \N-PR,  O NW,  N, 3138\ Can't Move on Ocean to N of HEX,  Patrolled and found 3138`, unitId: "0138e1s7", scoutNo: 7},
-		{id: "900-05.0138e1s8", line: `Scout 8:Scout SW-GH,  \NW-PR,  \NW-PR,  \NW-PR,  \ Not enough M.P's to move to NW into PRAIRIE,  Nothing of interest found`, unitId: "0138e1s8", scoutNo: 8},
+		{id: "900-05.0138e1s1",
+			line: `Scout 1:Scout N-PR,  \N-GH,  \N-RH,  O NW,  N, Find Iron Ore, 1590,  0138c2,  0138c3\ Can't Move on Ocean to N of HEX,  Patrolled and found 1590,  0138c2,  0138c3`, unitId: "0138e1s1", scoutNo: 1,
+			moves: []*parser.Move_t{
+				{LineNo: 1, StepNo: 1, Line: []byte("N-PR"),
+					Result: results.Succeeded, Advance: direction.North, Report: &parser.Report_t{
+						Terrain: terrain.Prairie,
+					},
+				},
+				{LineNo: 1, StepNo: 2, Line: []byte("N-GH"),
+					Result: results.Succeeded, Advance: direction.North, Report: &parser.Report_t{
+						Terrain: terrain.GrassyHills,
+					},
+				},
+				{LineNo: 1, StepNo: 3, Line: []byte("N-RH,  O NW,  N, Find Iron Ore, 1590,  0138c2,  0138c3"),
+					Result: results.Succeeded, Advance: direction.North, Report: &parser.Report_t{
+						Terrain: terrain.RockyHills,
+						Borders: []*parser.Border_t{
+							{Direction: direction.North, Terrain: terrain.Ocean},
+							{Direction: direction.NorthWest, Terrain: terrain.Ocean},
+						},
+						Resources:  []resources.Resource_e{resources.IronOre},
+						Encounters: []parser.UnitId_t{"0138c2", "0138c3", "1590"},
+					},
+				},
+				{LineNo: 1, StepNo: 4, Line: []byte("Can't Move on Ocean to N of HEX,  Patrolled and found 1590,  0138c2,  0138c3"),
+					Result: results.Failed, Advance: direction.North, Report: &parser.Report_t{
+						Borders: []*parser.Border_t{
+							{Direction: direction.North, Terrain: terrain.Ocean},
+						},
+						Encounters: []parser.UnitId_t{"0138c2", "0138c3", "1590"},
+					},
+				},
+			},
+		},
+		{id: "900-05.0138e1s3",
+			line: `Scout 3:Scout SE-PR,  River S, 0590\ Not enough M.P's to move to SE into ROCKY HILLS,  Patrolled and found 0590`, unitId: "0138e1s3", scoutNo: 3,
+			moves: []*parser.Move_t{
+				{LineNo: 1, StepNo: 1, Line: []byte("SE-PR,  River S, 0590"),
+					Result: results.Succeeded, Advance: direction.SouthEast, Report: &parser.Report_t{
+						Terrain: terrain.Prairie,
+						Borders: []*parser.Border_t{
+							{Direction: direction.South, Edge: edges.River},
+						},
+						Encounters: []parser.UnitId_t{"0590"},
+					},
+				},
+				{LineNo: 1, StepNo: 2, Line: []byte("Not enough M.P's to move to SE into ROCKY HILLS,  Patrolled and found 0590"),
+					Result: results.Failed, Advance: direction.SouthEast, Report: &parser.Report_t{
+						Borders: []*parser.Border_t{
+							{Direction: direction.SouthEast, Terrain: terrain.RockyHills},
+						},
+						Encounters: []parser.UnitId_t{"0590"},
+					},
+				},
+			},
+		},
+		{id: "900-05.0138e1s7",
+			line: `Scout 7:Scout N-PR,  O NW,  N,  River S, 3138\ Can't Move on Ocean to N of HEX,  Patrolled and found 3138`, unitId: "0138e1s7", scoutNo: 7,
+			moves: []*parser.Move_t{
+				{LineNo: 1, StepNo: 1, Line: []byte("N-PR,  O NW,  N,  River S, 3138"),
+					Result: results.Succeeded, Advance: direction.North, Report: &parser.Report_t{
+						Terrain: terrain.Prairie,
+						Borders: []*parser.Border_t{
+							{Direction: direction.North, Terrain: terrain.Ocean},
+							{Direction: direction.South, Edge: edges.River},
+							{Direction: direction.NorthWest, Terrain: terrain.Ocean},
+						},
+						Encounters: []parser.UnitId_t{"3138"},
+					},
+				},
+				{LineNo: 1, StepNo: 2, Line: []byte("Can't Move on Ocean to N of HEX,  Patrolled and found 3138"),
+					Result: results.Failed, Advance: direction.North, Report: &parser.Report_t{
+						Borders: []*parser.Border_t{
+							{Direction: direction.North, Terrain: terrain.Ocean},
+						},
+						Encounters: []parser.UnitId_t{"3138"},
+					},
+				},
+			},
+		},
+		{id: "900-05.0138e1s8",
+			line: `Scout 8:Scout SW-GH,  \NW-PR,  \NW-PR,  \NW-PR,  \ Not enough M.P's to move to NW into PRAIRIE,  Nothing of interest found`, unitId: "0138e1s8", scoutNo: 8,
+			moves: []*parser.Move_t{
+				{LineNo: 1, StepNo: 1, Line: []byte("SW-GH"),
+					Result: results.Succeeded, Advance: direction.SouthWest, Report: &parser.Report_t{
+						Terrain: terrain.GrassyHills,
+					},
+				},
+				{LineNo: 1, StepNo: 2, Line: []byte("NW-PR"),
+					Result: results.Succeeded, Advance: direction.NorthWest, Report: &parser.Report_t{
+						Terrain: terrain.Prairie,
+					},
+				},
+				{LineNo: 1, StepNo: 3, Line: []byte("NW-PR"),
+					Result: results.Succeeded, Advance: direction.NorthWest, Report: &parser.Report_t{
+						Terrain: terrain.Prairie,
+					},
+				},
+				{LineNo: 1, StepNo: 4, Line: []byte("NW-PR"),
+					Result: results.Succeeded, Advance: direction.NorthWest, Report: &parser.Report_t{
+						Terrain: terrain.Prairie,
+					},
+				},
+				{LineNo: 1, StepNo: 5, Line: []byte("Not enough M.P's to move to NW into PRAIRIE,  Nothing of interest found"),
+					Result: results.Failed, Advance: direction.NorthWest, Report: &parser.Report_t{
+						Borders: []*parser.Border_t{
+							{Direction: direction.NorthWest, Terrain: terrain.Prairie},
+						},
+					},
+				},
+			},
+		},
 	} {
 		sm, err := parser.ParseScoutMovementLine(tc.id, tc.unitId, 1, []byte(tc.line), tc.debug, tc.debug)
 		if err != nil {
@@ -420,8 +525,26 @@ func TestScoutMovementParse(t *testing.T) {
 		if tc.scoutNo != sm.No {
 			t.Errorf("id %q: scoutNo: want %d, got %d\n", tc.id, tc.scoutNo, sm.No)
 		}
-		if len(tc.moves) != len(sm.Moves) {
-			t.Errorf("id %q: moveCount: want %d, got %d\n", tc.id, len(tc.moves), len(sm.Moves))
+		i1, i2 := 0, 0
+		for i1 < len(tc.moves) && i2 < len(sm.Moves) {
+			m1, m2 := tc.moves[i1], sm.Moves[i2]
+			//t.Errorf("id: %q: step %3d: %q %q\n", tc.id, m1.StepNo, m1.Line, m2.Line)
+			if diff := deep.Equal(m1, m2); diff != nil {
+				for _, d := range diff {
+					t.Errorf("id: %q: step %3d: %s\n", tc.id, m1.StepNo, d)
+				}
+			}
+			i1, i2 = i1+1, i2+1
+		}
+		for i1 < len(tc.moves) {
+			m1 := tc.moves[i1]
+			t.Errorf("id: %q: step %3d: missing step %q\n", tc.id, m1.StepNo, m1.Line)
+			i1 = i1 + 1
+		}
+		for i2 < len(sm.Moves) {
+			m2 := sm.Moves[i2]
+			t.Errorf("id: %q: step %3d: extra   step %q\n", tc.id, m2.StepNo, m2.Line)
+			i2 = i2 + 1
 		}
 	}
 }
