@@ -41,6 +41,8 @@ const (
 	SnowyHills
 	Swamp
 	Tundra
+	UnknownLand
+	UnknownWater
 )
 
 // NumberOfTerrainTypes must be updated if we add new terrain types
@@ -110,6 +112,8 @@ var (
 		SnowyHills:           "SH",
 		Swamp:                "SW",
 		Tundra:               "TU",
+		UnknownLand:          "UL",
+		UnknownWater:         "UW",
 	}
 	// StringToEnum is a helper map for unmarshalling the enum
 	StringToEnum = map[string]Terrain_e{
@@ -142,6 +146,8 @@ var (
 		"SH":   SnowyHills,
 		"SW":   Swamp,
 		"TU":   Tundra,
+		"UL":   UnknownLand,
+		"UW":   UnknownWater,
 	}
 	// TileTerrainNames is the map for tile terrain name matching. the text values
 	// are extracted from the Worldographer tileset. they must match exactly.
@@ -177,5 +183,7 @@ var (
 		SnowyHills:           "Flat Snowfields",
 		Swamp:                "Flat Swamp",
 		Tundra:               "Flat Steppe",
+		UnknownLand:          "Flat Moss",
+		UnknownWater:         "Water Reefs",
 	}
 )

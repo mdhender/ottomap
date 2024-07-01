@@ -53,13 +53,13 @@ func TestCompassPoint(t *testing.T) {
 func TestCrowsNestObservation(t *testing.T) {
 	var fh parser.FarHorizon_t
 	for _, tc := range []struct {
-		id     string
-		line   string
-		point  compass.Point_e
-		isLand bool
+		id      string
+		line    string
+		point   compass.Point_e
+		terrain terrain.Terrain_e
 	}{
-		{id: "land", line: "Sight Land - N/N", point: compass.North, isLand: true},
-		{id: "water", line: "Sight Water - N/NE", point: compass.NorthNorthEast, isLand: false},
+		{id: "land", line: "Sight Land - N/N", point: compass.North, terrain: terrain.UnknownLand},
+		{id: "water", line: "Sight Water - N/NE", point: compass.NorthNorthEast, terrain: terrain.UnknownWater},
 	} {
 		va, err := parser.Parse(tc.id, []byte(tc.line), parser.Entrypoint("CrowsNestObservation"))
 		if err != nil {
@@ -74,8 +74,8 @@ func TestCrowsNestObservation(t *testing.T) {
 		if tc.point != cno.Point {
 			t.Errorf("id %q: point: want %q, got %q\n", tc.id, tc.point, cno.Point)
 		}
-		if tc.isLand != cno.IsLand {
-			t.Errorf("id %q: terrain: want %v, got %v\n", tc.id, tc.isLand, cno.IsLand)
+		if tc.terrain != cno.Terrain {
+			t.Errorf("id %q: terrain: want %q, got %q\n", tc.id, tc.terrain, cno.Terrain)
 		}
 	}
 }
@@ -89,7 +89,7 @@ func TestFleetMovementParse(t *testing.T) {
 		debug  bool
 	}{
 		{id: "900-05.0138f2",
-			line:   "STRONG S Fleet Movement: Move NW-GH,",
+			line:   `STRONG S Fleet Movement: Move NW-GH,`,
 			unitId: "0138f2",
 			moves: []*parser.Move_t{
 				{LineNo: 1, StepNo: 1, Line: []byte("NW-GH"),
@@ -138,7 +138,7 @@ func TestFleetMovementParse(t *testing.T) {
 			},
 		},
 		{id: "900-06.0138f1",
-			line:   "MILD NW Fleet Movement: Move SE-O,-(NE O,  SE LCM,  N O,  S LCM,  SW O,  NW O,  )(Sight Water - N/N, Sight Land - N/NE)",
+			line:   `MILD NW Fleet Movement: Move SE-O,-(NE O,  SE LCM,  N O,  S LCM,  SW O,  NW O,  )(Sight Water - N/N, Sight Land - N/NE)`,
 			unitId: "0138f1",
 			moves: []*parser.Move_t{
 				{LineNo: 1, StepNo: 1, Line: []byte("SE-O,-(NE O,  SE LCM,  N O,  S LCM,  SW O,  NW O,  )(Sight Water - N/N, Sight Land - N/NE)"),
@@ -153,16 +153,37 @@ func TestFleetMovementParse(t *testing.T) {
 							{Direction: direction.NorthWest, Terrain: terrain.Ocean},
 						},
 						FarHorizons: []*parser.FarHorizon_t{
-							{Point: compass.North, IsLand: false},
-							{Point: compass.NorthNorthEast, IsLand: true},
+							{Point: compass.North, Terrain: terrain.UnknownWater},
+							{Point: compass.NorthNorthEast, Terrain: terrain.UnknownLand},
 						},
 					},
 				},
 			},
 		},
-		{id: "900-06.1138f2",
+		{id: "900-06.0138f2",
+			line:   `MILD NW Fleet Movement: Move SE-O,-(NE O)(Sight Water - N/N, Sight Land - N/NE)\No River Adjacent to Hex to SW of HEX`,
+			unitId: "0138f1",
+			moves: []*parser.Move_t{
+				{LineNo: 1, StepNo: 1, Line: []byte("SE-O,-(NE O)(Sight Water - N/N, Sight Land - N/NE)"),
+					Result: results.Succeeded, Advance: direction.SouthEast, Report: &parser.Report_t{
+						Terrain: terrain.Ocean,
+						Borders: []*parser.Border_t{
+							{Direction: direction.NorthEast, Terrain: terrain.Ocean},
+						},
+						FarHorizons: []*parser.FarHorizon_t{
+							{Point: compass.North, Terrain: terrain.UnknownWater},
+							{Point: compass.NorthNorthEast, Terrain: terrain.UnknownLand},
+						},
+					},
+				},
+				{LineNo: 1, StepNo: 2, Line: []byte("No River Adjacent to Hex to SW of HEX"),
+					Result: results.Failed, Still: true, Advance: direction.SouthWest, Report: &parser.Report_t{},
+				},
+			},
+		},
+		{id: "900-06.1138f7",
 			line:   `MILD N Fleet Movement: Move SW-PR The Dirty Squirrel-(NE GH,  SE O, N GH, S O, SW O, NW O, )(Sight Land - N/N,Sight Land - N/NE,Sight Land - N/NW,Sight Water - NE/NE,Sight Water - NE/SE,Sight Water - SE/SE,Sight Water - S/SE,Sight Water - S/S,Sight Water - S/SW,Sight Water - SW/SW,Sight Water - SW/NW,Sight Water - NW/NW, )\NW-O, -(NE GH, SE PR, N SW, S O, SW O, NW O, )(Sight Water - N/N,Sight Land - N/NE,Sight Water - N/NW,Sight Land - NE/NE,Sight Land - NE/SE,Sight Water - SE/SE,Sight Water - S/SE,Sight Water - S/S,Sight Water - S/SW,Sight Water - SW/SW,Sight Water - SW/NW,Sight Water - NW/NW, )\NW-O, -(NE SW, SE O, N O, S O, SW O, NW O, )(Sight Water - N/N,Sight Water - N/NE,Sight Water - N/NW,Sight Land - NE/NE,Sight Land - NE/SE,Sight Land - SE/SE,Sight Water - S/SE,Sight Water - S/S,Sight Water - S/SW,Sight Water - SW/SW,Sight Water - SW/NW,Sight Water - NW/NW, )\N-O, -(NE O, SE SW, N O, S O, SW O, NW O, )(Sight Land - N/N,Sight Land - N/NE,Sight Water - N/NW,Sight Land - NE/NE,Sight Land - NE/SE,Sight Land - SE/SE,Sight Water - S/SE,Sight Water - S/S,Sight Water - S/SW,Sight Water - SW/SW,Sight Water - SW/NW,Sight Water - NW/NW, )\N-O,  Lcm NE, N,-(NE LCM, SE O, N LCM, S O, SW O, NW O, )(Sight Land - N/N,Sight Land - N/NE,Sight Water - N/NW,Sight Land - NE/NE,Sight Land - NE/SE,Sight Land - SE/SE,Sight Land - S/SE,Sight Water - S/S,Sight Water - S/SW,Sight Water - SW/SW,Sight Water - SW/NW,Sight Water - NW/NW, )\N-LCM,  Lcm NE, SE,  Ensalada sin Tomate\`,
-			unitId: "0138f2",
+			unitId: "0138f7",
 			moves: []*parser.Move_t{
 				{LineNo: 1, StepNo: 1, Line: []byte("SW-PR The Dirty Squirrel-(NE GH,  SE O, N GH, S O, SW O, NW O, )(Sight Land - N/N,Sight Land - N/NE,Sight Land - N/NW,Sight Water - NE/NE,Sight Water - NE/SE,Sight Water - SE/SE,Sight Water - S/SE,Sight Water - S/S,Sight Water - S/SW,Sight Water - SW/SW,Sight Water - SW/NW,Sight Water - NW/NW, )"),
 					Result: results.Succeeded, Advance: direction.SouthWest, Report: &parser.Report_t{
@@ -176,18 +197,18 @@ func TestFleetMovementParse(t *testing.T) {
 							{Direction: direction.NorthWest, Terrain: terrain.Ocean},
 						},
 						FarHorizons: []*parser.FarHorizon_t{
-							{Point: compass.North, IsLand: true},
-							{Point: compass.NorthNorthEast, IsLand: true},
-							{Point: compass.NorthEast, IsLand: false},
-							{Point: compass.East, IsLand: false},
-							{Point: compass.SouthEast, IsLand: false},
-							{Point: compass.SouthSouthEast, IsLand: false},
-							{Point: compass.South, IsLand: false},
-							{Point: compass.SouthSouthWest, IsLand: false},
-							{Point: compass.SouthWest, IsLand: false},
-							{Point: compass.West, IsLand: false},
-							{Point: compass.NorthWest, IsLand: false},
-							{Point: compass.NorthNorthWest, IsLand: true},
+							{Point: compass.North, Terrain: terrain.UnknownLand},
+							{Point: compass.NorthNorthEast, Terrain: terrain.UnknownLand},
+							{Point: compass.NorthEast, Terrain: terrain.UnknownWater},
+							{Point: compass.East, Terrain: terrain.UnknownWater},
+							{Point: compass.SouthEast, Terrain: terrain.UnknownWater},
+							{Point: compass.SouthSouthEast, Terrain: terrain.UnknownWater},
+							{Point: compass.South, Terrain: terrain.UnknownWater},
+							{Point: compass.SouthSouthWest, Terrain: terrain.UnknownWater},
+							{Point: compass.SouthWest, Terrain: terrain.UnknownWater},
+							{Point: compass.West, Terrain: terrain.UnknownWater},
+							{Point: compass.NorthWest, Terrain: terrain.UnknownWater},
+							{Point: compass.NorthNorthWest, Terrain: terrain.UnknownLand},
 						},
 						Settlements: []*parser.Settlement_t{{Name: "The Dirty Squirrel"}},
 					},
@@ -204,18 +225,18 @@ func TestFleetMovementParse(t *testing.T) {
 							{Direction: direction.NorthWest, Terrain: terrain.Ocean},
 						},
 						FarHorizons: []*parser.FarHorizon_t{
-							{Point: compass.North, IsLand: false},
-							{Point: compass.NorthNorthEast, IsLand: true},
-							{Point: compass.NorthEast, IsLand: true},
-							{Point: compass.East, IsLand: true},
-							{Point: compass.SouthEast, IsLand: false},
-							{Point: compass.SouthSouthEast, IsLand: false},
-							{Point: compass.South, IsLand: false},
-							{Point: compass.SouthSouthWest, IsLand: false},
-							{Point: compass.SouthWest, IsLand: false},
-							{Point: compass.West, IsLand: false},
-							{Point: compass.NorthWest, IsLand: false},
-							{Point: compass.NorthNorthWest, IsLand: false},
+							{Point: compass.North, Terrain: terrain.UnknownWater},
+							{Point: compass.NorthNorthEast, Terrain: terrain.UnknownLand},
+							{Point: compass.NorthEast, Terrain: terrain.UnknownLand},
+							{Point: compass.East, Terrain: terrain.UnknownLand},
+							{Point: compass.SouthEast, Terrain: terrain.UnknownWater},
+							{Point: compass.SouthSouthEast, Terrain: terrain.UnknownWater},
+							{Point: compass.South, Terrain: terrain.UnknownWater},
+							{Point: compass.SouthSouthWest, Terrain: terrain.UnknownWater},
+							{Point: compass.SouthWest, Terrain: terrain.UnknownWater},
+							{Point: compass.West, Terrain: terrain.UnknownWater},
+							{Point: compass.NorthWest, Terrain: terrain.UnknownWater},
+							{Point: compass.NorthNorthWest, Terrain: terrain.UnknownWater},
 						},
 					},
 				},
@@ -231,18 +252,18 @@ func TestFleetMovementParse(t *testing.T) {
 							{Direction: direction.NorthWest, Terrain: terrain.Ocean},
 						},
 						FarHorizons: []*parser.FarHorizon_t{
-							{Point: compass.North, IsLand: false},
-							{Point: compass.NorthNorthEast, IsLand: false},
-							{Point: compass.NorthEast, IsLand: true},
-							{Point: compass.East, IsLand: true},
-							{Point: compass.SouthEast, IsLand: true},
-							{Point: compass.SouthSouthEast, IsLand: false},
-							{Point: compass.South, IsLand: false},
-							{Point: compass.SouthSouthWest, IsLand: false},
-							{Point: compass.SouthWest, IsLand: false},
-							{Point: compass.West, IsLand: false},
-							{Point: compass.NorthWest, IsLand: false},
-							{Point: compass.NorthNorthWest, IsLand: false},
+							{Point: compass.North, Terrain: terrain.UnknownWater},
+							{Point: compass.NorthNorthEast, Terrain: terrain.UnknownWater},
+							{Point: compass.NorthEast, Terrain: terrain.UnknownLand},
+							{Point: compass.East, Terrain: terrain.UnknownLand},
+							{Point: compass.SouthEast, Terrain: terrain.UnknownLand},
+							{Point: compass.SouthSouthEast, Terrain: terrain.UnknownWater},
+							{Point: compass.South, Terrain: terrain.UnknownWater},
+							{Point: compass.SouthSouthWest, Terrain: terrain.UnknownWater},
+							{Point: compass.SouthWest, Terrain: terrain.UnknownWater},
+							{Point: compass.West, Terrain: terrain.UnknownWater},
+							{Point: compass.NorthWest, Terrain: terrain.UnknownWater},
+							{Point: compass.NorthNorthWest, Terrain: terrain.UnknownWater},
 						},
 					},
 				},
@@ -258,18 +279,18 @@ func TestFleetMovementParse(t *testing.T) {
 							{Direction: direction.NorthWest, Terrain: terrain.Ocean},
 						},
 						FarHorizons: []*parser.FarHorizon_t{
-							{Point: compass.North, IsLand: true},
-							{Point: compass.NorthNorthEast, IsLand: true},
-							{Point: compass.NorthEast, IsLand: true},
-							{Point: compass.East, IsLand: true},
-							{Point: compass.SouthEast, IsLand: true},
-							{Point: compass.SouthSouthEast, IsLand: false},
-							{Point: compass.South, IsLand: false},
-							{Point: compass.SouthSouthWest, IsLand: false},
-							{Point: compass.SouthWest, IsLand: false},
-							{Point: compass.West, IsLand: false},
-							{Point: compass.NorthWest, IsLand: false},
-							{Point: compass.NorthNorthWest, IsLand: false},
+							{Point: compass.North, Terrain: terrain.UnknownLand},
+							{Point: compass.NorthNorthEast, Terrain: terrain.UnknownLand},
+							{Point: compass.NorthEast, Terrain: terrain.UnknownLand},
+							{Point: compass.East, Terrain: terrain.UnknownLand},
+							{Point: compass.SouthEast, Terrain: terrain.UnknownLand},
+							{Point: compass.SouthSouthEast, Terrain: terrain.UnknownWater},
+							{Point: compass.South, Terrain: terrain.UnknownWater},
+							{Point: compass.SouthSouthWest, Terrain: terrain.UnknownWater},
+							{Point: compass.SouthWest, Terrain: terrain.UnknownWater},
+							{Point: compass.West, Terrain: terrain.UnknownWater},
+							{Point: compass.NorthWest, Terrain: terrain.UnknownWater},
+							{Point: compass.NorthNorthWest, Terrain: terrain.UnknownWater},
 						},
 					},
 				},
@@ -285,18 +306,18 @@ func TestFleetMovementParse(t *testing.T) {
 							{Direction: direction.NorthWest, Terrain: terrain.Ocean},
 						},
 						FarHorizons: []*parser.FarHorizon_t{
-							{Point: compass.North, IsLand: true},
-							{Point: compass.NorthNorthEast, IsLand: true},
-							{Point: compass.NorthEast, IsLand: true},
-							{Point: compass.East, IsLand: true},
-							{Point: compass.SouthEast, IsLand: true},
-							{Point: compass.SouthSouthEast, IsLand: true},
-							{Point: compass.South, IsLand: false},
-							{Point: compass.SouthSouthWest, IsLand: false},
-							{Point: compass.SouthWest, IsLand: false},
-							{Point: compass.West, IsLand: false},
-							{Point: compass.NorthWest, IsLand: false},
-							{Point: compass.NorthNorthWest, IsLand: false},
+							{Point: compass.North, Terrain: terrain.UnknownLand},
+							{Point: compass.NorthNorthEast, Terrain: terrain.UnknownLand},
+							{Point: compass.NorthEast, Terrain: terrain.UnknownLand},
+							{Point: compass.East, Terrain: terrain.UnknownLand},
+							{Point: compass.SouthEast, Terrain: terrain.UnknownLand},
+							{Point: compass.SouthSouthEast, Terrain: terrain.UnknownLand},
+							{Point: compass.South, Terrain: terrain.UnknownWater},
+							{Point: compass.SouthSouthWest, Terrain: terrain.UnknownWater},
+							{Point: compass.SouthWest, Terrain: terrain.UnknownWater},
+							{Point: compass.West, Terrain: terrain.UnknownWater},
+							{Point: compass.NorthWest, Terrain: terrain.UnknownWater},
+							{Point: compass.NorthNorthWest, Terrain: terrain.UnknownWater},
 						},
 					},
 				},

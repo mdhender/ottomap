@@ -28,10 +28,13 @@ type Turn_t struct {
 // Moves_t represents the results for a unit that moves and reports in a turn.
 // There will be one instance of this struct for each turn the unit moves in.
 type Moves_t struct {
-	Id UnitId_t // unit that is moving
+	TurnId string
+	Id     UnitId_t // unit that is moving
 
 	// all the moves made this turn
-	Moves []*Move_t
+	Moves   []*Move_t
+	Follows UnitId_t
+	GoesTo  string
 
 	// Scouts are optional and move at the end of the turn
 	Scouts []*Scout_t
@@ -65,6 +68,9 @@ type Move_t struct {
 	LineNo int
 	StepNo int
 	Line   []byte
+
+	TurnId     string
+	CurrentHex string
 }
 
 // Report_t represents the observations made by a unit.
@@ -105,13 +111,13 @@ func (r *Report_t) mergeEncounters(e UnitId_t) bool {
 }
 
 // mergeFarHorizons adds a new far horizon observation to the list if it's not already in the list
-func (r *Report_t) mergeFarHorizons(p compass.Point_e, isLand bool) bool {
+func (r *Report_t) mergeFarHorizons(fh FarHorizon_t) bool {
 	for _, l := range r.FarHorizons {
-		if l.Point == p && l.IsLand == isLand {
+		if l.Point == fh.Point && l.Terrain == fh.Terrain {
 			return false
 		}
 	}
-	r.FarHorizons = append(r.FarHorizons, &FarHorizon_t{Point: p, IsLand: isLand})
+	r.FarHorizons = append(r.FarHorizons, &FarHorizon_t{Point: fh.Point, Terrain: fh.Terrain})
 	return true
 }
 
@@ -199,8 +205,8 @@ func (e *Exhausted_t) String() string {
 }
 
 type FarHorizon_t struct {
-	Point  compass.Point_e
-	IsLand bool // land if true, water if false
+	Point   compass.Point_e
+	Terrain terrain.Terrain_e
 }
 
 // FoundItem_t represents items discovered by Scouts as they pass through a hex.
@@ -219,6 +225,11 @@ func (f *FoundItem_t) String() string {
 type Longhouse_t struct {
 	Id       string
 	Capacity int
+}
+
+// MissingEdge_t is returned for "No River Adjacent to Hex"
+type MissingEdge_t struct {
+	Direction direction.Direction_e
 }
 
 type NearHorizon_t struct {
@@ -273,4 +284,19 @@ func (s *Settlement_t) String() string {
 	return s.Name
 }
 
-// helper functions
+type UnitId_t string
+
+func (u UnitId_t) IsFleet() bool {
+	return len(u) == 6 && u[4] == 'f'
+}
+
+func (u UnitId_t) Parent() UnitId_t {
+	if len(u) == 4 {
+		return "0" + u[1:]
+	}
+	return u[:4]
+}
+
+func (u UnitId_t) String() string {
+	return string(u)
+}

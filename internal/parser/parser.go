@@ -164,17 +164,27 @@ func ParseInput(id string, input []byte, debugParser, debugSections, debugSteps,
 			}
 		} else if bytes.HasPrefix(line, []byte("Tribe Follows ")) {
 			debugs("%s: %s: %d: found %q\n", id, unitId, lineNo, slug(line, 13))
+			if moves.Follows != "" {
+				log.Printf("error: %s: %s: %d: found multiple follows\n", id, unitId, lineNo)
+				return t, fmt.Errorf("multiple follows")
+			}
 			followMove, err := ParseTribeFollowsLine(id, unitId, lineNo, line, false)
 			if err != nil {
 				return t, err
 			}
+			moves.Follows = followMove.Follows
 			moves.Moves = append(moves.Moves, followMove)
 		} else if bytes.HasPrefix(line, []byte("Tribe Goes to ")) {
 			debugs("%s: %s: %d: found %q\n", id, unitId, lineNo, slug(line, 14))
+			if moves.GoesTo != "" {
+				log.Printf("error: %s: %s: %d: found multiple goes to\n", id, unitId, lineNo)
+				return t, fmt.Errorf("multiple goes to")
+			}
 			goesToMove, err := ParseTribeGoesToLine(id, unitId, lineNo, line, false)
 			if err != nil {
 				return t, err
 			}
+			moves.GoesTo = goesToMove.GoesTo
 			moves.Moves = append(moves.Moves, goesToMove)
 		} else if bytes.HasPrefix(line, []byte("Tribe Movement: ")) {
 			debugs("%s: %s: %d: found %q\n", id, unitId, lineNo, slug(line, 14))
@@ -201,6 +211,15 @@ func ParseInput(id string, input []byte, debugParser, debugSections, debugSteps,
 			if len(statusMoves) > 0 {
 				moves.Moves = append(moves.Moves, statusMoves...)
 			}
+		}
+	}
+
+	// stuff the turn id into all the moves so that sammy can sort them later
+	turnId := fmt.Sprintf("%04d-%02d", t.Year, t.Month)
+	for _, v := range t.UnitMoves {
+		v.TurnId = turnId
+		for _, move := range v.Moves {
+			move.TurnId = turnId
 		}
 	}
 
@@ -388,6 +407,7 @@ func ParseTribeFollowsLine(id string, unitId UnitId_t, lineNo int, line []byte, 
 
 	return &Move_t{
 		Follows: follows,
+		Report:  &Report_t{},
 		LineNo:  lineNo,
 		StepNo:  1,
 		Line:    bdup(line),
@@ -412,6 +432,7 @@ func ParseTribeGoesToLine(id string, unitId UnitId_t, lineNo int, line []byte, d
 
 	return &Move_t{
 		GoesTo: goesTo,
+		Report: &Report_t{},
 		LineNo: lineNo,
 		StepNo: 1,
 		Line:   bdup(line),
@@ -568,7 +589,7 @@ func parseMovementLine(id string, unitId UnitId_t, lineNo int, line []byte, debu
 					log.Printf("please report this error")
 					panic(fmt.Errorf("unexpected type %T", va))
 				} else {
-					move.Report.mergeFarHorizons(fh.Point, fh.IsLand)
+					move.Report.mergeFarHorizons(fh)
 				}
 			}
 		}
@@ -599,7 +620,7 @@ func parseMovementLine(id string, unitId UnitId_t, lineNo int, line []byte, debu
 				if a.Point < b.Point {
 					return true
 				} else if a.Point == b.Point {
-					return a.IsLand
+					return a.Terrain < b.Terrain
 				}
 				return false
 			})
@@ -717,7 +738,8 @@ func parseMove(id string, unitId UnitId_t, lineNo, stepNo int, line []byte, debu
 				m.Report.mergeEncounters(unit.Id)
 			}
 		case Longhouse_t: // ignore
-		case MissingEdge_t: // ignore
+		case MissingEdge_t:
+			m.Result, m.Still, m.Advance = results.Failed, true, v.Direction
 		case []*Neighbor_t:
 			if m.Result == results.Unknown {
 				log.Printf("%s: %s: %d: step %d: sub %d: %q\n", id, unitId, lineNo, stepNo, subStepNo, subStep)
@@ -852,13 +874,4 @@ type Location_t struct {
 	PreviousHex string
 }
 
-// MissingEdge_t is returned for "No River Adjacent to Hex"
-type MissingEdge_t struct{}
-
 type NoGroupsFound_t struct{}
-
-type UnitId_t string
-
-func (u UnitId_t) String() string {
-	return string(u)
-}

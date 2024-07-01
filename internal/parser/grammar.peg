@@ -63,7 +63,7 @@ Noop <- EOF {
 CrowsNestObservation <- cs:CROWSIGHTING SP "-" SP cp:COMPASSPOINT EOF{
     return FarHorizon_t{
         Point: cp.(compass.Point_e),
-        IsLand: cs.(string) == "land",
+        Terrain: cs.(terrain.Terrain_e),
     }, nil
 }
 
@@ -216,8 +216,10 @@ Step <- d:DIRECTION "-" t:TERRAIN_CODE EOF {
     }, nil
 } / "No groups found" EOF {
     return NoGroupsFound_t{}, nil
-} / "No River Adjacent to Hex to" SP DIRECTION SP "of HEX" {
-    return MissingEdge_t{}, nil
+} / "No River Adjacent to Hex to" SP d:DIRECTION SP "of HEX" {
+    return MissingEdge_t{
+        Direction: d.(direction.Direction_e),
+    }, nil
 } / [Nn] "ot enough M.P's to move to" SP d:DIRECTION SP "into" SP t:TERRAIN EOF {
     return &Exhausted_t{
         Direction: d.(direction.Direction_e),
@@ -389,9 +391,9 @@ COORDS <- "N/A" {
 }
 
 CROWSIGHTING <- "Sight Land" {
-    return "land", nil
+    return terrain.UnknownLand, nil
 } / "Sight Water" {
-    return "water", nil
+    return terrain.UnknownWater, nil
 }
 
 DIRECTION <- "NE" {

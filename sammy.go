@@ -20,8 +20,12 @@ var argsSammy struct {
 		input  string // path to input folder
 		output string // path to output folder
 	}
-	turnId string // maximum turn id to use
-	debug  struct {
+	originGrid          string
+	noWarnOnInvalidGrid bool
+	quitOnInvalidGrid   bool
+	warnOnInvalidGrid   bool
+	turnId              string // maximum turn id to use
+	debug               struct {
 		maps     bool
 		nodes    bool
 		parser   bool
@@ -74,9 +78,25 @@ var cmdSammy = &cobra.Command{
 			argsSammy.paths.output = path
 		}
 
+		if len(argsSammy.originGrid) == 0 {
+			// terminate on ## in location
+			argsSammy.quitOnInvalidGrid = true
+		} else if len(argsSammy.originGrid) != 2 {
+			log.Fatalf("error: originGrid %q: must be two upper-case letters\n", argsSammy.originGrid)
+		} else if strings.Trim(argsSammy.originGrid, "ABCDEFGHIJKLMNOPQRSTUVWXYZ") != "" {
+			log.Fatalf("error: originGrid %q: must be two upper-case letters\n", argsSammy.originGrid)
+		} else {
+			// don't quit when we replace ## with the location
+			argsSammy.quitOnInvalidGrid = false
+		}
+		argsSammy.warnOnInvalidGrid = !argsSammy.noWarnOnInvalidGrid
+
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
+		argsSammy.originGrid = "RR"
+		argsSammy.quitOnInvalidGrid = false
+		argsSammy.warnOnInvalidGrid = true
 		started := time.Now()
 		log.Printf("data:   %s\n", argsSammy.paths.data)
 		log.Printf("input:  %s\n", argsSammy.paths.input)
@@ -88,25 +108,27 @@ var cmdSammy = &cobra.Command{
 		}
 		log.Printf("inputs: found %d turn reports\n", len(inputs))
 
-		var allMoves []*parser.Movement_t
+		mapTurns := map[string][]*parser.Turn_t{}
+		totalUnitMoves := 0
 		for _, i := range inputs {
 			started := time.Now()
 			data, err := os.ReadFile(i.Path)
 			if err != nil {
 				log.Fatalf("error: read: %v\n", err)
 			}
-			mt, err := parser.ParseInput(i.Id, data, argsSammy.debug.parser, argsSammy.debug.sections, argsSammy.debug.steps, argsSammy.debug.nodes)
+			turn, err := parser.ParseInput(i.Id, data, argsSammy.debug.parser, argsSammy.debug.sections, argsSammy.debug.steps, argsSammy.debug.nodes)
 			if err != nil {
 				log.Fatal(err)
 			}
-			_, _ = started, mt
-			//allMoves = append(allMoves, mt...)
-			//log.Printf("%q: parsed %6d moves in %v\n", i.Id, len(mt), time.Since(started))
+			turnId := fmt.Sprintf("%04d-%02d", turn.Year, turn.Month)
+			mapTurns[turnId] = append(mapTurns[turnId], turn)
+			totalUnitMoves += len(turn.UnitMoves)
+			log.Printf("%q: parsed %6d units in %v\n", i.Id, len(turn.UnitMoves), time.Since(started))
 		}
-		log.Printf("parsed %d inputs in %v\n", len(inputs), time.Since(started))
+		log.Printf("parsed %d inputs in to %d turns and %d units %v\n", len(inputs), len(mapTurns), totalUnitMoves, time.Since(started))
 
 		// map all the sections
-		err = turns.Map(allMoves, argsSammy.debug.maps)
+		err = turns.Map(mapTurns, argsSammy.originGrid, argsSammy.quitOnInvalidGrid, argsSammy.warnOnInvalidGrid, argsSammy.debug.maps)
 		if err != nil {
 			log.Fatalf("error: %v\n", err)
 		}
