@@ -18,11 +18,23 @@ import (
 
 // Turn_t represents a single turn identified by year and month.
 type Turn_t struct {
+	Id    string
 	Year  int
 	Month int
 
 	// UnitMoves holds the units that moved in this turn
-	UnitMoves map[UnitId_t]*Moves_t
+	UnitMoves   map[UnitId_t]*Moves_t
+	SortedMoves []*Moves_t
+
+	Next, Prev *Turn_t
+}
+
+func (t *Turn_t) FromMayBeObscured() bool {
+	return true
+}
+
+func (t *Turn_t) ToMayBeObscured() bool {
+	return t.Id <= LastTurnCurrentLocationObscured
 }
 
 // Moves_t represents the results for a unit that moves and reports in a turn.

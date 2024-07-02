@@ -10,6 +10,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 )
@@ -108,7 +109,8 @@ var cmdSammy = &cobra.Command{
 		}
 		log.Printf("inputs: found %d turn reports\n", len(inputs))
 
-		mapTurns := map[string][]*parser.Turn_t{}
+		// allTurns holds the turn and move data and allows multiple clans to be loaded.
+		allTurns := map[string][]*parser.Turn_t{}
 		totalUnitMoves := 0
 		for _, i := range inputs {
 			started := time.Now()
@@ -121,17 +123,170 @@ var cmdSammy = &cobra.Command{
 				log.Fatal(err)
 			}
 			turnId := fmt.Sprintf("%04d-%02d", turn.Year, turn.Month)
-			mapTurns[turnId] = append(mapTurns[turnId], turn)
+			allTurns[turnId] = append(allTurns[turnId], turn)
 			totalUnitMoves += len(turn.UnitMoves)
 			log.Printf("%q: parsed %6d units in %v\n", i.Id, len(turn.UnitMoves), time.Since(started))
 		}
-		log.Printf("parsed %d inputs in to %d turns and %d units %v\n", len(inputs), len(mapTurns), totalUnitMoves, time.Since(started))
+		log.Printf("parsed %d inputs in to %d turns and %d units %v\n", len(inputs), len(allTurns), totalUnitMoves, time.Since(started))
 
-		// map all the sections
-		err = turns.Map(mapTurns, argsSammy.originGrid, argsSammy.quitOnInvalidGrid, argsSammy.warnOnInvalidGrid, argsSammy.debug.maps)
+		// consolidate the turns, then sort by year and month
+		var consolidatedTurns []*parser.Turn_t
+		foundDuplicates := false
+		for _, unitTurns := range allTurns {
+			if len(unitTurns) == 0 {
+				// we shouldn't have any empty turns, but be safe
+				continue
+			}
+			// create a new turn to hold the consolidated unit moves for the turn
+			turn := &parser.Turn_t{
+				Id:        fmt.Sprintf("%04d-%02d", unitTurns[0].Year, unitTurns[0].Month),
+				Year:      unitTurns[0].Year,
+				Month:     unitTurns[0].Month,
+				UnitMoves: map[parser.UnitId_t]*parser.Moves_t{},
+			}
+			consolidatedTurns = append(consolidatedTurns, turn)
+
+			// copy all the unit moves into this new turn, calling out duplicates
+			for _, unitTurn := range unitTurns {
+				for id, unitMoves := range unitTurn.UnitMoves {
+					if turn.UnitMoves[id] != nil {
+						foundDuplicates = true
+						log.Printf("error: %s: %-6s: duplicate unit\n", turn.Id, id)
+					}
+					turn.UnitMoves[id] = unitMoves
+					turn.SortedMoves = append(turn.SortedMoves, unitMoves)
+				}
+			}
+		}
+		if foundDuplicates {
+			log.Fatalf("error: please fix the duplicate units and restart\n")
+		}
+		sort.Slice(consolidatedTurns, func(i, j int) bool {
+			a, b := consolidatedTurns[i], consolidatedTurns[j]
+			if a.Year < b.Year {
+				return true
+			} else if a.Year == b.Year {
+				return a.Month < b.Month
+			}
+			return false
+		})
+		for _, turn := range consolidatedTurns {
+			log.Printf("%s: %8d units\n", turn.Id, len(turn.UnitMoves))
+			sort.Slice(turn.SortedMoves, func(i, j int) bool {
+				return turn.SortedMoves[i].Id < turn.SortedMoves[j].Id
+			})
+		}
+
+		// link prev and next turns
+		for n, turn := range consolidatedTurns {
+			if n > 0 {
+				turn.Prev = consolidatedTurns[n-1]
+			}
+			if n+1 < len(consolidatedTurns) {
+				turn.Next = consolidatedTurns[n+1]
+			}
+		}
+
+		// check for N/A values in locations and quit if we find any
+		naLocationCount := 0
+		for _, turn := range consolidatedTurns {
+			for _, unitMoves := range turn.UnitMoves {
+				if unitMoves.FromHex == "N/A" {
+					naLocationCount++
+					log.Printf("%s: %-6s: location %q: invalid location\n", unitMoves.TurnId, unitMoves.Id, unitMoves.FromHex)
+				}
+			}
+		}
+		if naLocationCount != 0 {
+			log.Fatalf("please update the invalid locations and restart\n")
+		}
+
+		// sanity check on the current and prior locations.
+		badLinks, goodLinks := 0, 0
+		for _, turn := range consolidatedTurns {
+			if turn.Next == nil { // nothing to update
+				continue
+			}
+			for _, unitMoves := range turn.UnitMoves {
+				nextUnitMoves := turn.Next.UnitMoves[unitMoves.Id]
+				if nextUnitMoves == nil {
+					continue
+				}
+				if unitMoves.ToHex[2:] != nextUnitMoves.FromHex[2:] {
+					badLinks++
+					log.Printf("error: %s: %-6s: to   %q\n", turn.Id, unitMoves.Id, unitMoves.ToHex)
+					log.Printf("     : %s: %-6s: from %q\n", turn.Next.Id, nextUnitMoves.Id, nextUnitMoves.FromHex)
+				} else {
+					goodLinks++
+				}
+				nextUnitMoves.FromHex = unitMoves.ToHex
+			}
+		}
+		log.Printf("links: %d good, %d bad\n", goodLinks, badLinks)
+		if badLinks != 0 {
+			// this should never happen. if it does then something is wrong with the report generator.
+			log.Printf("sorry: the previous and current hexes don't align in some reports\n")
+			log.Fatalf("please report this error")
+		}
+
+		// proactively patch some of the obscured locations.
+		// turn reports initially gave obscured locations for from and to hexes.
+		// around 0902-02, the current location stopped being obscured,
+		// but the previous location is still obscured.
+		// NB: links between the locations must be validated before patching them!
+		updatedCurrentLinks, updatedPreviousLinks := 0, 0
+		for _, turn := range consolidatedTurns {
+			for _, unitMoves := range turn.UnitMoves {
+				var prevTurnMoves *parser.Moves_t
+				if turn.Prev != nil {
+					prevTurnMoves = turn.Prev.UnitMoves[unitMoves.Id]
+				}
+				var nextTurnMoves *parser.Moves_t
+				if turn.Next != nil {
+					nextTurnMoves = turn.Next.UnitMoves[unitMoves.Id]
+				}
+				//if unitMoves.Id == "0138" {
+				//	log.Printf("this: %s: %-6s: this prior %q current %q\n", unitMoves.TurnId, unitMoves.Id, unitMoves.FromHex, unitMoves.ToHex)
+				//	if prevTurnMoves != nil {
+				//		log.Printf("      %s: %-6s: prev prior %q current %q\n", prevTurnMoves.TurnId, prevTurnMoves.Id, prevTurnMoves.FromHex, prevTurnMoves.ToHex)
+				//	}
+				//	if nextTurnMoves != nil {
+				//		log.Printf("      %s: %-6s: next prior %q current %q\n", nextTurnMoves.TurnId, nextTurnMoves.Id, nextTurnMoves.FromHex, nextTurnMoves.ToHex)
+				//	}
+				//}
+
+				// link prior.ToHex and this.FromHex if this.FromHex is not obscured
+				if !strings.HasPrefix(unitMoves.FromHex, "##") && prevTurnMoves != nil {
+					if prevTurnMoves.ToHex != unitMoves.FromHex {
+						updatedPreviousLinks++
+						prevTurnMoves.ToHex = unitMoves.FromHex
+					}
+				}
+
+				// link this.ToHex and next.FromHex if this.ToHex is not obscured
+				if !strings.HasPrefix(unitMoves.ToHex, "##") && nextTurnMoves != nil {
+					if unitMoves.ToHex != nextTurnMoves.FromHex {
+						updatedCurrentLinks++
+						nextTurnMoves.FromHex = unitMoves.ToHex
+					}
+				}
+			}
+		}
+		log.Printf("updated %8d obscured 'Previous Hex' locations\n", updatedPreviousLinks)
+		log.Printf("updated %8d obscured 'Current Hex'  locations\n", updatedCurrentLinks)
+
+		// walk the data
+		err = turns.Walk(consolidatedTurns, argsSammy.originGrid, argsSammy.quitOnInvalidGrid, argsSammy.warnOnInvalidGrid, argsSammy.debug.maps)
 		if err != nil {
 			log.Fatalf("error: %v\n", err)
 		}
+
+		// map the data
+		err = turns.Map(consolidatedTurns, argsSammy.debug.maps)
+		if err != nil {
+			log.Fatalf("error: %v\n", err)
+		}
+
 		log.Printf("elapsed: %v\n", time.Since(started))
 	},
 }

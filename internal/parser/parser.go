@@ -16,6 +16,7 @@ import (
 	"log"
 	"regexp"
 	"sort"
+	"strings"
 	"unicode"
 	"unicode/utf8"
 )
@@ -32,6 +33,10 @@ var (
 	rxTribeSection    = regexp.MustCompile(`^Tribe \d{4}, ,`)
 )
 
+const (
+	LastTurnCurrentLocationObscured = "0902-01"
+)
+
 func ParseInput(id string, input []byte, debugParser, debugSections, debugSteps, debugNodes bool) (*Turn_t, error) {
 	log.Printf("parser: %q\n", id)
 	debugp := func(format string, args ...any) {
@@ -46,7 +51,9 @@ func ParseInput(id string, input []byte, debugParser, debugSections, debugSteps,
 	}
 	debugp("%s: parser: %8d bytes\n", id, len(input))
 
-	t := &Turn_t{UnitMoves: map[UnitId_t]*Moves_t{}}
+	t := &Turn_t{
+		UnitMoves: map[UnitId_t]*Moves_t{},
+	}
 	var unitId UnitId_t // current unit being parsed
 	var moves *Moves_t  // current move being parsed
 
@@ -67,6 +74,10 @@ func ParseInput(id string, input []byte, debugParser, debugSections, debugSteps,
 			} else if _, ok := t.UnitMoves[unitId]; ok {
 				log.Printf("%s: %s: %d: location %q\n", id, unitId, lineNo, slug(line, 14))
 				return t, fmt.Errorf("duplicate unit in turn")
+			} else if t.Id > LastTurnCurrentLocationObscured && strings.HasPrefix(location.CurrentHex, "##") {
+				log.Printf("info: last turn current location is obscured is %s\n", LastTurnCurrentLocationObscured)
+				log.Printf("%s: %s: %d: location %q\n", id, unitId, lineNo, location.CurrentHex)
+				return t, fmt.Errorf("current location is obscured")
 			}
 			moves = &Moves_t{Id: unitId, FromHex: location.PreviousHex, ToHex: location.CurrentHex}
 			t.UnitMoves[moves.Id] = moves
@@ -140,12 +151,13 @@ func ParseInput(id string, input []byte, debugParser, debugSections, debugSteps,
 				log.Printf("please report this error\n")
 				panic(fmt.Sprintf("unexpected type %T", va))
 			} else {
-				if t.Year == 0 && t.Month == 0 {
+				if t.Id == "" {
 					t.Year, t.Month = turnInfo.CurrentTurn.Year, turnInfo.CurrentTurn.Month
+					t.Id = fmt.Sprintf("%04d-%02d", t.Year, t.Month)
 				}
-				if turnInfo.CurrentTurn.Year != t.Year {
+				if turnInfo.CurrentTurn.Year != t.Year || turnInfo.CurrentTurn.Month != t.Month {
 					log.Printf("%s: %s: %d: current turn: %04d-%02d", id, unitId, lineNo, t.Year, t.Month)
-					log.Printf("%s: %s: %d: unit turn: %04d-%02d", id, unitId, lineNo, turnInfo.CurrentTurn.Year, turnInfo.CurrentTurn.Month)
+					log.Printf("%s: %s: %d:    unit turn: %04d-%02d", id, unitId, lineNo, turnInfo.CurrentTurn.Year, turnInfo.CurrentTurn.Month)
 					return t, fmt.Errorf("turn mismatch in report")
 				}
 			}
