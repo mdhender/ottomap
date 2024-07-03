@@ -5,6 +5,7 @@ package parser
 import (
 	"fmt"
 	"github.com/mdhender/ottomap/internal/compass"
+	"github.com/mdhender/ottomap/internal/coords"
 	"github.com/mdhender/ottomap/internal/direction"
 	"github.com/mdhender/ottomap/internal/edges"
 	"github.com/mdhender/ottomap/internal/items"
@@ -88,20 +89,24 @@ type Move_t struct {
 // Report_t represents the observations made by a unit.
 // All reports are relative to the hex that the unit is reporting from.
 type Report_t struct {
+	Location      coords.Map
+	TurnId        string // turn the report was received
+	ScoutedTurnId string // turn the report was received from a scouting party
+
 	// permanent items in this hex
 	Terrain terrain.Terrain_e
 	Borders []*Border_t
 
 	// transient items in this hex
-	Encounters  []UnitId_t // other units in the hex
+	Encounters  []*Encounter_t // other units in the hex
 	Items       []*FoundItem_t
 	Resources   []resources.Resource_e
 	Settlements []*Settlement_t
 	FarHorizons []*FarHorizon_t
 }
 
-// mergeBorders adds a new border to the list if it's not already in the list
-func (r *Report_t) mergeBorders(b *Border_t) bool {
+// MergeBorders adds a new border to the list if it's not already in the list
+func (r *Report_t) MergeBorders(b *Border_t) bool {
 	for _, l := range r.Borders {
 		if l.Direction == b.Direction && l.Edge == b.Edge && l.Terrain == b.Terrain {
 			return false
@@ -111,10 +116,10 @@ func (r *Report_t) mergeBorders(b *Border_t) bool {
 	return true
 }
 
-// mergeEncounters adds a new encounter to the list if it's not already in the list
-func (r *Report_t) mergeEncounters(e UnitId_t) bool {
+// MergeEncounters adds a new encounter to the list if it's not already in the list
+func (r *Report_t) MergeEncounters(e *Encounter_t) bool {
 	for _, l := range r.Encounters {
-		if l == e {
+		if l.TurnId == e.TurnId && l.UnitId == e.UnitId {
 			return false
 		}
 	}
@@ -149,8 +154,8 @@ func (r *Report_t) mergeItems(list []*FoundItem_t, f *FoundItem_t) []*FoundItem_
 	return append(list, f)
 }
 
-// mergeResources adds a new resource to the list if it's not already in the list
-func (r *Report_t) mergeResources(rs resources.Resource_e) bool {
+// MergeResources adds a new resource to the list if it's not already in the list
+func (r *Report_t) MergeResources(rs resources.Resource_e) bool {
 	if rs == resources.None {
 		return false
 	}
@@ -163,8 +168,8 @@ func (r *Report_t) mergeResources(rs resources.Resource_e) bool {
 	return true
 }
 
-// mergeSettlements adds a new settlement to the list if it's not already in the list
-func (r *Report_t) mergeSettlements(s *Settlement_t) bool {
+// MergeSettlements adds a new settlement to the list if it's not already in the list
+func (r *Report_t) MergeSettlements(s *Settlement_t) bool {
 	if s == nil {
 		return false
 	}
@@ -201,6 +206,11 @@ type DirectionTerrain_t struct {
 
 func (d DirectionTerrain_t) String() string {
 	return fmt.Sprintf("%s-%s", d.Direction, d.Terrain)
+}
+
+type Encounter_t struct {
+	TurnId string // turn the encounter happened
+	UnitId UnitId_t
 }
 
 // Exhausted_t is returned when a step fails because the unit was exhausted.
@@ -286,7 +296,8 @@ type Scout_t struct {
 
 // Settlement_t is a settlement that the unit sees in the current hex.
 type Settlement_t struct {
-	Name string
+	TurnId string // turn the settlement was observed
+	Name   string
 }
 
 func (s *Settlement_t) String() string {

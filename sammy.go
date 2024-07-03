@@ -4,7 +4,11 @@ package main
 
 import (
 	"fmt"
+	"github.com/mdhender/ottomap/actions"
+	"github.com/mdhender/ottomap/internal/edges"
 	"github.com/mdhender/ottomap/internal/parser"
+	"github.com/mdhender/ottomap/internal/results"
+	"github.com/mdhender/ottomap/internal/terrain"
 	"github.com/mdhender/ottomap/internal/turns"
 	"github.com/spf13/cobra"
 	"log"
@@ -27,7 +31,9 @@ var argsSammy struct {
 	warnOnInvalidGrid   bool
 	turnId              string // maximum turn id to use
 	debug               struct {
+		dumpAll  bool
 		maps     bool
+		merge    bool
 		nodes    bool
 		parser   bool
 		sections bool
@@ -118,11 +124,13 @@ var cmdSammy = &cobra.Command{
 			if err != nil {
 				log.Fatalf("error: read: %v\n", err)
 			}
-			turn, err := parser.ParseInput(i.Id, data, argsSammy.debug.parser, argsSammy.debug.sections, argsSammy.debug.steps, argsSammy.debug.nodes)
+			turnId := fmt.Sprintf("%04d-%02d", i.Turn.Year, i.Turn.Month)
+			turn, err := parser.ParseInput(i.Id, turnId, data, argsSammy.debug.parser, argsSammy.debug.sections, argsSammy.debug.steps, argsSammy.debug.nodes)
 			if err != nil {
 				log.Fatal(err)
+			} else if turnId != fmt.Sprintf("%04d-%02d", turn.Year, turn.Month) {
+				log.Fatalf("error: expected turn %q: got turn %q\n", turnId, fmt.Sprintf("%04d-%02d", turn.Year, turn.Month))
 			}
-			turnId := fmt.Sprintf("%04d-%02d", turn.Year, turn.Month)
 			allTurns[turnId] = append(allTurns[turnId], turn)
 			totalUnitMoves += len(turn.UnitMoves)
 			log.Printf("%q: parsed %6d units in %v\n", i.Id, len(turn.UnitMoves), time.Since(started))
@@ -281,11 +289,63 @@ var cmdSammy = &cobra.Command{
 			log.Fatalf("error: %v\n", err)
 		}
 
-		// map the data
-		err = turns.Map(consolidatedTurns, argsSammy.debug.maps)
+		if argsSammy.debug.dumpAll {
+			for _, turn := range consolidatedTurns {
+				for _, unit := range turn.SortedMoves {
+					for _, move := range unit.Moves {
+						if move.Report == nil {
+							log.Fatalf("%s: %-6s: %6d: %2d: %s: %s\n", move.TurnId, unit.Id, move.LineNo, move.StepNo, move.CurrentHex, "missing report!")
+						} else if move.Report.Terrain == terrain.Blank {
+							if move.Result == results.Failed {
+								log.Printf("%s: %-6s: %s: failed\n", move.TurnId, unit.Id, move.CurrentHex)
+							} else if move.Still {
+								log.Printf("%s: %-6s: %s: stayed in place\n", move.TurnId, unit.Id, move.CurrentHex)
+							} else if move.Follows != "" {
+								log.Printf("%s: %-6s: %s: follows %s\n", move.TurnId, unit.Id, move.CurrentHex, move.Follows)
+							} else if move.GoesTo != "" {
+								log.Printf("%s: %-6s: %s: goes to %s\n", move.TurnId, unit.Id, move.CurrentHex, move.GoesTo)
+							} else {
+								log.Fatalf("%s: %-6s: %6d: %2d: %s: %s\n", move.TurnId, unit.Id, move.LineNo, move.StepNo, move.CurrentHex, "missing terrain")
+							}
+						} else {
+							log.Printf("%s: %-6s: %s: terrain %s\n", move.TurnId, unit.Id, move.CurrentHex, move.Report.Terrain)
+						}
+						for _, border := range move.Report.Borders {
+							if border.Edge != edges.None {
+								log.Printf("%s: %-6s: %s: border  %-14s %q\n", move.TurnId, unit.Id, move.CurrentHex, border.Direction, border.Edge)
+							}
+							if border.Terrain != terrain.Blank {
+								log.Printf("%s: %-6s: %s: border  %-14s %q\n", move.TurnId, unit.Id, move.CurrentHex, border.Direction, border.Terrain)
+							}
+						}
+						for _, point := range move.Report.FarHorizons {
+							log.Printf("%s: %-6s: %s: compass %-14s sighted %q\n", move.TurnId, unit.Id, move.CurrentHex, point.Point, point.Terrain)
+						}
+						for _, settlement := range move.Report.Settlements {
+							log.Printf("%s: %-6s: %s: village %q\n", move.TurnId, unit.Id, move.CurrentHex, settlement.Name)
+						}
+					}
+				}
+			}
+		}
+
+		// merge the data
+		reports, err := turns.MergeMoves(consolidatedTurns, argsSammy.debug.merge)
 		if err != nil {
 			log.Fatalf("error: %v\n", err)
 		}
+		log.Printf("merge returned %8d reports in %v\n", len(reports), time.Since(started))
+
+		// map the data
+		var cfg actions.MapConfig
+		cfg.Clan = "0138"
+		cfg.Show.Grid.Coords = true
+		cfg.Show.Grid.Numbers = true
+		err = actions.MapWorld(reports, cfg)
+		if err != nil {
+			log.Fatalf("error: %v\n", err)
+		}
+		log.Printf("map: %8d nodes: elapsed %v\n", len(reports), time.Since(started))
 
 		log.Printf("elapsed: %v\n", time.Since(started))
 	},

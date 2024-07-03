@@ -11,19 +11,24 @@ import (
 	"strings"
 )
 
-func Move(hex string, d direction.Direction_e) string {
+func Move(hex string, directions ...direction.Direction_e) string {
 	if hex == "N/A" || strings.HasPrefix(hex, "##") {
-		log.Printf("error: hex %q direction %q: %v\n", hex, d, fmt.Errorf("bad hex"))
+		log.Printf("error: hex %q: %v\n", hex, fmt.Errorf("bad hex"))
 		return hex
 	}
-	from, err := HexToMap(hex)
+	to, err := HexToMap(hex)
 	if err != nil {
-		log.Printf("error: hex %q direction %q: %v\n", hex, d, err)
+		log.Printf("error: hex %q: %v\n", hex, err)
 		panic(err)
 	}
-	to := from.Add(d)
-	//log.Printf("from %s to %s\n", from, to)
+	for _, d := range directions {
+		to = to.Add(d)
+	}
 	return to.ToHex()
+}
+
+func ColumnRowToMap(column int, row int) Map {
+	return Map{Column: column, Row: row}
 }
 
 func HexToMap(hex string) (Map, error) {

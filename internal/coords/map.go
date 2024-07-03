@@ -18,6 +18,14 @@ func (m Map) GridId() string {
 	return m.ToGrid().String()[:2]
 }
 
+func (m Map) GridColumnZeroBased() int {
+	return m.Column % 30
+}
+func (m Map) GridRowZeroBased() int {
+	return m.Row % 21
+}
+
+// GridColumnRow is one based
 func (m Map) GridColumnRow() (int, int) {
 	return m.Column%30 + 1, m.Row%21 + 1
 }
