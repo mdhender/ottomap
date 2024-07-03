@@ -173,29 +173,3 @@ func MergeMoves(turns []*parser.Turn_t, debug bool) ([]*parser.Report_t, error) 
 
 	return sortedReports, nil
 }
-
-func FindBounds(reports []*parser.Report_t) (minLocation, maxLocation coords.Map) {
-	if len(reports) == 0 {
-		return coords.Map{}, coords.Map{}
-	}
-
-	minColumn, minRow := reports[0].Location.Column, reports[0].Location.Row
-	maxColumn, maxRow := reports[0].Location.Column, reports[0].Location.Row
-
-	for _, report := range reports {
-		if report.Location.Column < minColumn {
-			minColumn = report.Location.Column
-		}
-		if report.Location.Row < minRow {
-			minRow = report.Location.Row
-		}
-		if maxColumn < report.Location.Column {
-			maxColumn = report.Location.Column
-		}
-		if maxRow < report.Location.Row {
-			maxRow = report.Location.Row
-		}
-	}
-
-	return coords.ColumnRowToMap(minColumn, minRow), coords.ColumnRowToMap(maxColumn, maxRow)
-}

@@ -2,24 +2,10 @@
 
 package wxx
 
-import "log"
-
-// MergeHexes merges the hexes into the consolidated map, creating new grids as necessary.
-// It returns the first error encountered merging the new hexes.
-func (w *WXX) MergeHexes(turnId string, hexes []*Hex) error {
-	for _, hex := range hexes {
-		if err := w.mergeHex(turnId, hex); err != nil {
-			return err
-		}
-	}
-	log.Printf("wxx: %s: merge: hexes %6d: grids %6d\n", turnId, len(hexes), w.totalGrids)
-	return nil
-}
-
-// mergeHex merges the hex into the consolidated map, creating new grids and tiles as necessary.
+// MergeHex merges the hex into the consolidated map, creating new grids and tiles as necessary.
 // It returns the first error encountered merging the new hex.
-func (w *WXX) mergeHex(turnId string, hex *Hex) error {
-	gridId := hex.GridId
+func (w *WXX) MergeHex(turnId string, hex *Hex) error {
+	gridId := hex.Location.GridId()
 	gridRow, gridColumn := gridIdToRowColumn(gridId)
 
 	// create a new grid if necessary

@@ -338,7 +338,7 @@ var cmdSammy = &cobra.Command{
 
 		// map the data
 		var cfg actions.MapConfig
-		cfg.Clan = "0138"
+		cfg.ClanId = "0138"
 		cfg.Show.Grid.Coords = true
 		cfg.Show.Grid.Numbers = true
 		err = actions.MapWorld(reports, cfg)

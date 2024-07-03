@@ -46,7 +46,7 @@ const (
 )
 
 // NumberOfTerrainTypes must be updated if we add new terrain types
-const NumberOfTerrainTypes = int(Tundra + 1)
+const NumberOfTerrainTypes = int(UnknownWater + 1)
 
 // MarshalJSON implements the json.Marshaler interface.
 func (e Terrain_e) MarshalJSON() ([]byte, error) {

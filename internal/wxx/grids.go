@@ -103,8 +103,8 @@ func (g *Grid) addTile(turnId string, hex *Hex) error {
 
 	// if it does, verify that the terrain has not changed
 	if alreadyExists && tile.Terrain != hex.Terrain {
-		log.Printf("error: turn %q: tile %q\n", turnId, tile.GridCoords)
-		log.Printf("error: turn %q: hex  %q\n", turnId, hex.GridCoords)
+		log.Printf("error: turn %q: tile %q\n", turnId, tile.Location.GridString())
+		log.Printf("error: turn %q: hex  %q\n", turnId, hex.Location.GridString())
 		panic("assert(tile.Terrain == hex.Terrain)")
 	}
 
@@ -114,6 +114,8 @@ func (g *Grid) addTile(turnId string, hex *Hex) error {
 		tile.Terrain = hex.Terrain
 		tile.Elevation = 1
 		switch tile.Terrain {
+		case terrain.Blank, terrain.UnknownLand, terrain.UnknownWater:
+			tile.Elevation = 0
 		case terrain.AridHills,
 			terrain.AridTundra,
 			terrain.Brush,
