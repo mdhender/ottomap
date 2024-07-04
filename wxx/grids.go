@@ -116,7 +116,7 @@ func (g *Grid) addTile(turnId string, hex *Hex) error {
 		switch tile.Terrain {
 		case domain.TAridHills,
 			domain.TAridTundra,
-			domain.TBrush,
+			domain.TBrushFlat,
 			domain.TBrushHills,
 			domain.TConiferHills,
 			domain.TDeciduous,
