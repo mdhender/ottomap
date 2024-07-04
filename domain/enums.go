@@ -421,7 +421,7 @@ var (
 		TBrushHills:           "Hills Shrubland",
 		TConiferHills:         "Hills Forest Evergreen",
 		TDeciduous:            "Flat Forest Deciduous Heavy",
-		TDeciduousHills:       "Hills Deciduous Forest",
+		TDeciduousHills:       "Hills Forest Deciduous",
 		TDesert:               "Flat Desert Sandy",
 		TGrassyHills:          "Hills Grassland",
 		TGrassyHillsPlateau:   "Hills Grassy",
