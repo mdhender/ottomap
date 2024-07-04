@@ -644,7 +644,7 @@ TERRAIN <- "ALPS" {
     return terrain.Ocean, nil
 } / "POLAR ICE" {
     return terrain.PolarIce, nil
-} / "PRAIRIE PLATEAU" {
+} / "PLATEAU PRAIRIE" {
     return terrain.PrairiePlateau, nil
 } / "PRAIRIE" {
     return terrain.Prairie, nil

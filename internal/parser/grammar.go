@@ -4032,9 +4032,9 @@ var g = &grammar{
 						run: (*parser).callonTERRAIN46,
 						expr: &litMatcher{
 							pos:        position{line: 647, col: 5, offset: 19406},
-							val:        "PRAIRIE PLATEAU",
+							val:        "PLATEAU PRAIRIE",
 							ignoreCase: false,
-							want:       "\"PRAIRIE PLATEAU\"",
+							want:       "\"PLATEAU PRAIRIE\"",
 						},
 					},
 					&actionExpr{
