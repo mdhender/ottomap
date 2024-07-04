@@ -281,7 +281,7 @@ const (
 	TAlps
 	TAridHills
 	TAridTundra
-	TBrush
+	TBrushFlat
 	TBrushHills
 	TConiferHills
 	TDeciduous
@@ -350,7 +350,7 @@ var (
 		TAlps:                 "ALPS",
 		TAridHills:            "AH",
 		TAridTundra:           "AR",
-		TBrush:                "BR",
+		TBrushFlat:            "BF",
 		TBrushHills:           "BH",
 		TConiferHills:         "CH",
 		TDeciduous:            "D",
@@ -382,7 +382,7 @@ var (
 		"ALPS": TAlps,
 		"AH":   TAridHills,
 		"AR":   TAridTundra,
-		"BR":   TBrush,
+		"BF":   TBrushFlat,
 		"BH":   TBrushHills,
 		"CH":   TConiferHills,
 		"D":    TDeciduous,
@@ -417,7 +417,7 @@ var (
 		TAlps:                 "Mountains",
 		TAridHills:            "Hills",
 		TAridTundra:           "Flat Moss",
-		TBrush:                "Flat Shrubland",
+		TBrushFlat:            "Flat Shrubland",
 		TBrushHills:           "Hills Shrubland",
 		TConiferHills:         "Hills Forest Evergreen",
 		TDeciduous:            "Flat Forest Deciduous Heavy",

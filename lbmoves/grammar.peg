@@ -222,7 +222,7 @@ TERRAIN <- "ALPS" {
 } / "BRUSH HILLS" {
     return domain.TBrushHills, nil
 } / "BRUSH" {
-    return domain.TBrush, nil
+    return domain.TBrushFlat, nil
 } / "CONIFER HILLS" {
     return domain.TConiferHills, nil
 } / "DECIDUOUS FOREST" {
@@ -257,7 +257,7 @@ TERRAIN <- "ALPS" {
     return domain.TOcean, nil
 } / "POLAR ICE" {
     return domain.TPolarIce, nil
-} / "PRAIRIE PLATEAU" {
+} / "PLATEAU PRAIRIE" {
     return domain.TPrairiePlateau, nil
 } / "PRAIRIE" {
     return domain.TPrairie, nil
@@ -282,8 +282,8 @@ TERRAIN_CODE <- "ALPS" {    return domain.TAlps, nil
 } / "PPR" { return domain.TPrairiePlateau, nil
 } / "AH" { return domain.TAridHills, nil
 } / "AR" { return domain.TAridTundra, nil
+} / "BF" { return domain.TBrushFlat, nil
 } / "BH" { return domain.TBrushHills, nil
-} / "BR" { return domain.TBrush, nil
 } / "CH" { return domain.TConiferHills, nil
 } / "DE" { return domain.TDesert, nil
 } / "DH" { return domain.TDeciduousHills, nil
