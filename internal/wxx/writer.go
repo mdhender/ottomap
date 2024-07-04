@@ -8,9 +8,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"github.com/google/uuid"
-	"github.com/mdhender/ottomap/internal/coords"
 	"github.com/mdhender/ottomap/internal/direction"
-	"github.com/mdhender/ottomap/internal/parser"
 	"github.com/mdhender/ottomap/internal/resources"
 	"github.com/mdhender/ottomap/internal/terrain"
 	"log"
@@ -19,81 +17,17 @@ import (
 	"unicode/utf8"
 )
 
-// Hex is a hex on the Tribenet map.
-type Hex struct {
-	Location coords.Map // coordinates from the turn report
-	Offset   Offset     // coordinates in a grid hex are one-based
-	Terrain  terrain.Terrain_e
-	Scouted  bool
-	Features Features
-}
-
-func (h *Hex) Grid() string {
-	return h.Location.GridId()
-}
-
-// Tile is a hex on the Worldographer map.
-type Tile struct {
-	created   string     // turn id when the tile was created
-	updated   string     // turn id when the tile was updated
-	Location  coords.Map // original grid coordinates
-	Terrain   terrain.Terrain_e
-	Elevation int
-	IsIcy     bool
-	IsGMOnly  bool
-	Resources Resources
-	Features  Features
-}
-
-// Features are things to display on the map
-type Features struct {
-	Edges struct {
-		Ford      []direction.Direction_e
-		Pass      []direction.Direction_e
-		River     []direction.Direction_e
-		StoneRoad []direction.Direction_e
+type RenderConfig struct {
+	Show struct {
+		Grid struct {
+			Centers bool
+			Coords  bool
+			Numbers bool
+		}
 	}
-
-	// set label for either Coords or Numbers, not both
-	CoordsLabel  string
-	NumbersLabel string
-
-	IsOrigin    bool // true for the clan's origin hex
-	Label       *Label
-	Resources   []resources.Resource_e
-	Settlements []*parser.Settlement_t // name of settlement
-
-	Created string // turn id when the hex was created
-	Updated string // turn id when the hex was updated
-	Visited string // turn id when the hex was last visited
 }
 
-type Resources struct {
-	Animal int
-	Brick  int
-	Crops  int
-	Gems   int
-	Lumber int
-	Metals int
-	Rock   int
-}
-
-// Offset captures the layout.
-// Are these one-based or zero-based?
-type Offset struct {
-	Column int
-	Row    int
-}
-
-func (w *WXX) AddGridCoords() {
-	w.addGridCoords()
-}
-
-func (w *WXX) AddGridNumbering() {
-	w.addGridNumbers()
-}
-
-func (w *WXX) Create(path string, showGridCenters bool) error {
+func (w *WXX) Create(path string, cfg RenderConfig) error {
 	if w.totalGrids == 0 {
 		return fmt.Errorf("wxx: create: no grids")
 	}
@@ -103,6 +37,32 @@ func (w *WXX) Create(path string, showGridCenters bool) error {
 	//log.Printf("origin (%f, %f)\n", origin[0].X, origin[0].Y)
 	//x, y := 148.14830212120597, 241.81408953094206
 	//log.Printf("delta (%f, %f)\n", x-origin[0].X, y-origin[0].Y)
+
+	var err error
+
+	type niceLabel struct {
+		OffsetFromCenter Point
+		R, G, B          float64
+	}
+
+	notVisitedLabel := niceLabel{
+		OffsetFromCenter: Point{X: -2, Y: 45},
+	}
+	if notVisitedLabel.R, notVisitedLabel.G, notVisitedLabel.B, err = hexToRGB("#ffff00"); err != nil {
+		panic(err)
+	}
+	scoutedLabel := niceLabel{
+		OffsetFromCenter: Point{X: 75, Y: 75},
+	}
+	if scoutedLabel.R, scoutedLabel.G, scoutedLabel.B, err = hexToRGB("#000000"); err != nil {
+		panic(err)
+	}
+
+	if cfg.Show.Grid.Coords {
+		w.addGridCoords()
+	} else if cfg.Show.Grid.Numbers {
+		w.addGridNumbers()
+	}
 
 	// create any missing grids
 	for gridRow := w.minGridRow; gridRow <= w.maxGridRow; gridRow++ {
@@ -160,11 +120,12 @@ func (w *WXX) Create(path string, showGridCenters bool) error {
 	}
 	w.Printf("</terrainmap>\n")
 
-	w.Println(`<maplayer name="Tribenet Coords" isVisible="true"/>`)
-	w.Println(`<maplayer name="Tribenet Origin" isVisible="false"/>`)
+	// order of these is important; worldographer renders them from the bottom up.
 	w.Println(`<maplayer name="Tribenet Resources" isVisible="true"/>`)
 	w.Println(`<maplayer name="Tribenet Settlements" isVisible="true"/>`)
-	w.Println(`<maplayer name="Tribenet Unvisited" isVisible="true"/>`)
+	w.Println(`<maplayer name="Tribenet Visited" isVisible="true"/>`)
+	w.Println(`<maplayer name="Tribenet Coords" isVisible="true"/>`)
+	w.Println(`<maplayer name="Tribenet Origin" isVisible="true"/>`)
 	w.Println(`<maplayer name="Labels" isVisible="true"/>`)
 	w.Println(`<maplayer name="Grid" isVisible="true"/>`)
 	w.Println(`<maplayer name="Features" isVisible="true"/>`)
@@ -311,7 +272,7 @@ func (w *WXX) Create(path string, showGridCenters bool) error {
 					tile := g.tiles[column][row]
 					points := coordsToPoints(gridColumnOffset+column, gridRowOffset+row)
 
-					if showGridCenters {
+					if cfg.Show.Grid.Centers {
 						w.Printf(`<label  mapLayer="Tribenet Coords" style="null" fontFace="null" color="0.0,0.0,0.0,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags="">`)
 						w.Printf(`<location viewLevel="WORLD" x="%g" y="%g" scale="6.25" />`, points[0].X, points[0].Y)
 						if column&1 == 0 {
@@ -322,26 +283,40 @@ func (w *WXX) Create(path string, showGridCenters bool) error {
 						w.Printf("</label>\n")
 					}
 
-					if tile.Features.Created != "" && tile.Features.Visited == "" {
-						labelXY := points[0].Translate(Point{-1.851698, 91.814090})
-						w.Printf(`<label  mapLayer="Tribenet Unvisited" style="null" fontFace="null" color="0.7019608020782471,0.7019608020782471,0.7019608020782471,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags="">`)
-						w.Printf(`<location viewLevel="WORLD" x="%f" y="%f" scale="90.0" />`, labelXY.X, labelXY.Y)
-						w.Printf("X")
-						w.Printf("</label>/n")
-					}
+					if tile.Terrain != terrain.Blank {
+						if !(tile.WasVisited || tile.WasScouted) {
+							//labelXY := points[0].Translate(Point{-1.851698, 91.814090})
+							//w.Printf(`<label  mapLayer="Tribenet Visited" style="null" fontFace="null" color="0.7019608020782471,0.7019608020782471,0.7019608020782471,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags="">`)
+							//w.Printf(`<location viewLevel="WORLD" x="%f" y="%f" scale="90.0" />`, labelXY.X, labelXY.Y)
+							//w.Printf("X")
+							//w.Printf("</label>/n")
+							labelXY := points[0].Translate(notVisitedLabel.OffsetFromCenter)
+							w.Printf(`<label  mapLayer="Tribenet Visited" style="null" fontFace="null" color="%g,%g,%g,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags="">`, notVisitedLabel.R, notVisitedLabel.G, notVisitedLabel.B)
+							w.Printf(`<location viewLevel="WORLD" x="%f" y="%f" scale="50.0" />`, labelXY.X, labelXY.Y)
+							w.Printf("X")
+							w.Printf("</label>/n")
+						}
+						if tile.WasScouted {
+							labelXY := points[0].Translate(scoutedLabel.OffsetFromCenter)
+							w.Printf(`<label  mapLayer="Tribenet Visited" style="null" fontFace="null" color="%g,%g,%g,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags="">`, scoutedLabel.R, scoutedLabel.G, scoutedLabel.B)
+							w.Printf(`<location viewLevel="WORLD" x="%f" y="%f" scale="12.5" />`, labelXY.X, labelXY.Y)
+							w.Printf("S")
+							w.Printf("</label>/n")
+						}
 
-					if tile.Features.CoordsLabel != "" {
-						labelXY := bottomLeftCenter(points).Translate(Point{-9, -2.5})
-						w.Printf(`<label  mapLayer="Tribenet Coords" style="null" fontFace="null" color="0.0,0.0,0.0,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags="">`)
-						w.Printf(`<location viewLevel="WORLD" x="%g" y="%g" scale="6.25" />`, labelXY.X, labelXY.Y)
-						w.Printf("%s", tile.Features.CoordsLabel)
-						w.Printf("</label>\n")
-					} else if tile.Features.NumbersLabel != "" {
-						labelXY := bottomLeftCenter(points).Translate(Point{-15, -2.5})
-						w.Printf(`<label  mapLayer="Tribenet Coords" style="null" fontFace="null" color="0.0,0.0,0.0,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags="">`)
-						w.Printf(`<location viewLevel="WORLD" x="%g" y="%g" scale="6.25" />`, labelXY.X, labelXY.Y)
-						w.Printf("%s", tile.Features.NumbersLabel)
-						w.Printf("</label>\n")
+						if tile.Features.CoordsLabel != "" {
+							labelXY := bottomLeftCenter(points).Translate(Point{-9, -2.5})
+							w.Printf(`<label  mapLayer="Tribenet Coords" style="null" fontFace="null" color="0.0,0.0,0.0,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags="">`)
+							w.Printf(`<location viewLevel="WORLD" x="%g" y="%g" scale="6.25" />`, labelXY.X, labelXY.Y)
+							w.Printf("%s", tile.Features.CoordsLabel)
+							w.Printf("</label>\n")
+						} else if tile.Features.NumbersLabel != "" {
+							labelXY := bottomLeftCenter(points).Translate(Point{-15, -2.5})
+							w.Printf(`<label  mapLayer="Tribenet Coords" style="null" fontFace="null" color="0.0,0.0,0.0,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags="">`)
+							w.Printf(`<location viewLevel="WORLD" x="%g" y="%g" scale="6.25" />`, labelXY.X, labelXY.Y)
+							w.Printf("%s", tile.Features.NumbersLabel)
+							w.Printf("</label>\n")
+						}
 					}
 
 					if tile.Features.Label != nil {

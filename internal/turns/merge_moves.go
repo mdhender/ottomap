@@ -37,6 +37,10 @@ func MergeMoves(turns []*parser.Turn_t, debug bool) ([]*parser.Report_t, error) 
 				}
 			}
 			for _, move := range moves {
+				if move.Report.TurnId == "" {
+					log.Printf("bug: move.Report.TurnId == %q\n", move.Report.TurnId)
+					move.Report.TurnId = turn.Id
+				}
 				allReports[move.CurrentHex] = append(allReports[move.CurrentHex], move.Report)
 
 				// we have hexes that we've never visited. create reports for them so we can map them.
@@ -96,10 +100,15 @@ func MergeMoves(turns []*parser.Turn_t, debug bool) ([]*parser.Report_t, error) 
 		if err != nil {
 			panic(err)
 		}
-		rpt := &parser.Report_t{Location: loc}
+		rpt := &parser.Report_t{
+			Location: loc,
+		}
 		sortedReports = append(sortedReports, rpt)
 		for _, report := range reports {
 			rpt.TurnId = report.TurnId
+			if rpt.ScoutedTurnId == "" {
+				rpt.ScoutedTurnId = report.ScoutedTurnId
+			}
 
 			// merge terrain if it is different
 			if report.Terrain != rpt.Terrain {

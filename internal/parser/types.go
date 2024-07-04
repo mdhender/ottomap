@@ -287,8 +287,9 @@ func (p *ProhibitedFrom_t) String() string {
 
 // Scout_t represents a scout sent out by a unit.
 type Scout_t struct {
-	No    int // usually from 1..8
-	Moves []*Move_t
+	No     int // usually from 1..8
+	TurnId string
+	Moves  []*Move_t
 
 	LineNo int
 	Line   []byte

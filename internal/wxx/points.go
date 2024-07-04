@@ -74,6 +74,11 @@ func bottomLeftCenter(v [7]Point) Point {
 	return Point{X: (v[6].X + bc.X) / 2, Y: bc.Y}
 }
 
+func offsetSouthEastCenter(v [7]Point) Point {
+	bc := edgeCenter(direction.SouthEast, v)
+	return Point{X: (v[6].X + bc.X) / 2, Y: bc.Y}
+}
+
 func distance(p1, p2 Point) float64 {
 	dx := p2.X - p1.X
 	dy := p2.Y - p1.Y

@@ -10,11 +10,13 @@ import (
 	"github.com/mdhender/ottomap/internal/results"
 	"github.com/mdhender/ottomap/internal/terrain"
 	"github.com/mdhender/ottomap/internal/turns"
+	"github.com/mdhender/ottomap/internal/wxx"
 	"github.com/spf13/cobra"
 	"log"
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -25,6 +27,10 @@ var argsSammy struct {
 		input  string // path to input folder
 		output string // path to output folder
 	}
+	parser              parser.ParseConfig
+	mapper              actions.MapConfig
+	render              wxx.RenderConfig
+	clanId              string
 	originGrid          string
 	noWarnOnInvalidGrid bool
 	quitOnInvalidGrid   bool
@@ -42,6 +48,9 @@ var argsSammy struct {
 		parser   bool
 		sections bool
 		steps    bool
+	}
+	show struct {
+		origin bool
 	}
 }
 
@@ -102,6 +111,22 @@ var cmdSammy = &cobra.Command{
 		}
 		argsSammy.warnOnInvalidGrid = !argsSammy.noWarnOnInvalidGrid
 
+		if argsSammy.maxTurn.id == "" {
+			argsSammy.maxTurn.year, argsSammy.maxTurn.month = 9999, 12
+		} else if yyyy, mm, ok := strings.Cut(argsSammy.maxTurn.id, "-"); !ok {
+			log.Fatalf("error: turn-cutoff %q: must be yyyy-mm format", argsSammy.maxTurn.id)
+		} else if year, err := strconv.Atoi(yyyy); err != nil {
+			log.Fatalf("error: turn-cutoff %q: must be yyyy-mm format", argsSammy.maxTurn.id)
+		} else if month, err := strconv.Atoi(mm); err != nil {
+			log.Fatalf("error: turn-cutoff %q: must be yyyy-mm format", argsSammy.maxTurn.id)
+		} else if year < 899 || year > 9999 {
+			log.Fatalf("error: turn-cutoff %q: invalid year %d", argsSammy.maxTurn.id, year)
+		} else if month < 1 || month > 12 {
+			log.Fatalf("error: turn-cutoff %q: invalid month %d", argsSammy.maxTurn.id, month)
+		} else {
+			argsSammy.maxTurn.year, argsSammy.maxTurn.month = year, month
+		}
+
 		if argsSammy.maxTurn.year < 0 {
 			argsSammy.maxTurn.year = 0
 		} else if argsSammy.maxTurn.year > 9999 {
@@ -159,7 +184,7 @@ var cmdSammy = &cobra.Command{
 				log.Printf("warn: %q: past cutoff %04d-%02d\n", i.Id, argsSammy.maxTurn.year, argsSammy.maxTurn.month)
 			}
 			turnId := fmt.Sprintf("%04d-%02d", i.Turn.Year, i.Turn.Month)
-			turn, err := parser.ParseInput(i.Id, turnId, data, argsSammy.debug.parser, argsSammy.debug.sections, argsSammy.debug.steps, argsSammy.debug.nodes)
+			turn, err := parser.ParseInput(i.Id, turnId, data, argsSammy.debug.parser, argsSammy.debug.sections, argsSammy.debug.steps, argsSammy.debug.nodes, argsSammy.parser)
 			if err != nil {
 				log.Fatal(err)
 			} else if turnId != fmt.Sprintf("%04d-%02d", turn.Year, turn.Month) {
@@ -317,6 +342,17 @@ var cmdSammy = &cobra.Command{
 		log.Printf("updated %8d obscured 'Previous Hex' locations\n", updatedPreviousLinks)
 		log.Printf("updated %8d obscured 'Current Hex'  locations\n", updatedCurrentLinks)
 
+		// dangerous but try to find the origin hex if asked
+		if argsSammy.show.origin {
+			for _, turn := range consolidatedTurns {
+				for _, unit := range turn.SortedMoves {
+					argsSammy.mapper.Show.Origin = unit.FromHex
+					break
+				}
+			}
+			log.Printf("info: origin hex set to %q\n", argsSammy.mapper.Show.Origin)
+		}
+
 		// walk the data
 		err = turns.Walk(consolidatedTurns, argsSammy.originGrid, argsSammy.quitOnInvalidGrid, argsSammy.warnOnInvalidGrid, argsSammy.debug.maps)
 		if err != nil {
@@ -324,7 +360,9 @@ var cmdSammy = &cobra.Command{
 		}
 
 		if argsSammy.debug.dumpAll {
+			log.Printf("hey, dumping it all\n")
 			for _, turn := range consolidatedTurns {
+				log.Printf("%s: sortedMoves %d\n", turn.Id, len(turn.SortedMoves))
 				for _, unit := range turn.SortedMoves {
 					for _, move := range unit.Moves {
 						if move.Report == nil {
@@ -371,15 +409,23 @@ var cmdSammy = &cobra.Command{
 		log.Printf("merge returned %8d reports in %v\n", len(reports), time.Since(started))
 
 		// map the data
-		var cfg actions.MapConfig
-		cfg.ClanId = "0138"
-		cfg.Show.Grid.Coords = true
-		cfg.Show.Grid.Numbers = true
-		err = actions.MapWorld(reports, cfg)
+		argsSammy.clanId = "0138"
+		wxxMap, err := actions.MapWorld(reports, argsSammy.mapper)
 		if err != nil {
 			log.Fatalf("error: %v\n", err)
 		}
 		log.Printf("map: %8d nodes: elapsed %v\n", len(reports), time.Since(started))
+
+		argsSammy.render.Show.Grid.Coords = true
+		argsSammy.render.Show.Grid.Numbers = true
+
+		// now we can create the Worldographer map!
+		mapName := filepath.Join(argsSammy.paths.output, fmt.Sprintf("%s.wxx", argsSammy.clanId))
+		if err := wxxMap.Create(mapName, argsSammy.render); err != nil {
+			log.Printf("creating %s\n", mapName)
+			log.Fatalf("error: %v\n", err)
+		}
+		log.Printf("created  %s\n", mapName)
 
 		log.Printf("elapsed: %v\n", time.Since(started))
 	},

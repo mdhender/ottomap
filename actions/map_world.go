@@ -3,45 +3,42 @@
 package actions
 
 import (
-	"fmt"
 	"github.com/mdhender/ottomap/internal/coords"
 	"github.com/mdhender/ottomap/internal/parser"
 	"github.com/mdhender/ottomap/internal/wxx"
 	"log"
-	"path/filepath"
 )
 
 type MapConfig struct {
-	ClanId string
-	Path   string
-	Dump   struct {
+	Dump struct {
 		All bool
 	}
 	Show struct {
-		Grid struct {
-			Centers bool
-			Coords  bool
-			Numbers bool
-		}
+		Origin string // if set, flag this location as the "origin"
 	}
 }
 
-func MapWorld(reports []*parser.Report_t, cfg MapConfig) error {
+func MapWorld(reports []*parser.Report_t, cfg MapConfig) (*wxx.WXX, error) {
 	if len(reports) == 0 {
 		log.Fatalf("error: no reports to map\n")
 	}
 	log.Printf("map: collected %8d hexes\n", len(reports))
 
-	// log the map boundaries?
+	log.Printf("hey, resources disabled\n")
+	log.Printf("hey, borders   disabled\n")
+
+	consolidatedMap := &wxx.WXX{}
+
+	// create the grids within the existing bounds
 	minGrid, maxGrid := FindBounds(reports)
 	log.Printf("map: upper left  grid %s\n", minGrid.GridId())
 	log.Printf("map: lower right grid %s\n", maxGrid.GridId())
-
-	consolidatedMap := &wxx.WXX{}
+	log.Printf("map: todo: move grid creation from merge to here\n")
 
 	// world hex map is indexed by grid location
 	worldHexMap := map[string]*wxx.Hex{}
 	for _, report := range reports {
+		gridCoords := report.Location.GridString()
 		gridColumn, gridRow := report.Location.GridColumnRow()
 		hex := &wxx.Hex{
 			Location: report.Location,
@@ -51,9 +48,10 @@ func MapWorld(reports []*parser.Report_t, cfg MapConfig) error {
 			},
 			Terrain: report.Terrain,
 			Features: wxx.Features{
-				Created: report.TurnId,
+				IsOrigin: cfg.Show.Origin == gridCoords,
 				//Resources: report.Resources,
 			},
+			WasScouted: report.ScoutedTurnId != "",
 		}
 		worldHexMap[hex.Location.GridString()] = hex
 
@@ -80,21 +78,7 @@ func MapWorld(reports []*parser.Report_t, cfg MapConfig) error {
 
 	log.Printf("map: collected %8d new     hexes\n", len(worldHexMap))
 
-	if cfg.Show.Grid.Coords {
-		consolidatedMap.AddGridCoords()
-	} else if cfg.Show.Grid.Numbers {
-		consolidatedMap.AddGridNumbering()
-	}
-
-	// now we can create the Worldographer map!
-	mapName := filepath.Join(cfg.Path, fmt.Sprintf("%s.wxx", cfg.ClanId))
-	if err := consolidatedMap.Create(mapName, cfg.Show.Grid.Centers); err != nil {
-		log.Printf("creating %s\n", mapName)
-		log.Fatalf("error: %v\n", err)
-	}
-	log.Printf("created  %s\n", mapName)
-
-	return nil
+	return consolidatedMap, nil
 }
 
 func FindBounds(reports []*parser.Report_t) (minLocation, maxLocation coords.Map) {

@@ -37,8 +37,16 @@ const (
 	LastTurnCurrentLocationObscured = "0902-01"
 )
 
-func ParseInput(fid, tid string, input []byte, debugParser, debugSections, debugSteps, debugNodes bool) (*Turn_t, error) {
-	log.Printf("parser: %q\n", fid)
+type ParseConfig struct {
+	Ignore struct {
+		Scouts bool
+		Logged struct {
+			Scouts bool
+		}
+	}
+}
+
+func ParseInput(fid, tid string, input []byte, debugParser, debugSections, debugSteps, debugNodes bool, cfg ParseConfig) (*Turn_t, error) {
 	debugp := func(format string, args ...any) {
 		if debugParser {
 			log.Printf(format, args...)
@@ -208,12 +216,19 @@ func ParseInput(fid, tid string, input []byte, debugParser, debugSections, debug
 				moves.Moves = append(moves.Moves, unitMoves...)
 			}
 		} else if rxScoutLine.Match(line) {
-			debugs("%s: %s: %d: found %q\n", fid, unitId, lineNo, slug(line, 14))
-			scoutMoves, err := ParseScoutMovementLine(fid, tid, unitId, lineNo, line, debugSteps, debugNodes)
-			if err != nil {
-				return t, err
+			if cfg.Ignore.Scouts {
+				if !cfg.Ignore.Logged.Scouts {
+					log.Printf("%s: %s: %d: ignoring scouts\n", fid, unitId, lineNo)
+					cfg.Ignore.Logged.Scouts = true
+				}
+			} else {
+				debugs("%s: %s: %d: found %q\n", fid, unitId, lineNo, slug(line, 14))
+				scoutMoves, err := ParseScoutMovementLine(fid, tid, unitId, lineNo, line, debugSteps, debugNodes)
+				if err != nil {
+					return t, err
+				}
+				moves.Scouts = append(moves.Scouts, scoutMoves)
 			}
-			moves.Scouts = append(moves.Scouts, scoutMoves)
 		} else if bytes.HasPrefix(line, statusLinePrefix) {
 			debugs("%s: %s: %d: found %q\n", fid, unitId, lineNo, statusLinePrefix)
 			statusMoves, err := ParseStatusLine(fid, tid, unitId, lineNo, line, debugSteps, debugNodes)
@@ -347,6 +362,7 @@ func ParseLocationLine(fid, tid string, unitId UnitId_t, lineNo int, line []byte
 
 func ParseScoutMovementLine(fid, tid string, unitId UnitId_t, lineNo int, line []byte, debugSteps, debugNodes bool) (*Scout_t, error) {
 	scout := &Scout_t{
+		TurnId: tid,
 		LineNo: lineNo,
 		Line:   bdup(line),
 	}
@@ -379,6 +395,7 @@ func ParseScoutMovementLine(fid, tid string, unitId UnitId_t, lineNo int, line [
 		return nil, err
 	}
 	for _, move := range moves {
+		move.Report.TurnId = tid
 		move.Report.ScoutedTurnId = tid
 	}
 	scout.Moves = moves
@@ -423,7 +440,7 @@ func ParseTribeFollowsLine(fid, tid string, unitId UnitId_t, lineNo int, line []
 
 	return &Move_t{
 		Follows: follows,
-		Report:  &Report_t{},
+		Report:  &Report_t{TurnId: tid},
 		LineNo:  lineNo,
 		StepNo:  1,
 		Line:    bdup(line),
@@ -449,7 +466,7 @@ func ParseTribeGoesToLine(fid, tid string, unitId UnitId_t, lineNo int, line []b
 
 	return &Move_t{
 		GoesTo: goesTo,
-		Report: &Report_t{},
+		Report: &Report_t{TurnId: tid},
 		LineNo: lineNo,
 		StepNo: 1,
 		Line:   bdup(line),
@@ -478,7 +495,15 @@ func ParseTribeMovementLine(fid, tid string, unitId UnitId_t, lineNo int, line [
 	}
 	line = bytes.TrimPrefix(line, []byte{'M', 'o', 'v', 'e'})
 
-	return parseMovementLine(fid, tid, unitId, lineNo, line, debugSteps, debugNodes)
+	moves, err := parseMovementLine(fid, tid, unitId, lineNo, line, debugSteps, debugNodes)
+	if err != nil {
+		return nil, err
+	}
+	for _, move := range moves {
+		move.Report.TurnId = tid
+	}
+
+	return moves, nil
 }
 
 // parseMovementLine parses all the moves on a single line.
@@ -493,11 +518,11 @@ func parseMovementLine(fid, tid string, unitId UnitId_t, lineNo int, line []byte
 		// "Move \" should be treated as a stay in place
 		return []*Move_t{
 			{LineNo: lineNo, StepNo: 1, Line: []byte{},
-				Still: true, Result: results.Succeeded, Report: &Report_t{}},
+				Still: true, Result: results.Succeeded, Report: &Report_t{TurnId: tid}},
 		}, nil
 	}
 
-	for _, move := range splitMoves(lineNo, line) {
+	for _, move := range splitMoves(fid, tid, lineNo, line) {
 		// move is the current step in the line
 
 		if debugSteps {
@@ -666,7 +691,7 @@ func parseMove(fid, tid string, unitId UnitId_t, lineNo, stepNo int, line []byte
 		log.Printf("%s: %s: %d: step %d: %q\n", fid, unitId, lineNo, stepNo, line)
 	}
 
-	m := &Move_t{LineNo: lineNo, StepNo: stepNo, Line: line, Report: &Report_t{}}
+	m := &Move_t{LineNo: lineNo, StepNo: stepNo, Line: line, Report: &Report_t{TurnId: tid}}
 
 	// each move should find at most one settlement
 	var settlement *Settlement_t
@@ -816,14 +841,14 @@ func parseMove(fid, tid string, unitId UnitId_t, lineNo, stepNo int, line []byte
 
 // splitMoves splits the line into individual moves. moves are separated by backslashes.
 // leading and trailing spaces and any trailing commas are from each move.
-func splitMoves(lineNo int, line []byte) (moves []*Move_t) {
+func splitMoves(fid, tid string, lineNo int, line []byte) (moves []*Move_t) {
 	line = bytes.TrimSpace(bytes.TrimRight(line, " \t\\,"))
 	if len(line) == 0 {
 		return nil
 	}
 	for n, text := range bytes.Split(line, []byte{'\\'}) {
 		text = bytes.TrimSpace(bytes.TrimRight(text, ", \t"))
-		moves = append(moves, &Move_t{LineNo: lineNo, StepNo: n + 1, Line: bdup(text), Report: &Report_t{}})
+		moves = append(moves, &Move_t{LineNo: lineNo, StepNo: n + 1, Line: bdup(text), Report: &Report_t{TurnId: tid}})
 	}
 	return moves
 }

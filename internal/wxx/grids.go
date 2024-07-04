@@ -75,7 +75,7 @@ func (w *WXX) newGrid(id string) *Grid {
 func (g *Grid) addCoords() {
 	for column := 0; column < columnsPerGrid; column++ {
 		for row := 0; row < rowsPerGrid; row++ {
-			if g.tiles[column][row].created != "" {
+			if g.tiles[column][row].Terrain != terrain.Blank {
 				g.tiles[column][row].Features.CoordsLabel = fmt.Sprintf("%s %02d%02d", g.id, column+1, row+1)
 			}
 		}
@@ -85,7 +85,7 @@ func (g *Grid) addCoords() {
 func (g *Grid) addNumbers() {
 	for column := 0; column < columnsPerGrid; column++ {
 		for row := 0; row < rowsPerGrid; row++ {
-			if g.tiles[column][row].created != "" {
+			if g.tiles[column][row].Terrain != terrain.Blank {
 				g.tiles[column][row].Features.NumbersLabel = fmt.Sprintf("%02d%02d", column+1, row+1)
 			}
 		}
@@ -154,6 +154,8 @@ func (g *Grid) addTile(turnId string, hex *Hex) error {
 		}
 	}
 
+	tile.WasScouted = tile.WasScouted || hex.WasScouted
+	tile.WasVisited = tile.WasVisited || hex.WasVisited
 	tile.Features = hex.Features
 
 	return nil
