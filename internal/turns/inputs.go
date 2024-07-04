@@ -17,7 +17,7 @@ var (
 )
 
 // CollectInputs returns a slice containing all the turn reports in the path
-func CollectInputs(path string) (inputs []*TurnReportFile_t, err error) {
+func CollectInputs(path string, maxYear, maxMonth int) (inputs []*TurnReportFile_t, err error) {
 	log.Printf("collect: input path: %s\n", path)
 
 	entries, err := os.ReadDir(path)
@@ -35,6 +35,23 @@ func CollectInputs(path string) (inputs []*TurnReportFile_t, err error) {
 			year, _ := strconv.Atoi(matches[1])
 			month, _ := strconv.Atoi(matches[2])
 			clanId := matches[3]
+			if year < 899 || year > 9999 || month < 1 || month > 12 {
+				log.Printf("warn: %q: invalid turn year or month\n")
+				continue
+			}
+			pastCutoff := false
+			if year > maxYear {
+				pastCutoff = true
+			} else if year == maxYear {
+				if month > maxMonth {
+					pastCutoff = true
+				}
+			}
+			if pastCutoff {
+				log.Printf("warn: %q: past cutoff %04d-%02d\n", fileName, maxYear, maxMonth)
+				continue
+			}
+
 			rf := &TurnReportFile_t{
 				Id:   fmt.Sprintf("%04d-%02d.%s", year, month, clanId),
 				Path: filepath.Join(path, fileName),

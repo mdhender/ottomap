@@ -115,9 +115,10 @@ func Execute() error {
 	cmdSammy.Flags().BoolVar(&argsSammy.debug.sections, "debug-sections", false, "enable sections debugging")
 	cmdSammy.Flags().BoolVar(&argsSammy.debug.steps, "debug-steps", false, "enable step debugging")
 	cmdSammy.Flags().BoolVar(&argsSammy.noWarnOnInvalidGrid, "no-warn-on-invalid-grid", false, "disable grid id warnings")
+	cmdSammy.Flags().IntVar(&argsSammy.maxTurn.year, "max-turn-year", 9999, "maximum turn year to process")
+	cmdSammy.Flags().IntVar(&argsSammy.maxTurn.month, "max-turn-month", 12, "maximum turn month to process")
 	cmdSammy.Flags().StringVar(&argsSammy.paths.data, "data", "data", "path to root of data files")
 	cmdSammy.Flags().StringVar(&argsSammy.originGrid, "origin-grid", "", "grid id to substitute for ##")
-	cmdSammy.Flags().StringVar(&argsSammy.turnId, "turn", "", "maximum turn to process (yyyy-mm format)")
 
 	cmdServe.PersistentFlags().StringVar(&argsServe.host, "host", "", "host to serve on")
 	cmdServe.PersistentFlags().StringVar(&argsServe.port, "port", "8080", "port to serve on")

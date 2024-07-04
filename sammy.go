@@ -29,8 +29,12 @@ var argsSammy struct {
 	noWarnOnInvalidGrid bool
 	quitOnInvalidGrid   bool
 	warnOnInvalidGrid   bool
-	turnId              string // maximum turn id to use
-	debug               struct {
+	maxTurn             struct { // maximum turn id to use
+		id    string
+		year  int
+		month int
+	}
+	debug struct {
 		dumpAll  bool
 		maps     bool
 		merge    bool
@@ -98,6 +102,18 @@ var cmdSammy = &cobra.Command{
 		}
 		argsSammy.warnOnInvalidGrid = !argsSammy.noWarnOnInvalidGrid
 
+		if argsSammy.maxTurn.year < 0 {
+			argsSammy.maxTurn.year = 0
+		} else if argsSammy.maxTurn.year > 9999 {
+			argsSammy.maxTurn.year = 9999
+		}
+		if argsSammy.maxTurn.month < 0 {
+			argsSammy.maxTurn.month = 1
+		} else if argsSammy.maxTurn.month > 12 {
+			argsSammy.maxTurn.month = 12
+		}
+		argsSammy.maxTurn.id = fmt.Sprintf("%04d-%02d", argsSammy.maxTurn.year, argsSammy.maxTurn.month)
+
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
@@ -109,7 +125,7 @@ var cmdSammy = &cobra.Command{
 		log.Printf("input:  %s\n", argsSammy.paths.input)
 		log.Printf("output: %s\n", argsSammy.paths.output)
 
-		inputs, err := turns.CollectInputs(argsSammy.paths.input)
+		inputs, err := turns.CollectInputs(argsSammy.paths.input, argsSammy.maxTurn.year, argsSammy.maxTurn.month)
 		if err != nil {
 			log.Fatalf("error: inputs: %v\n", err)
 		}
@@ -123,6 +139,24 @@ var cmdSammy = &cobra.Command{
 			data, err := os.ReadFile(i.Path)
 			if err != nil {
 				log.Fatalf("error: read: %v\n", err)
+			}
+			if i.Turn.Year < 899 || i.Turn.Year > 9999 || i.Turn.Month < 1 || i.Turn.Month > 12 {
+				log.Printf("warn: %q: invalid turn year '%d'\n", i.Id, i.Turn.Year)
+				continue
+			} else if i.Turn.Month < 1 || i.Turn.Month > 12 {
+				log.Printf("warn: %q: invalid turn month '%d'\n", i.Id, i.Turn.Month)
+				continue
+			}
+			pastCutoff := false
+			if i.Turn.Year > argsSammy.maxTurn.year {
+				pastCutoff = true
+			} else if i.Turn.Year == argsSammy.maxTurn.year {
+				if i.Turn.Month > argsSammy.maxTurn.month {
+					pastCutoff = true
+				}
+			}
+			if pastCutoff {
+				log.Printf("warn: %q: past cutoff %04d-%02d\n", i.Id, argsSammy.maxTurn.year, argsSammy.maxTurn.month)
 			}
 			turnId := fmt.Sprintf("%04d-%02d", i.Turn.Year, i.Turn.Month)
 			turn, err := parser.ParseInput(i.Id, turnId, data, argsSammy.debug.parser, argsSammy.debug.sections, argsSammy.debug.steps, argsSammy.debug.nodes)
