@@ -116,7 +116,8 @@ func (g *Grid) addTile(turnId string, hex *Hex) error {
 		switch tile.Terrain {
 		case terrain.Blank, terrain.UnknownLand, terrain.UnknownWater:
 			tile.Elevation = 0
-		case terrain.AridHills,
+		case terrain.Alps,
+			terrain.AridHills,
 			terrain.AridTundra,
 			terrain.BrushFlat,
 			terrain.BrushHills,

@@ -162,7 +162,7 @@ var (
 		BrushHills:           "Hills Shrubland",
 		ConiferHills:         "Hills Forest Evergreen",
 		Deciduous:            "Flat Forest Deciduous Heavy",
-		DeciduousHills:       "Hills Deciduous Forest",
+		DeciduousHills:       "Hills Forest Deciduous",
 		Desert:               "Flat Desert Sandy",
 		GrassyHills:          "Hills Grassland",
 		GrassyHillsPlateau:   "Hills Grassy",
