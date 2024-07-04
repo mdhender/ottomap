@@ -609,7 +609,7 @@ TERRAIN <- "ALPS" {
 } / "BRUSH HILLS" {
     return terrain.BrushHills, nil
 } / "BRUSH" {
-    return terrain.Brush, nil
+    return terrain.BrushFlat, nil
 } / "CONIFER HILLS" {
     return terrain.ConiferHills, nil
 } / "DECIDUOUS FOREST" {
@@ -669,8 +669,8 @@ TERRAIN_CODE <- "ALPS" {    return terrain.Alps, nil
 } / "PPR" { return terrain.PrairiePlateau, nil
 } / "AH" { return terrain.AridHills, nil
 } / "AR" { return terrain.AridTundra, nil
+} / "BF" { return terrain.BrushFlat, nil
 } / "BH" { return terrain.BrushHills, nil
-} / "BR" { return terrain.Brush, nil
 } / "CH" { return terrain.ConiferHills, nil
 } / "DE" { return terrain.Desert, nil
 } / "DH" { return terrain.DeciduousHills, nil

@@ -16,7 +16,7 @@ const (
 	Alps
 	AridHills
 	AridTundra
-	Brush
+	BrushFlat
 	BrushHills
 	ConiferHills
 	Deciduous
@@ -87,7 +87,7 @@ var (
 		Alps:                 "ALPS",
 		AridHills:            "AH",
 		AridTundra:           "AR",
-		Brush:                "BR",
+		BrushFlat:            "BF",
 		BrushHills:           "BH",
 		ConiferHills:         "CH",
 		Deciduous:            "D",
@@ -121,7 +121,7 @@ var (
 		"ALPS": Alps,
 		"AH":   AridHills,
 		"AR":   AridTundra,
-		"BR":   Brush,
+		"BF":   BrushFlat,
 		"BH":   BrushHills,
 		"CH":   ConiferHills,
 		"D":    Deciduous,
@@ -158,7 +158,7 @@ var (
 		Alps:                 "Mountains",
 		AridHills:            "Hills",
 		AridTundra:           "Flat Moss",
-		Brush:                "Flat Shrubland",
+		BrushFlat:            "Flat Shrubland",
 		BrushHills:           "Hills Shrubland",
 		ConiferHills:         "Hills Forest Evergreen",
 		Deciduous:            "Flat Forest Deciduous Heavy",
