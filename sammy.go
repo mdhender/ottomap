@@ -416,8 +416,8 @@ var cmdSammy = &cobra.Command{
 		}
 		log.Printf("map: %8d nodes: elapsed %v\n", len(reports), time.Since(started))
 
-		argsSammy.render.Show.Grid.Coords = true
-		argsSammy.render.Show.Grid.Numbers = true
+		//argsSammy.render.Show.Grid.Coords = true
+		//argsSammy.render.Show.Grid.Numbers = true
 
 		// now we can create the Worldographer map!
 		mapName := filepath.Join(argsSammy.paths.output, fmt.Sprintf("%s.wxx", argsSammy.clanId))

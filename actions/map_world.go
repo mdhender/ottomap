@@ -53,6 +53,9 @@ func MapWorld(reports []*parser.Report_t, cfg MapConfig) (*wxx.WXX, error) {
 			},
 			WasScouted: report.ScoutedTurnId != "",
 		}
+		for _, settlement := range report.Settlements {
+			hex.Features.Settlements = append(hex.Features.Settlements, settlement)
+		}
 		worldHexMap[hex.Location.GridString()] = hex
 
 		//for _, border := range report.Borders {

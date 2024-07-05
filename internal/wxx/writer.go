@@ -13,6 +13,7 @@ import (
 	"github.com/mdhender/ottomap/internal/terrain"
 	"log"
 	"os"
+	"strings"
 	"unicode/utf16"
 	"unicode/utf8"
 )
@@ -243,7 +244,7 @@ func (w *WXX) Create(path string, cfg RenderConfig) error {
 					}
 
 					for _, s := range tile.Features.Settlements {
-						if s != nil && s.Name != "" {
+						if s != nil && s.Name != "" && !strings.HasPrefix(s.Name, "_") {
 							settlement := points[0]
 							w.Printf(`<feature type="Settlement City" rotate="0.0" uuid="%s" mapLayer="Tribenet Settlements" isFlipHorizontal="false" isFlipVertical="false" scale="35.0" scaleHt="-1.0" tags="" color="null" ringcolor="null" isGMOnly="false" isPlaceFreely="false" labelPosition="6:00" labelDistance="0" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isFillHexBottom="false" isHideTerrainIcon="false"><location viewLevel="WORLD" x="%f" y="%f" />`, uuid.New().String(), settlement.X, settlement.Y)
 							w.Println(`</feature>`)
@@ -329,11 +330,11 @@ func (w *WXX) Create(path string, cfg RenderConfig) error {
 
 					for _, s := range tile.Features.Settlements {
 						if s != nil && s.Name != "" {
-							label := s.Name
+							label := strings.Trim(s.Name, "_")
 							labelXY := settlementLabelXY(label, points)
 							w.Printf(`<label  mapLayer="Tribenet Settlements" style="null" fontFace="null" color="0.0,0.0,0.0,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags="">`)
 							w.Printf(`<location viewLevel="WORLD" x="%g" y="%g" scale="12.5" />`, labelXY.X, labelXY.Y)
-							w.Printf("%s", s.Name)
+							w.Printf("%s", label)
 							w.Printf("</label>\n")
 						}
 					}

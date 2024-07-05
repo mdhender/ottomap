@@ -716,7 +716,7 @@ func parseMove(fid, tid string, unitId UnitId_t, lineNo, stepNo int, line []byte
 			if settlement == nil {
 				// if it is the first thing after the direction-terrain code
 				if m.Result != results.Unknown {
-					if r, _ := utf8.DecodeRune(subStep); unicode.IsUpper(r) {
+					if r, _ := utf8.DecodeRune(subStep); unicode.IsUpper(r) || r == '_' {
 						obj, err = &Settlement_t{Name: string(subStep)}, nil
 					}
 				}
