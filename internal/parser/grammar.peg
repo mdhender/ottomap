@@ -660,7 +660,7 @@ TERRAIN <- "ALPS" {
 
 TERRAIN_CODE <- "ALPS" {    return terrain.Alps, nil
 } / "GHP" { return terrain.GrassyHillsPlateau, nil
-} / "HSM" { return terrain.AridTundra, nil
+} / "HSM" { return terrain.HighSnowyMountains, nil
 } / "LAM" { return terrain.LowAridMountains, nil
 } / "LCM" { return terrain.LowConiferMountains, nil
 } / "LJM" { return terrain.LowJungleMountains, nil
