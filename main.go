@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	version = semver.Version{Major: 0, Minor: 12, Patch: 13}
+	version = semver.Version{Major: 0, Minor: 12, Patch: 14}
 )
 
 func main() {
@@ -27,7 +27,7 @@ func main() {
 }
 
 func Execute() error {
-	cmdRoot.AddCommand(cmdImport, cmdIndex, cmdInitialize, cmdList, cmdMap, cmdParse, cmdOldParse, cmdServe, cmdSetup, cmdVersion)
+	cmdRoot.AddCommand(cmdImport, cmdIndex, cmdInitialize, cmdList, cmdMap, cmdParse, cmdOldParse, cmdSammy, cmdServe, cmdSetup, cmdVersion)
 
 	cmdImport.Flags().StringVar(&argsImport.paths.db, "db", "", "path to database files")
 	if err := cmdImport.MarkFlagRequired("db"); err != nil {
@@ -108,6 +108,21 @@ func Execute() error {
 	cmdOldParseReports.Flags().BoolVar(&argsOldParseReports.debug.captureRawText, "capture-raw-text", false, "capture raw text")
 	cmdOldParseReports.Flags().StringVarP(&argsOldParseReports.gridOrigin, "grid-origin", "g", "OO", "initial grid value for '##'")
 	cmdOldParse.AddCommand(cmdOldParseReports, cmdOldParseUnits)
+
+	cmdSammy.Flags().BoolVar(&argsSammy.debug.maps, "debug-maps", false, "enable maps debugging")
+	cmdSammy.Flags().BoolVar(&argsSammy.debug.nodes, "debug-nodes", false, "enable node debugging")
+	cmdSammy.Flags().BoolVar(&argsSammy.debug.parser, "debug-parser", false, "enable parser debugging")
+	cmdSammy.Flags().BoolVar(&argsSammy.debug.sections, "debug-sections", false, "enable sections debugging")
+	cmdSammy.Flags().BoolVar(&argsSammy.debug.steps, "debug-steps", false, "enable step debugging")
+	cmdSammy.Flags().BoolVar(&argsSammy.parser.Ignore.Scouts, "ignore-scouts", false, "ignore scout reports")
+	cmdSammy.Flags().BoolVar(&argsSammy.noWarnOnInvalidGrid, "no-warn-on-invalid-grid", false, "disable grid id warnings")
+	cmdSammy.Flags().BoolVar(&argsSammy.render.Show.Grid.Coords, "show-grid-coords", false, "show grid coordinates (XX CCRR)")
+	cmdSammy.Flags().BoolVar(&argsSammy.render.Show.Grid.Numbers, "show-grid-numbers", false, "show grid numbers (CCRR)")
+	cmdSammy.Flags().BoolVar(&argsSammy.show.origin, "show-origin", false, "show origin hex")
+	cmdSammy.Flags().StringVar(&argsSammy.clanId, "clan-id", "", "clan for output file names")
+	cmdSammy.Flags().StringVar(&argsSammy.paths.data, "data", "data", "path to root of data files")
+	cmdSammy.Flags().StringVar(&argsSammy.originGrid, "origin-grid", "", "grid id to substitute for ##")
+	cmdSammy.Flags().StringVar(&argsSammy.maxTurn.id, "max-turn", "", "last turn to map (yyyy-mm format)")
 
 	cmdServe.PersistentFlags().StringVar(&argsServe.host, "host", "", "host to serve on")
 	cmdServe.PersistentFlags().StringVar(&argsServe.port, "port", "8080", "port to serve on")

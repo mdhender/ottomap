@@ -183,6 +183,22 @@ var cmdMap = &cobra.Command{
 			panic("this needs to be fixed")
 		}
 
+		var listOfReports []string
+		for _, rpt := range allReports {
+			listOfReports = append(listOfReports, rpt.Path)
+		}
+		if len(listOfReports) != 0 {
+			debug := actions.DebugTurnReports{
+				Nodes: true,
+				Steps: true,
+			}
+			err = actions.ParseTurnReports(argsMap.clanId, debug, listOfReports...)
+			if err != nil {
+				log.Fatalf("error: %v\n", err)
+			}
+			return nil
+		}
+
 		err = actions.MapReports(allReports,
 			argsMap.clanId,
 			cfg.Inputs.GridOriginId,

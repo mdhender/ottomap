@@ -133,7 +133,7 @@ func MapReports(allReports []*reports.Report, clanId, originGridId, outputPath s
 			allMovementResults = append(allMovementResults, mrl)
 
 			if section.FleetMovement != nil {
-				slug := string(section.FleetMovement.MovesText)
+				slug := string(section.FleetMovement.Text)
 				if len(slug) > 55 {
 					slug = slug[:55] + "..."
 				}
