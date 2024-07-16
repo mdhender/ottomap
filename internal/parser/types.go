@@ -103,6 +103,9 @@ type Report_t struct {
 	Resources   []resources.Resource_e
 	Settlements []*Settlement_t
 	FarHorizons []*FarHorizon_t
+
+	WasVisited bool // set to true if the location was visited by any unit
+	WasScouted bool // set to true if the location was visited by a scouting party or a unit ended the turn here
 }
 
 // MergeBorders adds a new border to the list if it's not already in the list

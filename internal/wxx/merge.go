@@ -2,6 +2,8 @@
 
 package wxx
 
+import "log"
+
 // MergeHex merges the hex into the consolidated map, creating new grids and tiles as necessary.
 // It returns the first error encountered merging the new hex.
 func (w *WXX) MergeHex(turnId string, hex *Hex) error {
@@ -11,6 +13,7 @@ func (w *WXX) MergeHex(turnId string, hex *Hex) error {
 	// create a new grid if necessary
 	g := w.grids[gridRow][gridColumn]
 	if g == nil {
+		log.Printf("%s: wasVisited %v: wasScouted %v: new grid attributes\n", hex.Location.GridString(), hex.WasVisited, hex.WasScouted)
 		if w.totalGrids == 0 {
 			// this is the first grid we've seen, so initialize the min and max grid coordinates
 			w.minGridRow, w.minGridColumn = gridRow, gridColumn
@@ -32,6 +35,8 @@ func (w *WXX) MergeHex(turnId string, hex *Hex) error {
 		} else if gridColumn > w.maxGridColumn {
 			w.maxGridColumn = gridColumn
 		}
+	} else {
+		log.Printf("%s: wasVisited %v: wasScouted %v: merge grid attributes\n", hex.Location.GridString(), hex.WasVisited, hex.WasScouted)
 	}
 
 	// add the hex to the grid as a tile, returning any error

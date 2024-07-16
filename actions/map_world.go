@@ -27,6 +27,12 @@ func MapWorld(reports []*parser.Report_t, cfg MapConfig) (*wxx.WXX, error) {
 	log.Printf("hey, resources disabled\n")
 	log.Printf("hey, borders   disabled\n")
 
+	for _, report := range reports {
+		gridCoords := report.Location.GridString()
+		gridColumn, gridRow := report.Location.GridColumnRow()
+		log.Printf("%s: %4d %4d: %6d\n", gridCoords, gridColumn, gridRow, len(report.Borders))
+	}
+
 	consolidatedMap := &wxx.WXX{}
 
 	// create the grids within the existing bounds
