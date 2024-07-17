@@ -9,12 +9,16 @@ type Location struct {
 
 }
 
-Line <- ("Courier" / "Element" / "Fleet" / "Garrison" / "Tribe") _ u:UNIT_ID "," _ "," _ "Current Hex =" _ cc:COORDS "," _ "(Previous Hex =" _ pc:COORDS ")" _ EOF {
+Line <- ("Courier" / "Element" / "Fleet" / "Garrison" / "Tribe") _ u:UNIT_ID "," _ AdminNote? "," _ "Current Hex =" _ cc:COORDS "," _ "(Previous Hex =" _ pc:COORDS ")" _ EOF {
     return &Location {
         UnitId:     u.(string),
         PrevCoords: pc.(string),
         CurrCoords: cc.(string),
     }, nil
+}
+
+AdminNote <- "Map Testing" {
+    return true, nil
 }
 
 COORDS <- "N/A" {

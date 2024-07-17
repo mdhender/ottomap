@@ -23,7 +23,10 @@ var argsMap struct {
 	}
 	clanId string // clan id to use
 	turnId string // turn id to use
-	debug  struct {
+	accept struct {
+		adminNotes bool
+	}
+	debug struct {
 		nodes       bool
 		sectionMaps bool
 		steps       bool
@@ -206,6 +209,7 @@ var cmdMap = &cobra.Command{
 			argsMap.clanId,
 			cfg.Inputs.GridOriginId,
 			cfg.OutputPath,
+			argsMap.accept.adminNotes,
 			argsMap.show.gridCenters,
 			argsMap.show.gridCoords,
 			argsMap.show.gridNumbers,

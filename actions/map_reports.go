@@ -21,7 +21,7 @@ import (
 	"strings"
 )
 
-func MapReports(allReports []*reports.Report, clanId, originGridId, outputPath string, showGridCenters, showGridCoords, showGridNumbers, showIgnoredSections, showSectionData, showSkippedSections, showSteps, debugSteps, debugNodes bool) error {
+func MapReports(allReports []*reports.Report, clanId, originGridId, outputPath string, acceptAdminNotes, showGridCenters, showGridCoords, showGridNumbers, showIgnoredSections, showSectionData, showSkippedSections, showSteps, debugSteps, debugNodes bool) error {
 	// create a map for every movement result we have
 	var allMovementResults []*lbmoves.MovementResults
 
@@ -74,11 +74,12 @@ func MapReports(allReports []*reports.Report, clanId, originGridId, outputPath s
 		// split the report into sections before parsing it.
 		// note that the Sections() function does some processing to set fields in the Section struct.
 		var secError *reports.Error
-		rpt.Sections, secError = reports.Sections(rpt.Id, data, showSkippedSections)
+		rpt.Sections, secError = reports.Sections(rpt.Id, data, showSkippedSections, acceptAdminNotes)
 		if showSectionData {
 			log.Printf("report %s: loaded %8d sections\n", rpt.Id, len(rpt.Sections))
 		}
 		if secError != nil {
+			log.Printf("error: %d: %v\n", secError.Line, secError.Error)
 			for _, section := range rpt.Sections {
 				if section.Error != nil {
 					log.Printf("error: report %s: section %s: line %d: %v\n", rpt.Id, section.Id, section.Error.Line.No, section.Error.Error)

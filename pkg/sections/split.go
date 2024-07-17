@@ -52,7 +52,7 @@ var (
 	rxTribeSection    *regexp.Regexp
 )
 
-func SplitRegEx(id string, input []byte, showSections bool) ([]*Section, bool) {
+func SplitRegEx(id string, input []byte, showSections, acceptAdminNotes bool) ([]*Section, bool) {
 	if len(input) == 0 {
 		return nil, false
 	}
@@ -65,19 +65,36 @@ func SplitRegEx(id string, input []byte, showSections bool) ([]*Section, bool) {
 
 	if rxCourierSection == nil {
 		var err error
-		if rxCourierSection, err = regexp.Compile(`^Courier \d{4}c\d, ,`); err != nil {
+		if acceptAdminNotes {
+			log.Printf("warning: accepting admin notes\n")
+			if rxCourierSection, err = regexp.Compile(`^Courier \d{4}c\d, `); err != nil {
+				panic(err)
+			} else if rxElementSection, err = regexp.Compile(`^Element \d{4}e\d, `); err != nil {
+				panic(err)
+			} else if rxFleetSection, err = regexp.Compile(`^Fleet \d{4}f\d, `); err != nil {
+				panic(err)
+			} else if rxGarrisonSection, err = regexp.Compile(`^Garrison \d{4}g\d, `); err != nil {
+				panic(err)
+			} else if rxTribeSection, err = regexp.Compile(`^Tribe \d{4}, `); err != nil {
+				panic(err)
+			}
+		} else {
+			if rxCourierSection, err = regexp.Compile(`^Courier \d{4}c\d, ,`); err != nil {
+				panic(err)
+			} else if rxElementSection, err = regexp.Compile(`^Element \d{4}e\d, ,`); err != nil {
+				panic(err)
+			} else if rxFleetSection, err = regexp.Compile(`^Fleet \d{4}f\d, ,`); err != nil {
+				panic(err)
+			} else if rxGarrisonSection, err = regexp.Compile(`^Garrison \d{4}g\d, ,`); err != nil {
+				panic(err)
+			} else if rxTribeSection, err = regexp.Compile(`^Tribe \d{4}, ,`); err != nil {
+				panic(err)
+			}
+		}
+		if rxFleetMove, err = regexp.Compile(`^(CALM|MILD|STRONG|GALE)\s+(NE|SE|SW|NW|N|S)\s+Fleet Movement: Move\s+`); err != nil {
 			panic(err)
-		} else if rxElementSection, err = regexp.Compile(`^Element \d{4}e\d, ,`); err != nil {
-			panic(err)
-		} else if rxFleetMove, err = regexp.Compile(`^(CALM|MILD|STRONG|GALE)\s+(NE|SE|SW|NW|N|S)\s+Fleet Movement: Move\s+`); err != nil {
-			panic(err)
-		} else if rxFleetSection, err = regexp.Compile(`^Fleet \d{4}f\d, ,`); err != nil {
-			panic(err)
-		} else if rxGarrisonSection, err = regexp.Compile(`^Garrison \d{4}g\d, ,`); err != nil {
-			panic(err)
-		} else if rxScoutLine, err = regexp.Compile(`^Scout \d:Scout `); err != nil {
-			panic(err)
-		} else if rxTribeSection, err = regexp.Compile(`^Tribe \d{4}, ,`); err != nil {
+		}
+		if rxScoutLine, err = regexp.Compile(`^Scout \d:Scout `); err != nil {
 			panic(err)
 		}
 	}

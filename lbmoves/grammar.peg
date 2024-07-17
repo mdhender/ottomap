@@ -255,6 +255,8 @@ TERRAIN <- "ALPS" {
     return domain.TLowVolcanicMountains, nil
 } / "OCEAN" {
     return domain.TOcean, nil
+} / "PLATEAU GRASSY HILLS" {
+    return domain.TGrassyHillsPlateau, nil
 } / "POLAR ICE" {
     return domain.TPolarIce, nil
 } / "PLATEAU PRAIRIE" {

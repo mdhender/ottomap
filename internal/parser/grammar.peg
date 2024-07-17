@@ -60,6 +60,10 @@ Noop <- EOF {
     return true, nil
 }
 
+AdminNote <- "Map Testing" {
+    return true, nil
+}
+
 CrowsNestObservation <- cs:CROWSIGHTING SP "-" SP cp:COMPASSPOINT EOF{
     return FarHorizon_t{
         Point: cp.(compass.Point_e),
@@ -94,7 +98,7 @@ FleetMovement <- ws:WINDSTRENGTH SP d:DIRECTION SP "Fleet Movement:" _ results:T
     return mt, nil
 }
 
-Location <- ("Courier" / "Element" / "Fleet" / "Garrison" / "Tribe") SP u:UNIT_ID "," SP "," SP "Current Hex =" SP ch:COORDS "," SP "(Previous Hex =" SP ph:COORDS ")" _ EOF {
+Location <- ("Courier" / "Element" / "Fleet" / "Garrison" / "Tribe") SP u:UNIT_ID "," SP AdminNote? "," SP "Current Hex =" SP ch:COORDS "," SP "(Previous Hex =" SP ph:COORDS ")" _ EOF {
     return Location_t {
         UnitId:      u.(UnitId_t),
         CurrentHex:  ch.(string),
@@ -642,10 +646,12 @@ TERRAIN <- "ALPS" {
     return terrain.LowVolcanicMountains, nil
 } / "OCEAN" {
     return terrain.Ocean, nil
-} / "POLAR ICE" {
-    return terrain.PolarIce, nil
+} / "PLATEAU GRASSY HILLS" {
+    return terrain.GrassyHillsPlateau, nil
 } / "PLATEAU PRAIRIE" {
     return terrain.PrairiePlateau, nil
+} / "POLAR ICE" {
+    return terrain.PolarIce, nil
 } / "PRAIRIE" {
     return terrain.Prairie, nil
 } / "ROCKY HILLS" {

@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	version = semver.Version{Major: 0, Minor: 12, Patch: 15}
+	version = semver.Version{Major: 0, Minor: 12, Patch: 16}
 )
 
 func main() {
@@ -78,6 +78,7 @@ func Execute() error {
 		log.Fatalf("list: db: mark required: %v\n", err)
 	}
 
+	cmdMap.Flags().BoolVar(&argsMap.accept.adminNotes, "accept-admin-notes", false, "accept admin notes")
 	cmdMap.Flags().BoolVar(&argsMap.debug.nodes, "debug-nodes", false, "enable node debugging")
 	cmdMap.Flags().BoolVar(&argsMap.debug.sectionMaps, "debug-section-maps", false, "save section maps for debugging")
 	cmdMap.Flags().BoolVar(&argsMap.debug.steps, "debug-steps", false, "enable step debugging")

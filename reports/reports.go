@@ -363,7 +363,7 @@ type ScoutLine struct {
 	Moves   []*Line
 }
 
-func Sections(id string, input []byte, showSkippedSections bool) ([]*Section, *Error) {
+func Sections(id string, input []byte, showSkippedSections, acceptAdminNotes bool) ([]*Section, *Error) {
 	// check for bom and remove it if present.
 	for _, bom := range [][]byte{
 		// see https://en.wikipedia.org/wiki/Byte_order_mark for BOM values
@@ -376,7 +376,7 @@ func Sections(id string, input []byte, showSkippedSections bool) ([]*Section, *E
 		}
 	}
 
-	inputSections, ok := xscts.SplitRegEx(id, input, showSkippedSections)
+	inputSections, ok := xscts.SplitRegEx(id, input, showSkippedSections, acceptAdminNotes)
 	if !ok {
 		return nil, &Error{
 			Line: &Line{
