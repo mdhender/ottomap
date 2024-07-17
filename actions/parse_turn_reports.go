@@ -4,7 +4,6 @@ package actions
 
 import (
 	"bytes"
-	"fmt"
 	"github.com/mdhender/ottomap/cerrs"
 	"github.com/mdhender/ottomap/wbmoves"
 	"log"
@@ -47,7 +46,7 @@ func ParseTurnReport(lines []*wbmoves.Line_t, debugSteps, debugNodes bool) error
 		return cerrs.ErrNotATurnReport
 	}
 
-	return fmt.Errorf("!implemented")
+	panic("!implemented")
 }
 
 type DebugTurnReports struct {

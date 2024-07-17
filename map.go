@@ -27,6 +27,7 @@ var argsMap struct {
 		nodes       bool
 		sectionMaps bool
 		steps       bool
+		turnReports bool
 		units       bool
 	}
 	features struct{}
@@ -183,20 +184,22 @@ var cmdMap = &cobra.Command{
 			panic("this needs to be fixed")
 		}
 
-		var listOfReports []string
-		for _, rpt := range allReports {
-			listOfReports = append(listOfReports, rpt.Path)
-		}
-		if len(listOfReports) != 0 {
-			debug := actions.DebugTurnReports{
-				Nodes: true,
-				Steps: true,
+		if argsMap.debug.turnReports {
+			var listOfReports []string
+			for _, rpt := range allReports {
+				listOfReports = append(listOfReports, rpt.Path)
 			}
-			err = actions.ParseTurnReports(argsMap.clanId, debug, listOfReports...)
-			if err != nil {
-				log.Fatalf("error: %v\n", err)
+			if len(listOfReports) != 0 {
+				debug := actions.DebugTurnReports{
+					Nodes: true,
+					Steps: true,
+				}
+				err = actions.ParseTurnReports(argsMap.clanId, debug, listOfReports...)
+				if err != nil {
+					log.Fatalf("error: %v\n", err)
+				}
+				return nil
 			}
-			return nil
 		}
 
 		err = actions.MapReports(allReports,
