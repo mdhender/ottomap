@@ -225,6 +225,7 @@ func Walk(input []*parser.Turn_t, originGrid string, quitOnInvalidGrid, warnOnIn
 						// nothing changes
 						move.CurrentHex = currentHex
 					} else {
+						log.Printf("%s: %-6s: %d: step %d: result %q\n", unitMoves.TurnId, unitMoves.Id, move.LineNo, move.StepNo, string(move.Line))
 						log.Printf("%s: %-6s: %d: step %d: result %q\n", unitMoves.TurnId, unitMoves.Id, move.LineNo, move.StepNo, move.Result)
 						panic(fmt.Sprintf("assert(result != %q)", move.Result))
 					}

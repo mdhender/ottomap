@@ -1,4 +1,3 @@
-
 # How to Build OttoMap from Scratch
 
 OttoMap is a project written in Go, a statically typed, compiled programming language designed for simplicity and efficiency. Building the project is straightforward due to Go's cross-platform nature and simple build process.
@@ -104,3 +103,11 @@ This command creates an executable named `ottomap` (for macOS and Linux) or `ott
 For additional help or if you encounter issues, please join our Discord server. The Go team also provides excellent documentation, which you can find at [https://go.dev/doc/tutorial/compile-install](https://go.dev/doc/tutorial/compile-install).
 
 Please see the `OTTOMAP.md` file for more information about using OttoMap.
+
+# Cross Compiling
+Experimental!
+
+```shell
+GOOS=windows GOARCH=amd64 go build -o ottomap.exe
+scp ottomap.exe shadowcairn:/var/www/ottosvc/assets/ottomap-0.12.16.exe
+```

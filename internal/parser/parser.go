@@ -24,13 +24,13 @@ import (
 //go:generate pigeon -o grammar.go grammar.peg
 
 var (
-	rxCourierSection  = regexp.MustCompile(`^Courier \d{4}c\d, ,`)
-	rxElementSection  = regexp.MustCompile(`^Element \d{4}e\d, ,`)
-	rxFleetSection    = regexp.MustCompile(`^Fleet \d{4}f\d, ,`)
+	rxCourierSection  = regexp.MustCompile(`^Courier \d{4}c\d, `)
+	rxElementSection  = regexp.MustCompile(`^Element \d{4}e\d, `)
+	rxFleetSection    = regexp.MustCompile(`^Fleet \d{4}f\d, `)
 	rxFleetMovement   = regexp.MustCompile(`^(CALM|MILD|STRONG|GALE)\s(NE|SE|SW|NW|N|S)\sFleet\sMovement:\sMove\s`)
-	rxGarrisonSection = regexp.MustCompile(`^Garrison \d{4}g\d, ,`)
+	rxGarrisonSection = regexp.MustCompile(`^Garrison \d{4}g\d, `)
 	rxScoutLine       = regexp.MustCompile(`^Scout \d:Scout `)
-	rxTribeSection    = regexp.MustCompile(`^Tribe \d{4}, ,`)
+	rxTribeSection    = regexp.MustCompile(`^Tribe \d{4}, `)
 )
 
 const (
@@ -770,6 +770,7 @@ func parseMove(fid, tid string, unitId UnitId_t, lineNo, stepNo int, line []byte
 				Terrain:   v.Terrain,
 			})
 		case FoundNothing_t: // ignore
+			// log.Printf("%s: %s: %d: step %d: sub %d: %q\n", fid, unitId, lineNo, stepNo, subStepNo, subStep)
 		case FoundUnit_t:
 			if m.Result == results.Unknown {
 				log.Printf("%s: %s: %d: step %d: sub %d: %q\n", fid, unitId, lineNo, stepNo, subStepNo, subStep)
