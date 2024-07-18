@@ -34,6 +34,7 @@ func Execute() error {
 	cmdSammy.Flags().BoolVar(&argsSammy.debug.parser, "debug-parser", false, "enable parser debugging")
 	cmdSammy.Flags().BoolVar(&argsSammy.debug.sections, "debug-sections", false, "enable sections debugging")
 	cmdSammy.Flags().BoolVar(&argsSammy.debug.steps, "debug-steps", false, "enable step debugging")
+	cmdSammy.Flags().BoolVar(&argsSammy.mapper.Dump.BorderCounts, "dump-border-counts", false, "dump border counts")
 	cmdSammy.Flags().BoolVar(&argsSammy.parser.Ignore.Scouts, "ignore-scouts", false, "ignore scout reports")
 	cmdSammy.Flags().BoolVar(&argsSammy.noWarnOnInvalidGrid, "no-warn-on-invalid-grid", false, "disable grid id warnings")
 	cmdSammy.Flags().BoolVar(&argsSammy.render.Show.Grid.Coords, "show-grid-coords", false, "show grid coordinates (XX CCRR)")

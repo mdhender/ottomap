@@ -93,16 +93,19 @@ func Walk(input []*parser.Turn_t, originGrid string, quitOnInvalidGrid, warnOnIn
 			//	log.Printf("%s: %-6s: follows %q\n", unitMoves.TurnId, unitMoves.Id, unitMoves.Follows)
 			//}
 			if unitMoves.Follows != "" {
+				// unit is following another unit, so update the location to the leader's location
 				if unitMoves.Follows == unitMoves.Id {
 					log.Printf("error: %s: %-6s: follows %q\n", unitMoves.TurnId, unitMoves.Id, unitMoves.Follows)
 					panic("assert(move.Follows != unitMoves.Id)")
 				}
+				resolvedMovement := false
 				// if the to hex isn't obscured, just use it.
 				if !strings.HasPrefix(unitMoves.ToHex, "##") {
 					currentHex = unitMoves.ToHex
 					for _, move := range unitMoves.Moves {
 						move.CurrentHex = currentHex
 					}
+					resolvedMovement = true
 				} else {
 					// jump through several hoops to try and figure out where we're headed
 					leaderId := unitMoves.Follows
@@ -119,6 +122,7 @@ func Walk(input []*parser.Turn_t, originGrid string, quitOnInvalidGrid, warnOnIn
 						for _, move := range unitMoves.Moves {
 							move.CurrentHex = currentHex
 						}
+						resolvedMovement = true
 					} else if leaderMoves.GoesTo != "" && !strings.HasPrefix(leaderMoves.GoesTo, "##") {
 						// we caught a break - the leader has an un-obscured goes to line,
 						// so we can move the follower to the location the leader is going to.
@@ -126,6 +130,7 @@ func Walk(input []*parser.Turn_t, originGrid string, quitOnInvalidGrid, warnOnIn
 						for _, move := range unitMoves.Moves {
 							move.CurrentHex = currentHex
 						}
+						resolvedMovement = true
 					} else {
 						// the leader's location is obscured.
 						// if we're lucky, it's because it hasn't moved yet.
@@ -135,9 +140,18 @@ func Walk(input []*parser.Turn_t, originGrid string, quitOnInvalidGrid, warnOnIn
 							log.Printf("%s: %-6s: follows %q: follows %q\n", unitMoves.TurnId, unitMoves.Id, leaderId, leaderMoves.Follows)
 						}
 						followsQueue[leaderId] = append(followsQueue[leaderId], unitMoves)
+						// movement is still pending
+						resolvedMovement = false
+					}
+				}
+				if resolvedMovement {
+					// todo: is it safe to assume that we visited this location?
+					for _, move := range unitMoves.Moves {
+						move.Report.WasVisited = true
 					}
 				}
 			} else if unitMoves.GoesTo != "" {
+				// unit is going to a specific location, so update the location to that location
 				// sanity check, these should always be the same value
 				if unitMoves.GoesTo != unitMoves.ToHex {
 					log.Printf("turn %s: unit %-6s: current hex is %q\n", unitMoves.TurnId, unitMoves.Id, unitMoves.ToHex)
@@ -147,14 +161,19 @@ func Walk(input []*parser.Turn_t, originGrid string, quitOnInvalidGrid, warnOnIn
 				currentHex = unitMoves.GoesTo
 				for _, move := range unitMoves.Moves {
 					move.CurrentHex = currentHex
+					// todo: is it safe to assume that we visited this location?
+					move.Report.WasVisited = true
 				}
 			} else {
+				// unit is moving by itself
+				// todo: the hex the unit starts in should always be flagged as visited
 				for _, move := range unitMoves.Moves {
 					var nextHex string
 					// update the current hex if the unit successfully moved to another hex
 					if move.Still {
 						// stays in the current hex, so nothing to update
 						nextHex = currentHex
+						move.Report.WasVisited = true
 					} else if move.GoesTo != "" {
 						// took care of this above
 						nextHex = currentHex
@@ -176,6 +195,7 @@ func Walk(input []*parser.Turn_t, originGrid string, quitOnInvalidGrid, warnOnIn
 					//	log.Printf("%s: %-6s: %d: step %d: result %q: to %q\n", unitMoves.TurnId, unitMoves.Id, move.LineNo, move.StepNo, move.Result, nextHex)
 					//}
 					currentHex, move.CurrentHex = nextHex, nextHex
+					// todo: how do we update the last location in the move?
 				}
 			}
 
@@ -214,6 +234,7 @@ func Walk(input []*parser.Turn_t, originGrid string, quitOnInvalidGrid, warnOnIn
 					if move.Still {
 						// nothing changes
 						move.CurrentHex = currentHex
+						move.Report.WasVisited, move.Report.WasScouted = true, true
 					} else if move.GoesTo != "" {
 						panic("scouts are not allowed to teleport")
 					} else if move.Follows != "" {
@@ -221,15 +242,18 @@ func Walk(input []*parser.Turn_t, originGrid string, quitOnInvalidGrid, warnOnIn
 					} else if move.Result == results.Succeeded {
 						// update current hex based on the direction
 						move.CurrentHex = coords.Move(currentHex, move.Advance)
+						move.Report.WasVisited, move.Report.WasScouted = true, true
 					} else if move.Result == results.Failed {
 						// nothing changes
 						move.CurrentHex = currentHex
+						// todo: can we update the visited and scouted flags?
 					} else {
 						log.Printf("%s: %-6s: %d: step %d: result %q\n", unitMoves.TurnId, unitMoves.Id, move.LineNo, move.StepNo, string(move.Line))
 						log.Printf("%s: %-6s: %d: step %d: result %q\n", unitMoves.TurnId, unitMoves.Id, move.LineNo, move.StepNo, move.Result)
 						panic(fmt.Sprintf("assert(result != %q)", move.Result))
 					}
 					currentHex = move.CurrentHex
+					// todo: how do we update the last location in the move?
 				}
 			}
 
