@@ -3,7 +3,7 @@
 package coords_test
 
 import (
-	"github.com/mdhender/ottomap/coords"
+	"github.com/mdhender/ottomap/internal/coords"
 	"testing"
 )
 

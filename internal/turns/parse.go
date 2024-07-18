@@ -4,11 +4,12 @@ package turns
 
 import (
 	"fmt"
-	"github.com/mdhender/ottomap/domain"
 	"github.com/mdhender/ottomap/internal/direction"
 	"github.com/mdhender/ottomap/internal/edges"
 	"github.com/mdhender/ottomap/internal/hexes"
 	"github.com/mdhender/ottomap/internal/parser"
+	"github.com/mdhender/ottomap/internal/resources"
+	"github.com/mdhender/ottomap/internal/terrain"
 	"github.com/mdhender/ottomap/internal/unit_movement"
 	"github.com/mdhender/ottomap/internal/units"
 	"github.com/mdhender/ottomap/internal/winds"
@@ -189,7 +190,7 @@ type Edge_t struct {
 type Neighbor_t struct {
 	Hex       hexes.Hex_t // hex where the neighbor is
 	Direction direction.Direction_e
-	Terrain   domain.Terrain
+	Terrain   terrain.Terrain_e
 	Text      []byte // copy of the original neighbor
 	Warning   string
 	Error     error
@@ -222,7 +223,7 @@ type Item_t struct {
 }
 
 type Resource_t struct {
-	Resource domain.Resource
+	Resource resources.Resource_e
 	Text     []byte // copy of the original resource
 	Warning  string
 	Error    error
@@ -248,7 +249,7 @@ type Winds_t struct {
 type DeckObservation_t struct {
 	No        int // index number in this step's deck observations
 	Direction direction.Direction_e
-	Terrain   domain.Terrain
+	Terrain   terrain.Terrain_e
 	Text      []byte // copy of the original deck observation
 	Warning   string
 	Error     error

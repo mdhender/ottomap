@@ -5,7 +5,6 @@ package parser
 import (
 	"bytes"
 	"fmt"
-	"github.com/mdhender/ottomap/domain"
 	"github.com/mdhender/ottomap/internal/direction"
 	"github.com/mdhender/ottomap/internal/edges"
 	"github.com/mdhender/ottomap/internal/resources"
@@ -306,7 +305,7 @@ type Step_t struct {
 	// that means they may be for the hex where the unit started.
 
 	GridHex string
-	Terrain domain.Terrain
+	Terrain terrain.Terrain_e
 
 	BlockedBy        *BlockedByEdge_t
 	Edges            []*Edge_t
