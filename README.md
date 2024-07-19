@@ -186,6 +186,6 @@ hexDirectionVectors["even-column"] = {
 
 ## Roadmap
 
-1. Replaced the CLI with a web front end.
+1. Replace the CLI with a web front end.
 2. A future version of the tool will convert the turn report files into JSON data that you can use to create your own maps.
-3. Useable documentation.
+3. Usable documentation.

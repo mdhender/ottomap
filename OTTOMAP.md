@@ -5,8 +5,7 @@ OttoMap is a tool that translates TribeNet turn report files into JSON data and 
 The basic usage is:
 
 1. Copy your turn report into a text file and save it to your `data/input` folder.
-2. Run the `index reports` command to add the new reports to your `config.json` file.
-3. Run the `map` command to generate the WXX files.
+3. Run the `render` command to generate the WXX files.
 
 ## Important Assumptions
 
@@ -23,9 +22,9 @@ OttoMap expects turn report files to be stored in the `data/input` directory wit
 The report files must be text files (we can't parse the `.docx` files yet).
 They must be named according to the following format:
 
-      YYY-MM.CLAN.report.txt
+      YYYY-MM.CLAN.report.txt
 
-Where `YYY` is the turn year (eg, 901), `MM` is the month (eg, 02), `CLAN` is the clan code (eg, 0991).
+Where `YYYY` is the turn year (eg, 901), `MM` is the month (eg, 02), `CLAN` is the clan code (eg, 0991).
 The extension `report.txt` tells OttoMap that it is a report file.
 
 You can create the report files by opening up your turn report, selecting the entire file (Control-A or Command-A) and then pasting it into the text file.
@@ -33,46 +32,48 @@ You can create the report files by opening up your turn report, selecting the en
 > **NOTE**
 > You should include all of your turn report files, not just the ones you want to generate a map for.
 
-## Indexing the Reports
-
-The `index reports` command adds new reports to the configuration so that you can generate maps.
-
-The index is saved in the file `data/config.json` and contains all the metadata about the reports.
-
-```bash
-$ ottomap index reports
-```
-
-Output example:
-```
-config: 0899-12.0991: added    input/899-12.0991.report.txt
-config: 0900-01.0991: added    input/900-01.0991.report.txt
-config: saved   data/config.json
-index:  created data/config.json
-```
-
-As mentioned earlier, only report files that match the naming convention `YYY-MM.CLAN.report.txt` are added.
-
 ## Creating Maps
 
-The `map` command reads the configuration and generates maps for each turn report.
-Only the files in the configuration are processed.
+The `render` command reads the configuration and generates maps for each turn report.
+Only the files in the `data/input` folder that match the YYYY-MM.CLAN.report.txt pattern are processed.
 
 ```bash
-$ ottomap map --turn 901-12 --clan 0991 --show-grid-coords
+$ ottomap render --clan 0991 --show-grid-coords
 ```
 
 Output example:
 ```
-map: config: file data/config.json
-config: loaded data/config.json
-map: config: path   data/config.json
-map: config: output data/output
-map: config: clan   "0991"
-map: config: turn year   901
-map: config: turn month   12
-map: created  data/output/0900-01.0991.wxx
-map: created  data/output/0991.wxx
+14:25:55 render.go:156: data:   /Users/wraith/JetBrains/tribenet/tn3/0138/data
+14:25:55 render.go:157: input:  /Users/wraith/JetBrains/tribenet/tn3/0138/data/input
+14:25:55 render.go:158: output: /Users/wraith/JetBrains/tribenet/tn3/0138/data/output
+14:25:55 inputs.go:21: collect: input path: /Users/wraith/JetBrains/tribenet/tn3/0138/data/input
+14:25:55 render.go:164: inputs: found 4 turn reports
+14:25:55 render.go:203: "0901-04.0138": parsed      2 units in 878.75µs
+14:25:55 render.go:203: "0901-05.0138": parsed      2 units in 648.209µs
+14:25:55 render.go:203: "0901-06.0138": parsed      2 units in 999.167µs
+14:25:55 render.go:203: "0901-07.0138": parsed      2 units in 993.334µs
+14:25:55 render.go:205: parsed 4 inputs in to 4 turns and 8 units 4.835208ms
+14:25:55 render.go:249: 0901-04:        2 units
+14:25:55 render.go:249: 0901-05:        2 units
+14:25:55 render.go:249: 0901-06:        2 units
+14:25:55 render.go:249: 0901-07:        2 units
+14:25:55 render.go:300: links: 6 good, 0 bad
+14:25:55 render.go:350: updated        0 obscured 'Previous Hex' locations
+14:25:55 render.go:351: updated        0 obscured 'Current Hex'  locations
+14:25:55 walk.go:16: walk: input:        4 turns
+14:25:55 walk.go:119: walk:        4 nodes: elapsed 60.375µs
+14:25:55 map_world.go:31: map: collected       59 tiles
+14:25:55 map_world.go:47: map: upper left  grid SA 1904
+14:25:55 map_world.go:48: map: lower right grid SA 2912
+14:25:55 map_world.go:49: map: todo: move grid creation from merge to here
+14:25:55 map_world.go:158: map: collected       59 new     hexes
+14:25:55 render.go:422: map:       59 nodes: elapsed 4.991917ms
+14:25:55 writer.go:36: wxx: create: 59 tiles
+14:25:55 writer.go:76: map: tile columns   11 rows    9
+14:25:55 writer.go:85: map: tile columns   14 rows   12
+14:25:55 render.go:430: created  /Users/wraith/JetBrains/tribenet/tn3/0138/data/output/0138.wxx
+14:25:55 render.go:432: elapsed: 7.839ms
+
 ```
 
 > **TODO**
@@ -95,50 +96,20 @@ $ ottomap version
 
 Output example:
 ```
-0.2.0
+0.13.0
 ```
 
-### `index reports`
+### `render`
 
-The `index reports` command creates an index for the turn report files to process. The index is saved in the file `data/input/config.json` and contains all the metadata about the reports.
+The `render` command generates a map from the turn report files.
 
 ```bash
-$ ottomap index reports
-```
-
-Output example:
-```
-config: 0899-12.0991: added    input/899-12.0991.report.txt
-config: 0900-01.0991: added    input/900-01.0991.report.txt
-config: saved   data/config.json
-index:  created data/config.json
-```
-
-### `map`
-
-The `map` command generates a map based on the indexed turn report files.
-
-```bash
-$ ottomap map --turn 901-12 --clan 0991 --show-grid-coords
-```
-
-Output example:
-```
-map: config: file data/config.json
-config: loaded data/config.json
-map: config: path   data/config.json
-map: config: output data/output
-map: config: clan   "0991"
-map: config: turn year   901
-map: config: turn month   12
-map: created  data/output/0900-01.0991.wxx
-map: created  data/output/0991.wxx
+$ ottomap render --clan 0991 --show-grid-coords
 ```
 
 You can specify additional options for the `map` command:
 
-- `--output` or `-o`: Specify the output directory for the generated map files.
-- `--config` or `-c`: Specify the path to a configuration file for customizing the map generation.
+- `--turn`: Specify the last turn to generate a map for.
 
 ## Running OttoMap
 
@@ -158,15 +129,11 @@ To run OttoMap, follow these steps:
 3. **Place your turn report files in the `data/input` directory**.
 
 4. **Run the desired command with any necessary options**:
-    - To index the report files, run:
-      ```bash
-      $ ottomap index reports
-      ```
     - To generate a map using the default settings, run:
       ```bash
-      $ ottomap map --turn 901-12 --clan 0991
+      $ ottomap render --clan 0991
       ```
 
-This will index the turn report files and generate a map in the default output directory.
+This will read all the turn report files in the `data/input` folder and create the Worldographer file `data/output/0991.wxx`.
 
 Note: Detailed information about the configuration options and map generation settings can be found in the project's documentation.

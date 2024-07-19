@@ -5,7 +5,6 @@ package parser
 import (
 	"bytes"
 	"fmt"
-	"github.com/mdhender/ottomap/domain"
 	"github.com/mdhender/ottomap/internal/direction"
 	"github.com/mdhender/ottomap/internal/edges"
 	"github.com/mdhender/ottomap/internal/resources"
@@ -24,13 +23,13 @@ import (
 //go:generate pigeon -o grammar.go grammar.peg
 
 var (
-	rxCourierSection  = regexp.MustCompile(`^Courier \d{4}c\d, ,`)
-	rxElementSection  = regexp.MustCompile(`^Element \d{4}e\d, ,`)
-	rxFleetSection    = regexp.MustCompile(`^Fleet \d{4}f\d, ,`)
+	rxCourierSection  = regexp.MustCompile(`^Courier \d{4}c\d, `)
+	rxElementSection  = regexp.MustCompile(`^Element \d{4}e\d, `)
+	rxFleetSection    = regexp.MustCompile(`^Fleet \d{4}f\d, `)
 	rxFleetMovement   = regexp.MustCompile(`^(CALM|MILD|STRONG|GALE)\s(NE|SE|SW|NW|N|S)\sFleet\sMovement:\sMove\s`)
-	rxGarrisonSection = regexp.MustCompile(`^Garrison \d{4}g\d, ,`)
+	rxGarrisonSection = regexp.MustCompile(`^Garrison \d{4}g\d, `)
 	rxScoutLine       = regexp.MustCompile(`^Scout \d:Scout `)
-	rxTribeSection    = regexp.MustCompile(`^Tribe \d{4}, ,`)
+	rxTribeSection    = regexp.MustCompile(`^Tribe \d{4}, `)
 )
 
 const (
@@ -306,7 +305,7 @@ type Step_t struct {
 	// that means they may be for the hex where the unit started.
 
 	GridHex string
-	Terrain domain.Terrain
+	Terrain terrain.Terrain_e
 
 	BlockedBy        *BlockedByEdge_t
 	Edges            []*Edge_t
@@ -419,7 +418,13 @@ func ParseStatusLine(fid, tid string, unitId UnitId_t, lineNo int, line []byte, 
 		log.Printf("%s: %s: %d: %q\n", fid, unitId, lineNo, line)
 	}
 
-	return parseMovementLine(fid, tid, unitId, lineNo, line, debugSteps, debugNodes)
+	// status lines have to be tagged since they are reported as scouting lines
+	moves, err := parseMovementLine(fid, tid, unitId, lineNo, line, debugSteps, debugNodes)
+	if len(moves) > 0 && moves[0].Result == results.Succeeded {
+		moves[0].Result = results.StatusLine
+		//log.Printf("status: %s: %s: %s: %d: %d: %q\n", fid, tid, unitId, lineNo, len(moves), string(line))
+	}
+	return moves, err
 }
 
 func ParseTribeFollowsLine(fid, tid string, unitId UnitId_t, lineNo int, line []byte, debug bool) (*Move_t, error) {
@@ -769,7 +774,14 @@ func parseMove(fid, tid string, unitId UnitId_t, lineNo, stepNo int, line []byte
 				Direction: v.Direction,
 				Terrain:   v.Terrain,
 			})
-		case FoundNothing_t: // ignore
+		case FoundItem_t: // ignore
+			// log.Printf("%s: %s: %d: step %d: sub %d: %q\n", fid, unitId, lineNo, stepNo, subStepNo, subStep)
+		case FoundNothing_t:
+			// mostly ignore, except for the case of where this is the entire step
+			if m.Result == results.Unknown {
+				m.Still = true
+			}
+			// log.Printf("%s: %s: %d: step %d: sub %d: %q: %q\n", fid, unitId, lineNo, stepNo, subStepNo, subStep, m.Result)
 		case FoundUnit_t:
 			if m.Result == results.Unknown {
 				log.Printf("%s: %s: %d: step %d: sub %d: %q\n", fid, unitId, lineNo, stepNo, subStepNo, subStep)

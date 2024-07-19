@@ -19,6 +19,19 @@ const (
 	SouthWest
 	NorthWest
 )
+const (
+	NumDirections = int(NorthWest) + 1
+)
+
+// Directions is a helper for iterating over the directions
+var Directions = []Direction_e{
+	North,
+	NorthEast,
+	SouthEast,
+	South,
+	SouthWest,
+	NorthWest,
+}
 
 // MarshalJSON implements the json.Marshaler interface.
 func (d Direction_e) MarshalJSON() ([]byte, error) {

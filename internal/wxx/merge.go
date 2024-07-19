@@ -2,65 +2,78 @@
 
 package wxx
 
-import "log"
+import (
+	"fmt"
+	"github.com/mdhender/ottomap/internal/terrain"
+	"log"
+)
 
 // MergeHex merges the hex into the consolidated map, creating new grids and tiles as necessary.
 // It returns the first error encountered merging the new hex.
-func (w *WXX) MergeHex(turnId string, hex *Hex) error {
-	gridId := hex.Location.GridId()
-	gridRow, gridColumn := gridIdToRowColumn(gridId)
+func (w *WXX) MergeHex(hex *Hex) error {
+	// create a new tile if necessary
+	t, ok := w.tiles[hex.Location]
+	if !ok {
+		//log.Printf("wxx: merge: creating tile %s\n", hex.Location.GridString())
+		t = newTile(hex.Location, hex.RenderAt)
 
-	// create a new grid if necessary
-	g := w.grids[gridRow][gridColumn]
-	if g == nil {
-		log.Printf("%s: wasVisited %v: wasScouted %v: new grid attributes\n", hex.Location.GridString(), hex.WasVisited, hex.WasScouted)
-		if w.totalGrids == 0 {
-			// this is the first grid we've seen, so initialize the min and max grid coordinates
-			w.minGridRow, w.minGridColumn = gridRow, gridColumn
-			w.maxGridRow, w.maxGridColumn = gridRow, gridColumn
+		// set up the terrain
+		t.Terrain = hex.Terrain
+		t.Elevation = 1
+		switch t.Terrain {
+		case terrain.Blank, terrain.UnknownLand, terrain.UnknownWater:
+			t.Elevation = 0
+		case terrain.Alps,
+			terrain.AridHills,
+			terrain.AridTundra,
+			terrain.BrushFlat,
+			terrain.BrushHills,
+			terrain.ConiferHills,
+			terrain.Deciduous,
+			terrain.DeciduousHills,
+			terrain.Desert,
+			terrain.GrassyHills,
+			terrain.GrassyHillsPlateau,
+			terrain.HighSnowyMountains,
+			terrain.Jungle,
+			terrain.JungleHills,
+			terrain.LowAridMountains,
+			terrain.LowConiferMountains,
+			terrain.LowJungleMountains,
+			terrain.LowSnowyMountains,
+			terrain.LowVolcanicMountains,
+			terrain.Prairie,
+			terrain.PrairiePlateau,
+			terrain.RockyHills,
+			terrain.SnowyHills,
+			terrain.Tundra:
+			t.Elevation = 1_250
+		case terrain.Lake:
+			t.Elevation = -1
+		case terrain.Ocean:
+			t.Elevation = -3
+		case terrain.PolarIce:
+			t.Elevation = 10
+		case terrain.Swamp:
+			t.Elevation = 1
+		default:
+			log.Printf("grid: addTile: unknown terrain type %d %q", hex.Terrain, hex.Terrain.String())
+			panic(fmt.Sprintf("assert(hex.Terrain != %d)", hex.Terrain))
 		}
 
-		w.grids[gridRow][gridColumn] = w.newGrid(gridId)
-		g = w.grids[gridRow][gridColumn]
-		w.totalGrids++
-
-		// track the bounds of the populated grids on the map
-		if gridRow < w.minGridRow {
-			w.minGridRow = gridRow
-		} else if gridRow > w.maxGridRow {
-			w.maxGridRow = gridRow
-		}
-		if gridColumn < w.minGridColumn {
-			w.minGridColumn = gridColumn
-		} else if gridColumn > w.maxGridColumn {
-			w.maxGridColumn = gridColumn
-		}
-	} else {
-		log.Printf("%s: wasVisited %v: wasScouted %v: merge grid attributes\n", hex.Location.GridString(), hex.WasVisited, hex.WasScouted)
+		w.tiles[hex.Location] = t
 	}
 
-	// add the hex to the grid as a tile, returning any error
-	return g.addTile(turnId, hex)
-}
-
-func (w *WXX) addGridCoords() {
-	for row := 0; row < 26; row++ {
-		for col := 0; col < 26; col++ {
-			if w.grids[row][col] == nil {
-				continue
-			}
-			w.grids[row][col].addCoords()
-		}
+	// verify that the terrain has not changed
+	if t.Terrain != hex.Terrain {
+		log.Printf("error: turn %q: tile %q\n", "?", t.Location.GridString())
+		log.Printf("error: turn %q: hex  %q\n", "?", hex.Location.GridString())
+		panic("assert(tile.Terrain == hex.Terrain)")
 	}
-}
 
-func (w *WXX) addGridNumbers() {
-	for row := 0; row < 26; row++ {
-		for col := 0; col < 26; col++ {
-			if w.grids[row][col] == nil {
-				continue
-			}
-			w.grids[row][col].addNumbers()
-		}
-	}
+	t.WasScouted = t.WasScouted || hex.WasScouted
+	t.WasVisited = t.WasVisited || hex.WasVisited
+	t.Features = hex.Features
+
+	return nil
 }

@@ -12,6 +12,7 @@ import (
 	"github.com/mdhender/ottomap/internal/resources"
 	"github.com/mdhender/ottomap/internal/results"
 	"github.com/mdhender/ottomap/internal/terrain"
+	"sort"
 	"strings"
 )
 
@@ -38,6 +39,47 @@ func (t *Turn_t) ToMayBeObscured() bool {
 	return t.Id <= LastTurnCurrentLocationObscured
 }
 
+// TopoSortMoves sorts the moves in the turn in a way that guarantees that units that depend on other units will be sorted last.
+func (t *Turn_t) TopoSortMoves() {
+	sort.Slice(t.SortedMoves, func(i, j int) bool {
+		a, b := t.SortedMoves[i], t.SortedMoves[j]
+
+		// Determine the type of move for a
+		aIsGoto, aIsNormal, aIsFollows := a.GoesTo != "", a.GoesTo == "" && a.Follows == "", a.Follows != ""
+
+		// Determine the type of move for b
+		bIsGoto, bIsNormal, bIsFollows := b.GoesTo != "", b.GoesTo == "" && b.Follows == "", b.Follows != ""
+
+		// Goto moves sort before normal and follow moves
+		if aIsGoto || bIsGoto {
+			if !bIsGoto {
+				return true
+			} else if !aIsGoto {
+				return false
+			}
+			return a.Id < b.Id
+		}
+
+		// Normal moves sort before follow moves
+		if aIsNormal || bIsNormal {
+			if bIsFollows {
+				return true
+			} else if aIsFollows {
+				return false
+			}
+			return a.Id < b.Id
+		}
+
+		// Follow moves sort last
+		if a.Follows < b.Follows {
+			return true
+		} else if a.Follows == b.Follows {
+			return a.Id < b.Id
+		}
+		return false
+	})
+}
+
 // Moves_t represents the results for a unit that moves and reports in a turn.
 // There will be one instance of this struct for each turn the unit moves in.
 type Moves_t struct {
@@ -61,6 +103,9 @@ type Moves_t struct {
 	// This should always be set from the turn report.
 	// It might be the same as the FromHex if the unit stays in place or fails to move.
 	ToHex string
+
+	// Location is the tile the unit ends the move in
+	Location coords.Map
 }
 
 // Move_t represents a single move by a unit.
@@ -84,6 +129,9 @@ type Move_t struct {
 
 	TurnId     string
 	CurrentHex string
+
+	// Location is the tile the unit ends the move in
+	Location coords.Map
 }
 
 // Report_t represents the observations made by a unit.
@@ -212,8 +260,9 @@ func (d DirectionTerrain_t) String() string {
 }
 
 type Encounter_t struct {
-	TurnId string // turn the encounter happened
-	UnitId UnitId_t
+	TurnId   string // turn the encounter happened
+	UnitId   UnitId_t
+	Friendly bool // true if the encounter was friendly
 }
 
 // Exhausted_t is returned when a step fails because the unit was exhausted.
@@ -312,6 +361,13 @@ func (s *Settlement_t) String() string {
 }
 
 type UnitId_t string
+
+func (u UnitId_t) InClan(clan UnitId_t) bool {
+	if len(u) != 4 {
+		return u.Parent().Parent() == clan
+	}
+	return u.Parent() == clan
+}
 
 func (u UnitId_t) IsFleet() bool {
 	return len(u) == 6 && u[4] == 'f'
