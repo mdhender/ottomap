@@ -6,9 +6,7 @@ OttoMap is a tool that translates TribeNet turn report files into JSON data and 
 
 == Installation
 
-. Download OttoMap from the official repository.
-. Unzip the Downloaded File.
-. Open a Terminal or Command Prompt and navigate to the OttoMap directory.
+. Ottomap currently requires you to download the source and build it on your computer.
 
 == Basic Commands
 
@@ -20,26 +18,18 @@ Displays the current version of OttoMap.
 ottomap version
 ----
 
-=== index reports
+=== render
 
-Indexes the turn report files for processing. This command adds new reports to the `data/config.json` file.
-
-----
-ottomap index reports
-----
-
-=== map
-
-Generates maps based on the indexed turn report files.
+Generates maps from the turn report files in the `data/input` directory.
 
 ----
-ottomap map --turn 901-12 --clan 0991 --show-grid-coords
+ottomap render --turn 901-12 --clan 0991 --show-grid-coords
 ----
 
 == File Naming Convention
 
-Turn report files must be named in the format `YYY-MM.CLAN.report.txt`:
-- `YYY` is the turn year (e.g., 901).
+Turn report files must be named in the format `YYYY-MM.CLAN.report.txt`:
+- `YYYY` is the turn year (e.g., 0901).
 - `MM` is the month (e.g., 02).
 - `CLAN` is the clan code (e.g., 0991).
 
@@ -49,22 +39,15 @@ Turn report files must be named in the format `YYY-MM.CLAN.report.txt`:
 
 . Store Turn Report Files:
 * Save the text files in the `data/input` directory.
-. Index the Reports:
-* Run the `index reports` command to add the files to the configuration.
 
 === Generating Maps
 
-. Run the `map` Command:
-* Specify the turn and clan for which you want to generate a map.
+. Run the `render` Command:
+* Specify the clan for which you want to generate a map.
 
 ----
-ottomap map --turn 901-12 --clan 0991 --show-grid-coords
+ottomap render --clan 0991 --show-grid-coords
 ----
-
-=== Additional Options
-
-* `--output` or `-o`: Specify the output directory for the generated map files.
-* `--config` or `-c`: Specify the path to a configuration file for customizing the map generation.
 
 == Error Handling
 
