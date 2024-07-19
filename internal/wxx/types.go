@@ -77,6 +77,7 @@ type Features struct {
 
 	IsOrigin    bool // true for the clan's origin hex
 	Label       *Label
+	Encounters  []*parser.Encounter_t // other units in this tile
 	Resources   []resources.Resource_e
 	Settlements []*parser.Settlement_t // name of settlement
 }

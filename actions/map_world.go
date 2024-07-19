@@ -7,6 +7,7 @@ import (
 	"github.com/mdhender/ottomap/internal/coords"
 	"github.com/mdhender/ottomap/internal/direction"
 	"github.com/mdhender/ottomap/internal/edges"
+	"github.com/mdhender/ottomap/internal/parser"
 	"github.com/mdhender/ottomap/internal/tiles"
 	"github.com/mdhender/ottomap/internal/wxx"
 	"log"
@@ -23,7 +24,7 @@ type MapConfig struct {
 	}
 }
 
-func MapWorld(allTiles *tiles.Map_t, cfg MapConfig) (*wxx.WXX, error) {
+func MapWorld(allTiles *tiles.Map_t, clan parser.UnitId_t, cfg MapConfig) (*wxx.WXX, error) {
 	if allTiles.Length() == 0 {
 		log.Fatalf("error: no tiles to map\n")
 	}
@@ -88,6 +89,13 @@ func MapWorld(allTiles *tiles.Map_t, cfg MapConfig) (*wxx.WXX, error) {
 					panic(fmt.Sprintf("assert(edge != %d)", edge))
 				}
 			}
+		}
+
+		for _, encounter := range t.Encounters {
+			if encounter.UnitId.InClan(clan) {
+				encounter.Friendly = true
+			}
+			hex.Features.Encounters = append(hex.Features.Encounters, encounter)
 		}
 
 		for _, resource := range t.Resources {

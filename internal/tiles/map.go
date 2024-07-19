@@ -78,29 +78,9 @@ func (m *Map_t) FetchTile(location coords.Map) *Tile_t {
 	// create a new tile to add to the map
 	tile := &Tile_t{Location: location}
 
-	//// visit all the neighbors in turn and ensure that they link back to the tile that we just created.
-	//// todo: why do we need to do this? why do we care about the neighbors now?
-	//if neighbor, ok := m.Tiles[location.Add(direction.North)]; ok {
-	//	neighbor.Neighbors[direction.South] = tile
-	//}
-	//if neighbor, ok := m.Tiles[location.Add(direction.NorthEast)]; ok {
-	//	neighbor.Neighbors[direction.SouthWest] = tile
-	//}
-	//if neighbor, ok := m.Tiles[location.Add(direction.SouthEast)]; ok {
-	//	neighbor.Neighbors[direction.NorthWest] = tile
-	//}
-	//if neighbor, ok := m.Tiles[location.Add(direction.South)]; ok {
-	//	neighbor.Neighbors[direction.North] = tile
-	//}
-	//if neighbor, ok := m.Tiles[location.Add(direction.SouthWest)]; ok {
-	//	neighbor.Neighbors[direction.NorthEast] = tile
-	//}
-	//if neighbor, ok := m.Tiles[location.Add(direction.NorthWest)]; ok {
-	//	neighbor.Neighbors[direction.SouthEast] = tile
-	//}
-
 	// add the tile to the map
 	m.Tiles[tile.Location] = tile
+
 	// and return it
 	return tile
 }

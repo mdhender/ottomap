@@ -61,6 +61,7 @@ func Step(turnId string, move *parser.Move_t, location, leader coords.Map, world
 		}
 	} else {
 		log.Printf("%s: %d: step %d: result %q\n", turnId, move.LineNo, move.StepNo, move.Result)
+		log.Printf("line: %q\n", move.Line)
 		panic(fmt.Sprintf("assert(result != %q)", move.Result))
 	}
 	if to == nil {

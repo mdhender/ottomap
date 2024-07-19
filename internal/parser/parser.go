@@ -774,8 +774,14 @@ func parseMove(fid, tid string, unitId UnitId_t, lineNo, stepNo int, line []byte
 				Direction: v.Direction,
 				Terrain:   v.Terrain,
 			})
-		case FoundNothing_t: // ignore
+		case FoundItem_t: // ignore
 			// log.Printf("%s: %s: %d: step %d: sub %d: %q\n", fid, unitId, lineNo, stepNo, subStepNo, subStep)
+		case FoundNothing_t:
+			// mostly ignore, except for the case of where this is the entire step
+			if m.Result == results.Unknown {
+				m.Still = true
+			}
+			// log.Printf("%s: %s: %d: step %d: sub %d: %q: %q\n", fid, unitId, lineNo, stepNo, subStepNo, subStep, m.Result)
 		case FoundUnit_t:
 			if m.Result == results.Unknown {
 				log.Printf("%s: %s: %d: step %d: sub %d: %q\n", fid, unitId, lineNo, stepNo, subStepNo, subStep)

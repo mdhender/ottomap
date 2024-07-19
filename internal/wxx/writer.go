@@ -29,10 +29,11 @@ type RenderConfig struct {
 	}
 }
 
-func (w *WXX) Create(path string, upperLeft, lowerRight coords.Map, cfg RenderConfig) error {
+func (w *WXX) Create(path string, turnId string, upperLeft, lowerRight coords.Map, cfg RenderConfig) error {
 	if len(w.tiles) == 0 {
 		return fmt.Errorf("wxx: create: no tiles")
 	}
+	log.Printf("wxx: create: %d tiles\n", len(w.tiles))
 
 	// handy way to figure out offset for features and labels
 	//origin := coordsToPoints(0, 0)
@@ -136,6 +137,8 @@ func (w *WXX) Create(path string, upperLeft, lowerRight coords.Map, cfg RenderCo
 	// order of these is important; worldographer renders them from the bottom up.
 	w.Println(`<maplayer name="Tribenet Resources" isVisible="true"/>`)
 	w.Println(`<maplayer name="Tribenet Settlements" isVisible="true"/>`)
+	w.Println(`<maplayer name="Tribenet Clan Units" isVisible="true"/>`)
+	w.Println(`<maplayer name="Tribenet Encounters" isVisible="true"/>`)
 	w.Println(`<maplayer name="Tribenet Visited" isVisible="true"/>`)
 	w.Println(`<maplayer name="Tribenet Coords" isVisible="true"/>`)
 	w.Println(`<maplayer name="Tribenet Origin" isVisible="true"/>`)
@@ -218,6 +221,38 @@ func (w *WXX) Create(path string, upperLeft, lowerRight coords.Map, cfg RenderCo
 				w.Printf("</feature>\n")
 			}
 
+			for _, e := range t.Features.Encounters {
+				// for now, only show encounters that are in the current turn.
+				if e.TurnId != turnId {
+					continue
+				}
+
+				// get the center of the hex we're in
+				center := points[0]
+
+				// avoid putting the units in the center of the hex
+				var edgePoint Point
+				if e.Friendly { // shift friendly units to the north-east
+					edgePoint = edgeCenter(direction.NorthEast, points)
+				} else { // shift other units to the north-west
+					edgePoint = edgeCenter(direction.NorthWest, points)
+				}
+				origin := midpoint(center, edgePoint)
+				var mapLayer, isFlipHorizontal, color string
+				if e.Friendly {
+					mapLayer, isFlipHorizontal, color = "Tribenet Clan Units", "false", "null"
+				} else {
+					mapLayer, isFlipHorizontal, color = "Tribenet Encounters", "true", "1.0,0.0,0.0,1.0"
+				}
+				w.Printf(`<feature type="Military Ancient Soldier" rotate="0.0" uuid="%s" mapLayer=%q isFlipHorizontal=%q isFlipVertical="false" scale="25.0" scaleHt="-1.0" tags="" color=%q ringcolor="null" isGMOnly="false" isPlaceFreely="false" labelPosition="12:00" labelDistance="-50" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isFillHexBottom="false" isHideTerrainIcon="false">`, uuid.New().String(), mapLayer, isFlipHorizontal, color)
+				w.Printf(`<location viewLevel="WORLD" x="%f" y="%f" />`, origin.X, origin.Y)
+				w.Printf(`<label  mapLayer=%q style="null" fontFace="null" color="0.0,0.0,0.0,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags="">`, mapLayer)
+				w.Printf(`<location viewLevel="WORLD" x="%g" y="%g" scale="6.25" />`, origin.X, origin.Y)
+				w.Printf("%s", e.UnitId)
+				w.Printf(`</label>`)
+				w.Println(`</feature>`)
+			}
+
 			for _, r := range t.Features.Resources {
 				if r != resources.None {
 					origin := points[0]
@@ -225,7 +260,7 @@ func (w *WXX) Create(path string, upperLeft, lowerRight coords.Map, cfg RenderCo
 					w.Printf(`<location viewLevel="WORLD" x="%f" y="%f" />`, origin.X, origin.Y)
 					w.Printf(`<label  mapLayer="Tribenet Resources" style="null" fontFace="null" color="0.0,0.0,0.0,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags="">`)
 					w.Printf(`<location viewLevel="WORLD" x="%g" y="%g" scale="12.5" />`, origin.X, origin.Y)
-					w.Printf("%s", t.Features.Resources)
+					w.Printf("%s", r.String())
 					w.Printf(`</label>`)
 					w.Println(`</feature>`)
 				}

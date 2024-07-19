@@ -60,6 +60,12 @@ var cmdSammy = &cobra.Command{
 	Short: "Create a map from a report",
 	Long:  `Load a parsed report and create a map.`,
 	PreRunE: func(cmd *cobra.Command, args []string) error {
+		if len(argsSammy.clanId) != 4 || argsSammy.clanId[0] != '0' {
+			return fmt.Errorf("clan-id must be a 4 digit number starting with 0")
+		} else if n, err := strconv.Atoi(argsSammy.clanId[1:]); err != nil || n < 0 || n > 9999 {
+			return fmt.Errorf("clan-id must be a 4 digit number starting with 0")
+		}
+
 		if argsSammy.paths.data == "" {
 			return fmt.Errorf("path to data folder is required")
 		}
@@ -160,6 +166,7 @@ var cmdSammy = &cobra.Command{
 		// allTurns holds the turn and move data and allows multiple clans to be loaded.
 		allTurns := map[string][]*parser.Turn_t{}
 		totalUnitMoves := 0
+		var turnId string // will be set to the last turnId we process
 		for _, i := range inputs {
 			started := time.Now()
 			data, err := os.ReadFile(i.Path)
@@ -184,7 +191,7 @@ var cmdSammy = &cobra.Command{
 			if pastCutoff {
 				log.Printf("warn: %q: past cutoff %04d-%02d\n", i.Id, argsSammy.maxTurn.year, argsSammy.maxTurn.month)
 			}
-			turnId := fmt.Sprintf("%04d-%02d", i.Turn.Year, i.Turn.Month)
+			turnId = fmt.Sprintf("%04d-%02d", i.Turn.Year, i.Turn.Month)
 			turn, err := parser.ParseInput(i.Id, turnId, data, argsSammy.debug.parser, argsSammy.debug.sections, argsSammy.debug.steps, argsSammy.debug.nodes, argsSammy.parser)
 			if err != nil {
 				log.Fatal(err)
@@ -414,7 +421,7 @@ var cmdSammy = &cobra.Command{
 		}
 
 		// map the data
-		wxxMap, err := actions.MapWorld(worldMap, argsSammy.mapper)
+		wxxMap, err := actions.MapWorld(worldMap, parser.UnitId_t(argsSammy.clanId), argsSammy.mapper)
 		if err != nil {
 			log.Fatalf("error: %v\n", err)
 		}
@@ -422,7 +429,7 @@ var cmdSammy = &cobra.Command{
 
 		// now we can create the Worldographer map!
 		mapName := filepath.Join(argsSammy.paths.output, fmt.Sprintf("%s.wxx", argsSammy.clanId))
-		if err := wxxMap.Create(mapName, upperLeft, lowerRight, argsSammy.render); err != nil {
+		if err := wxxMap.Create(mapName, turnId, upperLeft, lowerRight, argsSammy.render); err != nil {
 			log.Printf("creating %s\n", mapName)
 			log.Fatalf("error: %v\n", err)
 		}

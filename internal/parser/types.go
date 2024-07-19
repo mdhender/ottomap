@@ -260,8 +260,9 @@ func (d DirectionTerrain_t) String() string {
 }
 
 type Encounter_t struct {
-	TurnId string // turn the encounter happened
-	UnitId UnitId_t
+	TurnId   string // turn the encounter happened
+	UnitId   UnitId_t
+	Friendly bool // true if the encounter was friendly
 }
 
 // Exhausted_t is returned when a step fails because the unit was exhausted.
@@ -360,6 +361,13 @@ func (s *Settlement_t) String() string {
 }
 
 type UnitId_t string
+
+func (u UnitId_t) InClan(clan UnitId_t) bool {
+	if len(u) != 4 {
+		return u.Parent().Parent() == clan
+	}
+	return u.Parent() == clan
+}
 
 func (u UnitId_t) IsFleet() bool {
 	return len(u) == 6 && u[4] == 'f'
