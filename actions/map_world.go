@@ -3,7 +3,10 @@
 package actions
 
 import (
+	"fmt"
 	"github.com/mdhender/ottomap/internal/coords"
+	"github.com/mdhender/ottomap/internal/direction"
+	"github.com/mdhender/ottomap/internal/edges"
 	"github.com/mdhender/ottomap/internal/tiles"
 	"github.com/mdhender/ottomap/internal/wxx"
 	"log"
@@ -26,10 +29,8 @@ func MapWorld(allTiles *tiles.Map_t, cfg MapConfig) (*wxx.WXX, error) {
 	}
 	log.Printf("map: collected %8d tiles\n", allTiles.Length())
 
-	log.Printf("hey, resources disabled\n")
-	log.Printf("hey, borders   disabled\n")
-
 	if cfg.Dump.BorderCounts {
+		panic("border counts not implemented")
 		//for _, report := range allTiles {
 		//	gridCoords := report.Location.GridString()
 		//	gridColumn, gridRow := report.Location.GridColumnRow()
@@ -68,6 +69,29 @@ func MapWorld(allTiles *tiles.Map_t, cfg MapConfig) (*wxx.WXX, error) {
 			},
 			WasVisited: t.Visited != "",
 			WasScouted: t.Scouted != "",
+		}
+
+		// todo: one way fords and one way passes?
+		for _, d := range direction.Directions {
+			for _, edge := range t.Edges[d] {
+				switch edge {
+				case edges.None:
+				case edges.Ford:
+					hex.Features.Edges.Ford = append(hex.Features.Edges.Ford, d)
+				case edges.Pass:
+					hex.Features.Edges.Pass = append(hex.Features.Edges.Pass, d)
+				case edges.River:
+					hex.Features.Edges.River = append(hex.Features.Edges.River, d)
+				case edges.StoneRoad:
+					hex.Features.Edges.StoneRoad = append(hex.Features.Edges.StoneRoad, d)
+				default:
+					panic(fmt.Sprintf("assert(edge != %d)", edge))
+				}
+			}
+		}
+
+		for _, resource := range t.Resources {
+			hex.Features.Resources = append(hex.Features.Resources, resource)
 		}
 
 		for _, settlement := range t.Settlements {
