@@ -41,13 +41,14 @@ var argsSammy struct {
 		month int
 	}
 	debug struct {
-		dumpAll  bool
-		maps     bool
-		merge    bool
-		nodes    bool
-		parser   bool
-		sections bool
-		steps    bool
+		dumpAllTiles bool
+		dumpAllTurns bool
+		maps         bool
+		merge        bool
+		nodes        bool
+		parser       bool
+		sections     bool
+		steps        bool
 	}
 	show struct {
 		origin bool
@@ -346,20 +347,26 @@ var cmdSammy = &cobra.Command{
 		if argsSammy.show.origin {
 			for _, turn := range consolidatedTurns {
 				for _, unit := range turn.SortedMoves {
-					argsSammy.mapper.Show.Origin = unit.FromHex
+					argsSammy.mapper.Origin = unit.Location
 					break
 				}
 			}
-			log.Printf("info: origin hex set to %q\n", argsSammy.mapper.Show.Origin)
+			log.Printf("info: origin hex set to %q\n", argsSammy.mapper.Origin)
 		}
 
 		// walk the data
-		err = turns.Walk(consolidatedTurns, argsSammy.originGrid, argsSammy.quitOnInvalidGrid, argsSammy.warnOnInvalidGrid, argsSammy.debug.maps)
+		worldMap, err := turns.Walk2(consolidatedTurns, argsSammy.originGrid, argsSammy.quitOnInvalidGrid, argsSammy.warnOnInvalidGrid, argsSammy.debug.maps)
 		if err != nil {
 			log.Fatalf("error: %v\n", err)
 		}
+		_ = worldMap
 
-		if argsSammy.debug.dumpAll {
+		//err = turns.Walk(consolidatedTurns, argsSammy.originGrid, argsSammy.quitOnInvalidGrid, argsSammy.warnOnInvalidGrid, argsSammy.debug.maps)
+		//if err != nil {
+		//	log.Fatalf("error: %v\n", err)
+		//}
+
+		if argsSammy.debug.dumpAllTurns {
 			log.Printf("hey, dumping it all\n")
 			for _, turn := range consolidatedTurns {
 				log.Printf("%s: sortedMoves %d\n", turn.Id, len(turn.SortedMoves))
@@ -400,28 +407,22 @@ var cmdSammy = &cobra.Command{
 				}
 			}
 		}
+		upperLeft, lowerRight := worldMap.Bounds()
 
-		// merge the data
-		reports, err := turns.MergeMoves(consolidatedTurns, argsSammy.debug.merge)
-		if err != nil {
-			log.Fatalf("error: %v\n", err)
+		if argsSammy.debug.dumpAllTiles {
+			worldMap.Dump()
 		}
-		log.Printf("merge returned %8d reports in %v\n", len(reports), time.Since(started))
 
 		// map the data
-		argsSammy.clanId = "0138"
-		wxxMap, err := actions.MapWorld(reports, argsSammy.mapper)
+		wxxMap, err := actions.MapWorld(worldMap, argsSammy.mapper)
 		if err != nil {
 			log.Fatalf("error: %v\n", err)
 		}
-		log.Printf("map: %8d nodes: elapsed %v\n", len(reports), time.Since(started))
-
-		//argsSammy.render.Show.Grid.Coords = true
-		//argsSammy.render.Show.Grid.Numbers = true
+		log.Printf("map: %8d nodes: elapsed %v\n", worldMap.Length(), time.Since(started))
 
 		// now we can create the Worldographer map!
 		mapName := filepath.Join(argsSammy.paths.output, fmt.Sprintf("%s.wxx", argsSammy.clanId))
-		if err := wxxMap.Create(mapName, argsSammy.render); err != nil {
+		if err := wxxMap.Create(mapName, upperLeft, lowerRight, argsSammy.render); err != nil {
 			log.Printf("creating %s\n", mapName)
 			log.Fatalf("error: %v\n", err)
 		}

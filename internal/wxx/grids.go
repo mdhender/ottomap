@@ -93,7 +93,7 @@ func (g *Grid) addNumbers() {
 }
 
 func (g *Grid) addTile(turnId string, hex *Hex) error {
-	column, row := hex.Offset.Column-1, hex.Offset.Row-1
+	column, row := hex.Location.Column, hex.Location.Row
 
 	tile := &g.tiles[column][row]
 	tile.updated = turnId

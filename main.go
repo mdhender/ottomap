@@ -29,6 +29,8 @@ func main() {
 func Execute() error {
 	cmdRoot.AddCommand(cmdSammy, cmdVersion)
 
+	cmdSammy.Flags().BoolVar(&argsSammy.debug.dumpAllTiles, "debug-dump-all-tiles", false, "dump all tiles")
+	cmdSammy.Flags().BoolVar(&argsSammy.debug.dumpAllTurns, "debug-dump-all-turns", false, "dump all turns")
 	cmdSammy.Flags().BoolVar(&argsSammy.debug.maps, "debug-maps", false, "enable maps debugging")
 	cmdSammy.Flags().BoolVar(&argsSammy.debug.nodes, "debug-nodes", false, "enable node debugging")
 	cmdSammy.Flags().BoolVar(&argsSammy.debug.parser, "debug-parser", false, "enable parser debugging")
@@ -41,6 +43,9 @@ func Execute() error {
 	cmdSammy.Flags().BoolVar(&argsSammy.render.Show.Grid.Numbers, "show-grid-numbers", false, "show grid numbers (CCRR)")
 	cmdSammy.Flags().BoolVar(&argsSammy.show.origin, "show-origin", false, "show origin hex")
 	cmdSammy.Flags().StringVar(&argsSammy.clanId, "clan-id", "", "clan for output file names")
+	if err := cmdSammy.MarkFlagRequired("clan-id"); err != nil {
+		log.Fatalf("error: clan-id: %v\n", err)
+	}
 	cmdSammy.Flags().StringVar(&argsSammy.paths.data, "data", "data", "path to root of data files")
 	cmdSammy.Flags().StringVar(&argsSammy.originGrid, "origin-grid", "", "grid id to substitute for ##")
 	cmdSammy.Flags().StringVar(&argsSammy.maxTurn.id, "max-turn", "", "last turn to map (yyyy-mm format)")

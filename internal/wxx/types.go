@@ -13,7 +13,7 @@ import (
 // Hex is a hex on the Tribenet map.
 type Hex struct {
 	Location   coords.Map // coordinates from the turn report
-	Offset     Offset     // coordinates in a grid hex are one-based
+	RenderAt   coords.Map // shifted location to render tile at
 	Terrain    terrain.Terrain_e
 	WasScouted bool
 	WasVisited bool
@@ -29,6 +29,7 @@ type Tile struct {
 	created    string     // turn id when the tile was created
 	updated    string     // turn id when the tile was updated
 	Location   coords.Map // original grid coordinates
+	RenderAt   coords.Map // shifted location to render tile at
 	Terrain    terrain.Terrain_e
 	Elevation  int
 	IsIcy      bool
@@ -37,6 +38,28 @@ type Tile struct {
 	WasScouted bool
 	WasVisited bool
 	Features   Features
+}
+
+func newTile(location, renderAt coords.Map) *Tile {
+	t := &Tile{
+		Location: location,
+		RenderAt: renderAt,
+	}
+	return t
+}
+
+func (t *Tile) addCoords() {
+	if t.Terrain == terrain.Blank {
+		return
+	}
+	t.Features.CoordsLabel = t.Location.GridString()
+}
+
+func (t *Tile) addNumbers() {
+	if t.Terrain == terrain.Blank {
+		return
+	}
+	t.Features.NumbersLabel = t.Location.GridString()[3:]
 }
 
 // Features are things to display on the map

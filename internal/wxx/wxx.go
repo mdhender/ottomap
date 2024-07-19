@@ -4,29 +4,26 @@ package wxx
 
 import (
 	"bytes"
+	"github.com/mdhender/ottomap/internal/coords"
 )
 
 type WXX struct {
 	buffer *bytes.Buffer
 
-	// range of grids is AA to ZZ.
-	// grids are stored in row-column format.
-	grids                     [26][26]*Grid
-	totalGrids                int
-	minGridRow, minGridColumn int
-	maxGridRow, maxGridColumn int
+	tiles map[coords.Map]*Tile
 }
 
-// GetGrid grids are stored in row-column format
-func (w *WXX) GetGrid(row, column int) *Grid {
-	if !(0 <= row && row < 26) {
-		panic("out of bounds")
-	} else if !(0 <= column && column < 26) {
-		panic("out of bounds")
+func NewWXX() *WXX {
+	return &WXX{
+		tiles: map[coords.Map]*Tile{},
 	}
-	g := w.grids[row][column]
-	if g == nil {
-		panic("grid not defined")
+}
+
+// GetTile returns the tile at the given coordinates.
+func (w *WXX) GetTile(location coords.Map) *Tile {
+	t, ok := w.tiles[location]
+	if !ok {
+		panic("tile not defined")
 	}
-	return g
+	return t
 }

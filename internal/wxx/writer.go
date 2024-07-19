@@ -8,6 +8,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"github.com/google/uuid"
+	"github.com/mdhender/ottomap/internal/coords"
 	"github.com/mdhender/ottomap/internal/direction"
 	"github.com/mdhender/ottomap/internal/resources"
 	"github.com/mdhender/ottomap/internal/terrain"
@@ -28,9 +29,9 @@ type RenderConfig struct {
 	}
 }
 
-func (w *WXX) Create(path string, cfg RenderConfig) error {
-	if w.totalGrids == 0 {
-		return fmt.Errorf("wxx: create: no grids")
+func (w *WXX) Create(path string, upperLeft, lowerRight coords.Map, cfg RenderConfig) error {
+	if len(w.tiles) == 0 {
+		return fmt.Errorf("wxx: create: no tiles")
 	}
 
 	// handy way to figure out offset for features and labels
@@ -60,31 +61,42 @@ func (w *WXX) Create(path string, cfg RenderConfig) error {
 	}
 
 	if cfg.Show.Grid.Coords {
-		w.addGridCoords()
+		for _, t := range w.tiles {
+			t.addCoords()
+		}
 	} else if cfg.Show.Grid.Numbers {
-		w.addGridNumbers()
-	}
-
-	// create any missing grids
-	for gridRow := w.minGridRow; gridRow <= w.maxGridRow; gridRow++ {
-		for gridColumn := w.minGridColumn; gridColumn <= w.maxGridColumn; gridColumn++ {
-			if w.grids[gridRow][gridColumn] != nil {
-				continue
-			}
-			// create a new grid
-			gridId := gridRowColumnToId(gridRow, gridColumn)
-			w.newGrid(gridId)
+		for _, t := range w.tiles {
+			t.addNumbers()
 		}
 	}
 
 	// calculate the size of the consolidated map
-	gridsWide, gridsHigh := w.maxGridColumn-w.minGridColumn+1, w.maxGridRow-w.minGridRow+1
-	tilesWide, tilesHigh := columnsPerGrid*gridsWide, rowsPerGrid*gridsHigh
-	//log.Printf("map: grid columns %4d rows %4d", gridsWide, gridsHigh)
-	//log.Printf("map: tile columns %4d rows %4d", tilesWide, tilesHigh)
+	tilesWide, tilesHigh := lowerRight.Column-upperLeft.Column+1, lowerRight.Row-upperLeft.Row+1
+	log.Printf("map: tile columns %4d rows %4d", tilesWide, tilesHigh)
+	for _, t := range w.tiles {
+		if tilesWide < t.RenderAt.Column {
+			tilesWide = t.RenderAt.Column
+		}
+		if tilesHigh < t.RenderAt.Row {
+			tilesHigh = t.RenderAt.Row
+		}
+	}
+	log.Printf("map: tile columns %4d rows %4d", tilesWide, tilesHigh)
+	// bump the tiles wide and high by 4 so that we can render the borders
+	tilesWide, tilesHigh = tilesWide+4, tilesHigh+4
+
+	// create a two-dimensional slice of tiles so that we can render them in the order we want.
+	// the slice will be indexed by the render location row and column.
+	var allTiles [][]*Tile
+	for row := 0; row <= tilesHigh; row++ {
+		allTiles = append(allTiles, make([]*Tile, tilesWide+1))
+	}
+	for _, t := range w.tiles {
+		allTiles[t.RenderAt.Row][t.RenderAt.Column] = t
+	}
 
 	// create the slice that maps our terrains to the Worldographer terrain names.
-	// todo: this is a hack and should be extracted into the domain package.
+	// todo: this is a hack and should be extracted into the terrain package.
 	var terrainSlice []string // the first row must be the Blank terrain
 	for n := 0; n < terrain.NumberOfTerrainTypes; n++ {
 		value, ok := terrain.TileTerrainNames[terrain.Terrain_e(n)]
@@ -139,54 +151,35 @@ func (w *WXX) Create(path string, cfg RenderConfig) error {
 	// width is the number of columns, height is the number of rows.
 	w.Println(`<tiles viewLevel="WORLD" tilesWide="%d" tilesHigh="%d">`, tilesWide, tilesHigh)
 
-	// NB: the element is named "tilerow" but it holds the tiles for a single column because we're using COLUMNS orientation.
-	//
-	// this is hard for me to understand.
-	//
-	// we have to sweep through the columns from left to right.
-	// for each column, we have to sweep through the rows from top to bottom.
-	// the rows have to jump across grids as we process each tile row.
-	for gridColumn := w.minGridColumn; gridColumn <= w.maxGridColumn; gridColumn++ {
-		// we are creating tile-row elements, but they actually contain all the tiles for a single column.
-		// the name is confusing because we're using COLUMNS orientation.
-		for tileColumn := 0; tileColumn < columnsPerGrid; tileColumn++ {
-			// the tile-row element holds the tiles for a single column.
-			// these rows are going to come from multiple grids.
-			w.Printf("<tilerow>\n")
-			// sweep through all the grids that contain this column, from top to bottom.
-			for gridRow := w.minGridRow; gridRow <= w.maxGridRow; gridRow++ {
-				g := w.grids[gridRow][gridColumn]
-				if g == nil {
-					// todo: this could be updated to punch out blank tiles instead of panicking.
-					//log.Printf("bug: minGridColumn %d: gridColumn %d: maxGridColumn %d\n", w.minGridColumn, gridColumn, w.maxGridColumn)
-					//log.Printf("bug: tileColumn %d\n", tileColumn)
-					//log.Printf("bug: minGridRow %d: gridRow %d: maxGridRow %d\n", w.minGridRow, gridRow, w.maxGridRow)
-					gridId := gridRowColumnToId(gridRow, gridColumn)
-					log.Printf("bug: gridId %q is missing\n", gridId)
-					g = w.newGrid(gridId)
-					//panic("assert(g != nil)\nplease report this bug")
-					w.grids[gridRow][gridColumn] = g
-				}
-				for tileRow := 0; tileRow < rowsPerGrid; tileRow++ {
-					// process all the tiles in this row of this grid.
-					tile := g.tiles[tileColumn][tileRow]
-					w.Printf("%d\t%d", int(tile.Terrain), tile.Elevation)
-					if tile.IsIcy {
-						w.Printf("\t1")
-					} else {
-						w.Printf("\t0")
-					}
-					if tile.IsGMOnly {
-						w.Printf("\t1")
-					} else {
-						w.Printf("\t0")
-					}
-					// todo: implement resources. for now, just set them to 0 Z.
-					w.Printf("\t%d\t%s\n", tile.Resources.Animal, "Z")
-				}
+	// generate the tile-row elements. this is confusing because we're using COLUMNS orientation.
+	// we have to generate all the columns for a single row before we move on to the next row.
+	for gridColumn := 0; gridColumn < tilesWide; gridColumn++ {
+		w.Printf("<tilerow>\n")
+
+		// generate all the tiles in this column, one tile per row
+		for gridRow := 0; gridRow < tilesHigh; gridRow++ {
+			t := allTiles[gridRow][gridColumn]
+			if t == nil {
+				// this will happen when there are holes in the map.
+				t = &Tile{}
 			}
-			w.Printf("</tilerow>\n")
+
+			w.Printf("%d\t%d", int(t.Terrain), t.Elevation)
+			if t.IsIcy {
+				w.Printf("\t1")
+			} else {
+				w.Printf("\t0")
+			}
+			if t.IsGMOnly {
+				w.Printf("\t1")
+			} else {
+				w.Printf("\t0")
+			}
+			// todo: implement resources. for now, just set them to 0 Z.
+			w.Printf("\t%d\t%s\n", t.Resources.Animal, "Z")
 		}
+
+		w.Printf("</tilerow>\n")
 	}
 
 	w.Println(`</tiles>`)
@@ -197,60 +190,53 @@ func (w *WXX) Create(path string, cfg RenderConfig) error {
 	// add features
 	w.Println(`<features>`)
 
-	for gridRow := w.minGridRow; gridRow <= w.maxGridRow; gridRow++ {
-		gridRowOffset := (gridRow - w.minGridRow) * rowsPerGrid
-		for gridColumn := w.minGridColumn; gridColumn <= w.maxGridColumn; gridColumn++ {
-			g := w.grids[gridRow][gridColumn]
-			if g == nil {
+	for gridRow := 0; gridRow < tilesHigh; gridRow++ {
+		for gridColumn := 0; gridColumn < tilesWide; gridColumn++ {
+			t := allTiles[gridRow][gridColumn]
+			if t == nil {
 				continue
 			}
-			gridColumnOffset := (gridColumn - w.minGridColumn) * columnsPerGrid
-			for column := 0; column < columnsPerGrid; column++ {
-				for row := 0; row < rowsPerGrid; row++ {
-					tile := g.tiles[column][row]
-					points := coordsToPoints(gridColumnOffset+column, gridRowOffset+row)
+			points := coordsToPoints(t.RenderAt.Column, t.RenderAt.Row)
 
-					if tile.Features.IsOrigin {
-						origin := points[0]
-						w.Printf(`<feature type="Three Dots" rotate="0.0" uuid="%s" mapLayer="Tribenet Origin" isFlipHorizontal="false" isFlipVertical="false" scale="-1.0" scaleHt="-1.0" tags="" color="0.800000011920929,0.800000011920929,0.800000011920929,1.0" ringcolor="null" isGMOnly="false" isPlaceFreely="false" labelPosition="6:00" labelDistance="0" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isFillHexBottom="false" isHideTerrainIcon="false">`, uuid.New().String())
-						w.Printf(`<location viewLevel="WORLD" x="%f" y="%f" />`, origin.X, origin.Y)
-						w.Printf(`<label  mapLayer="Tribenet Origin" style="null" fontFace="null" color="0.0,0.0,0.0,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags="">`)
-						w.Printf(`<location viewLevel="WORLD" x="%f" y="%f" scale="25.0" />`, origin.X, origin.Y)
-						w.Printf(`</label>`)
-						w.Printf("</feature>\n")
-					}
+			if t.Features.IsOrigin {
+				origin := points[0]
+				w.Printf(`<feature type="Three Dots" rotate="0.0" uuid="%s" mapLayer="Tribenet Origin" isFlipHorizontal="false" isFlipVertical="false" scale="-1.0" scaleHt="-1.0" tags="" color="0.800000011920929,0.800000011920929,0.800000011920929,1.0" ringcolor="null" isGMOnly="false" isPlaceFreely="false" labelPosition="6:00" labelDistance="0" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isFillHexBottom="false" isHideTerrainIcon="false">`, uuid.New().String())
+				w.Printf(`<location viewLevel="WORLD" x="%f" y="%f" />`, origin.X, origin.Y)
+				w.Printf(`<label  mapLayer="Tribenet Origin" style="null" fontFace="null" color="0.0,0.0,0.0,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags="">`)
+				w.Printf(`<location viewLevel="WORLD" x="%f" y="%f" scale="25.0" />`, origin.X, origin.Y)
+				w.Printf(`</label>`)
+				w.Printf("</feature>\n")
+			}
 
-					if tile.Terrain == terrain.PrairiePlateau {
-						origin := points[0]
-						w.Printf(`<feature type="Semi-Real Hill Jagged" rotate="0.0" uuid="%s" mapLayer="Features" isFlipHorizontal="false" isFlipVertical="false" scale="90.0" scaleHt="-1.0" tags="" color="0.800000011920929,0.800000011920929,0.800000011920929,1.0" ringcolor="null" isGMOnly="false" isPlaceFreely="false" labelPosition="6:00" labelDistance="0" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isFillHexBottom="false" isHideTerrainIcon="false">`, uuid.New().String())
-						w.Printf(`<location viewLevel="WORLD" x="%f" y="%f" />`, origin.X, origin.Y)
-						w.Printf(`<label  mapLayer="Features" style="null" fontFace="null" color="0.0,0.0,0.0,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags="">`)
-						w.Printf(`<location viewLevel="WORLD" x="%f" y="%f" scale="25.0" />`, origin.X, origin.Y)
-						w.Printf(`</label>`)
-						w.Printf("</feature>\n")
-					}
+			if t.Terrain == terrain.PrairiePlateau {
+				origin := points[0]
+				w.Printf(`<feature type="Semi-Real Hill Jagged" rotate="0.0" uuid="%s" mapLayer="Features" isFlipHorizontal="false" isFlipVertical="false" scale="90.0" scaleHt="-1.0" tags="" color="0.800000011920929,0.800000011920929,0.800000011920929,1.0" ringcolor="null" isGMOnly="false" isPlaceFreely="false" labelPosition="6:00" labelDistance="0" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isFillHexBottom="false" isHideTerrainIcon="false">`, uuid.New().String())
+				w.Printf(`<location viewLevel="WORLD" x="%f" y="%f" />`, origin.X, origin.Y)
+				w.Printf(`<label  mapLayer="Features" style="null" fontFace="null" color="0.0,0.0,0.0,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags="">`)
+				w.Printf(`<location viewLevel="WORLD" x="%f" y="%f" scale="25.0" />`, origin.X, origin.Y)
+				w.Printf(`</label>`)
+				w.Printf("</feature>\n")
+			}
 
-					for _, r := range tile.Features.Resources {
-						if r != resources.None {
-							origin := points[0]
-							w.Printf(`<feature type="Resource Mines" rotate="0.0" uuid="%s" mapLayer="Tribenet Resources" isFlipHorizontal="false" isFlipVertical="false" scale="35.0" scaleHt="-1.0" tags="" color="null" ringcolor="null" isGMOnly="false" isPlaceFreely="false" labelPosition="6:00" labelDistance="0" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isFillHexBottom="false" isHideTerrainIcon="false">`, uuid.New().String())
-							w.Printf(`<location viewLevel="WORLD" x="%f" y="%f" />`, origin.X, origin.Y)
-							w.Printf(`<label  mapLayer="Tribenet Resources" style="null" fontFace="null" color="0.0,0.0,0.0,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags="">`)
-							w.Printf(`<location viewLevel="WORLD" x="%g" y="%g" scale="12.5" />`, origin.X, origin.Y)
-							w.Printf("%s", tile.Features.Resources)
-							w.Printf(`</label>`)
-							w.Println(`</feature>`)
-						}
-					}
+			for _, r := range t.Features.Resources {
+				if r != resources.None {
+					origin := points[0]
+					w.Printf(`<feature type="Resource Mines" rotate="0.0" uuid="%s" mapLayer="Tribenet Resources" isFlipHorizontal="false" isFlipVertical="false" scale="35.0" scaleHt="-1.0" tags="" color="null" ringcolor="null" isGMOnly="false" isPlaceFreely="false" labelPosition="6:00" labelDistance="0" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isFillHexBottom="false" isHideTerrainIcon="false">`, uuid.New().String())
+					w.Printf(`<location viewLevel="WORLD" x="%f" y="%f" />`, origin.X, origin.Y)
+					w.Printf(`<label  mapLayer="Tribenet Resources" style="null" fontFace="null" color="0.0,0.0,0.0,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags="">`)
+					w.Printf(`<location viewLevel="WORLD" x="%g" y="%g" scale="12.5" />`, origin.X, origin.Y)
+					w.Printf("%s", t.Features.Resources)
+					w.Printf(`</label>`)
+					w.Println(`</feature>`)
+				}
+			}
 
-					for _, s := range tile.Features.Settlements {
-						if s != nil && s.Name != "" && !strings.HasPrefix(s.Name, "_") {
-							settlement := points[0]
-							w.Printf(`<feature type="Settlement City" rotate="0.0" uuid="%s" mapLayer="Tribenet Settlements" isFlipHorizontal="false" isFlipVertical="false" scale="35.0" scaleHt="-1.0" tags="" color="null" ringcolor="null" isGMOnly="false" isPlaceFreely="false" labelPosition="6:00" labelDistance="0" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isFillHexBottom="false" isHideTerrainIcon="false"><location viewLevel="WORLD" x="%f" y="%f" />`, uuid.New().String(), settlement.X, settlement.Y)
-							w.Println(`</feature>`)
-							break
-						}
-					}
+			for _, s := range t.Features.Settlements {
+				if s != nil && s.Name != "" && !strings.HasPrefix(s.Name, "_") {
+					settlement := points[0]
+					w.Printf(`<feature type="Settlement City" rotate="0.0" uuid="%s" mapLayer="Tribenet Settlements" isFlipHorizontal="false" isFlipVertical="false" scale="35.0" scaleHt="-1.0" tags="" color="null" ringcolor="null" isGMOnly="false" isPlaceFreely="false" labelPosition="6:00" labelDistance="0" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isFillHexBottom="false" isHideTerrainIcon="false"><location viewLevel="WORLD" x="%f" y="%f" />`, uuid.New().String(), settlement.X, settlement.Y)
+					w.Println(`</feature>`)
+					break
 				}
 			}
 		}
@@ -260,84 +246,73 @@ func (w *WXX) Create(path string, cfg RenderConfig) error {
 
 	w.Printf("<labels>\n")
 
-	for gridRow := w.minGridRow; gridRow <= w.maxGridRow; gridRow++ {
-		gridRowOffset := (gridRow - w.minGridRow) * rowsPerGrid
-		for gridColumn := w.minGridColumn; gridColumn <= w.maxGridColumn; gridColumn++ {
-			g := w.grids[gridRow][gridColumn]
-			if g == nil {
+	for gridRow := 0; gridRow < tilesHigh; gridRow++ {
+		for gridColumn := 0; gridColumn < tilesWide; gridColumn++ {
+			t := allTiles[gridRow][gridColumn]
+			if t == nil {
 				continue
 			}
-			gridColumnOffset := (gridColumn - w.minGridColumn) * columnsPerGrid
-			for column := 0; column < columnsPerGrid; column++ {
-				for row := 0; row < rowsPerGrid; row++ {
-					tile := g.tiles[column][row]
-					points := coordsToPoints(gridColumnOffset+column, gridRowOffset+row)
+			points := coordsToPoints(t.RenderAt.Column, t.RenderAt.Row)
 
-					if cfg.Show.Grid.Centers {
-						w.Printf(`<label  mapLayer="Tribenet Coords" style="null" fontFace="null" color="0.0,0.0,0.0,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags="">`)
-						w.Printf(`<location viewLevel="WORLD" x="%g" y="%g" scale="6.25" />`, points[0].X, points[0].Y)
-						if column&1 == 0 {
-							w.Printf("%d", column&1)
-						} else {
-							w.Printf("%d", column&1)
-						}
-						w.Printf("</label>\n")
-					}
+			if cfg.Show.Grid.Centers {
+				w.Printf(`<label  mapLayer="Tribenet Coords" style="null" fontFace="null" color="0.0,0.0,0.0,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags="">`)
+				w.Printf(`<location viewLevel="WORLD" x="%g" y="%g" scale="6.25" />`, points[0].X, points[0].Y)
+				w.Printf("0")
+				w.Printf("</label>\n")
+			}
 
-					if tile.Terrain != terrain.Blank {
-						if !(tile.WasVisited || tile.WasScouted) {
-							//labelXY := points[0].Translate(Point{-1.851698, 91.814090})
-							//w.Printf(`<label  mapLayer="Tribenet Visited" style="null" fontFace="null" color="0.7019608020782471,0.7019608020782471,0.7019608020782471,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags="">`)
-							//w.Printf(`<location viewLevel="WORLD" x="%f" y="%f" scale="90.0" />`, labelXY.X, labelXY.Y)
-							//w.Printf("X")
-							//w.Printf("</label>/n")
-							labelXY := points[0].Translate(notVisitedLabel.OffsetFromCenter)
-							w.Printf(`<label  mapLayer="Tribenet Visited" style="null" fontFace="null" color="%g,%g,%g,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags="">`, notVisitedLabel.R, notVisitedLabel.G, notVisitedLabel.B)
-							w.Printf(`<location viewLevel="WORLD" x="%f" y="%f" scale="50.0" />`, labelXY.X, labelXY.Y)
-							w.Printf("X")
-							w.Printf("</label>/n")
-						}
-						if tile.WasScouted {
-							labelXY := points[0].Translate(scoutedLabel.OffsetFromCenter)
-							w.Printf(`<label  mapLayer="Tribenet Visited" style="null" fontFace="null" color="%g,%g,%g,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags="">`, scoutedLabel.R, scoutedLabel.G, scoutedLabel.B)
-							w.Printf(`<location viewLevel="WORLD" x="%f" y="%f" scale="12.5" />`, labelXY.X, labelXY.Y)
-							w.Printf("S")
-							w.Printf("</label>/n")
-						}
+			if t.Terrain != terrain.Blank {
+				if !(t.WasVisited || t.WasScouted) {
+					//labelXY := points[0].Translate(Point{-1.851698, 91.814090})
+					//w.Printf(`<label  mapLayer="Tribenet Visited" style="null" fontFace="null" color="0.7019608020782471,0.7019608020782471,0.7019608020782471,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags="">`)
+					//w.Printf(`<location viewLevel="WORLD" x="%f" y="%f" scale="90.0" />`, labelXY.X, labelXY.Y)
+					//w.Printf("X")
+					//w.Printf("</label>/n")
+					labelXY := points[0].Translate(notVisitedLabel.OffsetFromCenter)
+					w.Printf(`<label  mapLayer="Tribenet Visited" style="null" fontFace="null" color="%g,%g,%g,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags="">`, notVisitedLabel.R, notVisitedLabel.G, notVisitedLabel.B)
+					w.Printf(`<location viewLevel="WORLD" x="%f" y="%f" scale="50.0" />`, labelXY.X, labelXY.Y)
+					w.Printf("X")
+					w.Printf("</label>/n")
+				}
+				if t.WasScouted {
+					labelXY := points[0].Translate(scoutedLabel.OffsetFromCenter)
+					w.Printf(`<label  mapLayer="Tribenet Visited" style="null" fontFace="null" color="%g,%g,%g,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags="">`, scoutedLabel.R, scoutedLabel.G, scoutedLabel.B)
+					w.Printf(`<location viewLevel="WORLD" x="%f" y="%f" scale="12.5" />`, labelXY.X, labelXY.Y)
+					w.Printf("S")
+					w.Printf("</label>/n")
+				}
 
-						if tile.Features.CoordsLabel != "" {
-							labelXY := bottomLeftCenter(points).Translate(Point{-9, -2.5})
-							w.Printf(`<label  mapLayer="Tribenet Coords" style="null" fontFace="null" color="0.0,0.0,0.0,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags="">`)
-							w.Printf(`<location viewLevel="WORLD" x="%g" y="%g" scale="6.25" />`, labelXY.X, labelXY.Y)
-							w.Printf("%s", tile.Features.CoordsLabel)
-							w.Printf("</label>\n")
-						} else if tile.Features.NumbersLabel != "" {
-							labelXY := bottomLeftCenter(points).Translate(Point{-15, -2.5})
-							w.Printf(`<label  mapLayer="Tribenet Coords" style="null" fontFace="null" color="0.0,0.0,0.0,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags="">`)
-							w.Printf(`<location viewLevel="WORLD" x="%g" y="%g" scale="6.25" />`, labelXY.X, labelXY.Y)
-							w.Printf("%s", tile.Features.NumbersLabel)
-							w.Printf("</label>\n")
-						}
-					}
+				if t.Features.CoordsLabel != "" {
+					labelXY := bottomLeftCenter(points).Translate(Point{-9, -2.5})
+					w.Printf(`<label  mapLayer="Tribenet Coords" style="null" fontFace="null" color="0.0,0.0,0.0,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags="">`)
+					w.Printf(`<location viewLevel="WORLD" x="%g" y="%g" scale="6.25" />`, labelXY.X, labelXY.Y)
+					w.Printf("%s", t.Features.CoordsLabel)
+					w.Printf("</label>\n")
+				} else if t.Features.NumbersLabel != "" {
+					labelXY := bottomLeftCenter(points).Translate(Point{-15, -2.5})
+					w.Printf(`<label  mapLayer="Tribenet Coords" style="null" fontFace="null" color="0.0,0.0,0.0,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags="">`)
+					w.Printf(`<location viewLevel="WORLD" x="%g" y="%g" scale="6.25" />`, labelXY.X, labelXY.Y)
+					w.Printf("%s", t.Features.NumbersLabel)
+					w.Printf("</label>\n")
+				}
+			}
 
-					if tile.Features.Label != nil {
-						labelXY := points[0]
-						w.Printf(`<label  mapLayer="Labels" style="null" fontFace="null" color="0.0,0.0,0.0,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags="">`)
-						w.Printf(`<location viewLevel="WORLD" x="%g" y="%g" scale="12.5" />`, labelXY.X, labelXY.Y)
-						w.Printf("%s", tile.Features.Label.Text)
-						w.Printf("</label>\n")
-					}
+			if t.Features.Label != nil {
+				labelXY := points[0]
+				w.Printf(`<label  mapLayer="Labels" style="null" fontFace="null" color="0.0,0.0,0.0,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags="">`)
+				w.Printf(`<location viewLevel="WORLD" x="%g" y="%g" scale="12.5" />`, labelXY.X, labelXY.Y)
+				w.Printf("%s", t.Features.Label.Text)
+				w.Printf("</label>\n")
+			}
 
-					for _, s := range tile.Features.Settlements {
-						if s != nil && s.Name != "" {
-							label := strings.Trim(s.Name, "_")
-							labelXY := settlementLabelXY(label, points)
-							w.Printf(`<label  mapLayer="Tribenet Settlements" style="null" fontFace="null" color="0.0,0.0,0.0,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags="">`)
-							w.Printf(`<location viewLevel="WORLD" x="%g" y="%g" scale="12.5" />`, labelXY.X, labelXY.Y)
-							w.Printf("%s", label)
-							w.Printf("</label>\n")
-						}
-					}
+			for _, s := range t.Features.Settlements {
+				if s != nil && s.Name != "" {
+					label := strings.Trim(s.Name, "_")
+					labelXY := settlementLabelXY(label, points)
+					w.Printf(`<label  mapLayer="Tribenet Settlements" style="null" fontFace="null" color="0.0,0.0,0.0,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags="">`)
+					w.Printf(`<location viewLevel="WORLD" x="%g" y="%g" scale="12.5" />`, labelXY.X, labelXY.Y)
+					w.Printf("%s", label)
+					w.Printf("</label>\n")
 				}
 			}
 		}
@@ -348,99 +323,92 @@ func (w *WXX) Create(path string, cfg RenderConfig) error {
 	w.Println(`<shapes>`)
 
 	const riverWidth = 0.0625
-	for gridRow := w.minGridRow; gridRow <= w.maxGridRow; gridRow++ {
-		gridRowOffset := (gridRow - w.minGridRow) * rowsPerGrid
-		for gridColumn := w.minGridColumn; gridColumn <= w.maxGridColumn; gridColumn++ {
-			g := w.grids[gridRow][gridColumn]
-			if g == nil {
+	for gridRow := 0; gridRow < tilesHigh; gridRow++ {
+		for gridColumn := 0; gridColumn < tilesWide; gridColumn++ {
+			t := allTiles[gridRow][gridColumn]
+			if t == nil {
 				continue
 			}
-			gridColumnOffset := (gridColumn - w.minGridColumn) * columnsPerGrid
-			for column := 0; column < columnsPerGrid; column++ {
-				for row := 0; row < rowsPerGrid; row++ {
-					tile := g.tiles[column][row]
-					points := coordsToPoints(gridColumnOffset+column, gridRowOffset+row)
+			points := coordsToPoints(t.RenderAt.Column, t.RenderAt.Row)
 
-					// detect edges that are both Ford and River
-					fordEdges := map[direction.Direction_e]bool{}
+			// detect edges that are both Ford and River
+			fordEdges := map[direction.Direction_e]bool{}
 
-					var from, to Point
+			var from, to Point
 
-					for _, dir := range tile.Features.Edges.Ford {
-						switch dir {
-						case direction.North:
-							from, to = points[2], points[3]
-						case direction.NorthEast:
-							from, to = points[3], points[4]
-						case direction.SouthEast:
-							from, to = points[4], points[5]
-						case direction.South:
-							from, to = points[5], points[6]
-						case direction.SouthWest:
-							from, to = points[6], points[1]
-						case direction.NorthWest:
-							from, to = points[1], points[2]
-						default:
-							panic(fmt.Sprintf("assert(direction != %d)", dir))
-						}
-						fordEdges[dir] = true
-
-						ford := edgeCenter(dir, points)
-						midpointFrom := midpoint(from, ford)
-						midpointTo := midpoint(to, ford)
-
-						w.Printf(`<shape  type="Path" isCurve="false" isGMOnly="false" isSnapVertices="true" isMatchTileBorders="false" tags="" creationType="BASIC" isDropShadow="false" isInnerShadow="false" isBoxBlur="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" dsSpread="0.2" dsRadius="50.0" dsOffsetX="0.0" dsOffsetY="0.0" insChoke="0.2" insRadius="50.0" insOffsetX="0.0" insOffsetY="0.0" bbWidth="10.0" bbHeight="10.0" bbIterations="3" mapLayer="Above Terrain" fillTexture="" strokeTexture="" strokeType="SIMPLE" highestViewLevel="WORLD" currentShapeViewLevel="WORLD" lineCap="ROUND" lineJoin="ROUND" opacity="1.0" fillRule="NON_ZERO" strokeColor="0.6000000238418579,0.800000011920929,1.0,1.0" strokeWidth="%f" dsColor="1.0,0.8941176533699036,0.7686274647712708,1.0" insColor="1.0,0.8941176533699036,0.7686274647712708,1.0">`, riverWidth)
-						w.Printf(` <p type="m" x="%f" y="%f"/>`, from.X, from.Y)
-						w.Printf(` <p x="%f" y="%f"/>`, midpointFrom.X, midpointFrom.Y)
-						w.Println(`</shape>`)
-
-						w.Printf(`<shape  type="Path" isCurve="false" isGMOnly="false" isSnapVertices="true" isMatchTileBorders="false" tags="" creationType="BASIC" isDropShadow="false" isInnerShadow="false" isBoxBlur="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" dsSpread="0.2" dsRadius="50.0" dsOffsetX="0.0" dsOffsetY="0.0" insChoke="0.2" insRadius="50.0" insOffsetX="0.0" insOffsetY="0.0" bbWidth="10.0" bbHeight="10.0" bbIterations="3" mapLayer="Above Terrain" fillTexture="" strokeTexture="" strokeType="SIMPLE" highestViewLevel="WORLD" currentShapeViewLevel="WORLD" lineCap="ROUND" lineJoin="ROUND" opacity="1.0" fillRule="NON_ZERO" strokeColor="0.6000000238418579,0.800000011920929,1.0,1.0" strokeWidth="%f" dsColor="1.0,0.8941176533699036,0.7686274647712708,1.0" insColor="1.0,0.8941176533699036,0.7686274647712708,1.0">`, riverWidth)
-						w.Printf(` <p type="m" x="%f" y="%f"/>`, midpointTo.X, midpointTo.Y)
-						w.Printf(` <p x="%f" y="%f"/>`, to.X, to.Y)
-						w.Println(`</shape>`)
-					}
-
-					for _, dir := range tile.Features.Edges.River {
-						// if we have both a ford and a river, honor the ford
-						if fordEdges[dir] {
-							continue
-						}
-						switch dir {
-						case direction.North:
-							from, to = points[2], points[3]
-						case direction.NorthEast:
-							from, to = points[3], points[4]
-						case direction.SouthEast:
-							from, to = points[4], points[5]
-						case direction.South:
-							from, to = points[5], points[6]
-						case direction.SouthWest:
-							from, to = points[6], points[1]
-						case direction.NorthWest:
-							from, to = points[1], points[2]
-						default:
-							panic(fmt.Sprintf("assert(direction != %d)", dir))
-						}
-						w.Printf(`<shape  type="Path" isCurve="false" isGMOnly="false" isSnapVertices="true" isMatchTileBorders="false" tags="" creationType="BASIC" isDropShadow="false" isInnerShadow="false" isBoxBlur="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" dsSpread="0.2" dsRadius="50.0" dsOffsetX="0.0" dsOffsetY="0.0" insChoke="0.2" insRadius="50.0" insOffsetX="0.0" insOffsetY="0.0" bbWidth="10.0" bbHeight="10.0" bbIterations="3" mapLayer="Above Terrain" fillTexture="" strokeTexture="" strokeType="SIMPLE" highestViewLevel="WORLD" currentShapeViewLevel="WORLD" lineCap="ROUND" lineJoin="ROUND" opacity="1.0" fillRule="NON_ZERO" strokeColor="0.6000000238418579,0.800000011920929,1.0,1.0" strokeWidth="%f" dsColor="1.0,0.8941176533699036,0.7686274647712708,1.0" insColor="1.0,0.8941176533699036,0.7686274647712708,1.0">`, riverWidth)
-						w.Printf(` <p type="m" x="%f" y="%f"/>`, from.X, from.Y)
-						w.Printf(` <p x="%f" y="%f"/>`, to.X, to.Y)
-						w.Println(`</shape>`)
-					}
-
-					for _, dir := range tile.Features.Edges.StoneRoad {
-						// get the center of the hex we're in
-						center := points[0]
-
-						// get the midpoint of the segment from the center to the edge
-						segmentEnd := edgeCenter(dir, points)
-						segmentStart := midpoint(midpoint(center, segmentEnd), segmentEnd)
-
-						w.Printf(`<shape  type="Path" isCurve="false" isGMOnly="false" isSnapVertices="true" isMatchTileBorders="false" tags="" creationType="BASIC" isDropShadow="false" isInnerShadow="false" isBoxBlur="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" dsSpread="0.2" dsRadius="50.0" dsOffsetX="0.0" dsOffsetY="0.0" insChoke="0.2" insRadius="50.0" insOffsetX="0.0" insOffsetY="0.0" bbWidth="10.0" bbHeight="10.0" bbIterations="3" mapLayer="Above Terrain" fillTexture="" strokeTexture="" strokeType="SIMPLE" highestViewLevel="WORLD" currentShapeViewLevel="WORLD" lineCap="ROUND" lineJoin="ROUND" opacity="1.0" fillRule="NON_ZERO" fillColor="0.7019608020782471,0.7019608020782471,0.7019608020782471,1.0" strokeColor="0.7019608020782471,0.7019608020782471,0.7019608020782471,1.0" strokeWidth="0.05" dsColor="1.0,0.8941176533699036,0.7686274647712708,1.0" insColor="1.0,0.8941176533699036,0.7686274647712708,1.0">`)
-						w.Printf(` <p type="m" x="%f" y="%f"/>`, segmentStart.X, segmentStart.Y)
-						w.Printf(` <p x="%f" y="%f"/>`, segmentEnd.X, segmentEnd.Y)
-						w.Println(`</shape>`)
-					}
+			for _, dir := range t.Features.Edges.Ford {
+				switch dir {
+				case direction.North:
+					from, to = points[2], points[3]
+				case direction.NorthEast:
+					from, to = points[3], points[4]
+				case direction.SouthEast:
+					from, to = points[4], points[5]
+				case direction.South:
+					from, to = points[5], points[6]
+				case direction.SouthWest:
+					from, to = points[6], points[1]
+				case direction.NorthWest:
+					from, to = points[1], points[2]
+				default:
+					panic(fmt.Sprintf("assert(direction != %d)", dir))
 				}
+				fordEdges[dir] = true
+
+				ford := edgeCenter(dir, points)
+				midpointFrom := midpoint(from, ford)
+				midpointTo := midpoint(to, ford)
+
+				w.Printf(`<shape  type="Path" isCurve="false" isGMOnly="false" isSnapVertices="true" isMatchTileBorders="false" tags="" creationType="BASIC" isDropShadow="false" isInnerShadow="false" isBoxBlur="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" dsSpread="0.2" dsRadius="50.0" dsOffsetX="0.0" dsOffsetY="0.0" insChoke="0.2" insRadius="50.0" insOffsetX="0.0" insOffsetY="0.0" bbWidth="10.0" bbHeight="10.0" bbIterations="3" mapLayer="Above Terrain" fillTexture="" strokeTexture="" strokeType="SIMPLE" highestViewLevel="WORLD" currentShapeViewLevel="WORLD" lineCap="ROUND" lineJoin="ROUND" opacity="1.0" fillRule="NON_ZERO" strokeColor="0.6000000238418579,0.800000011920929,1.0,1.0" strokeWidth="%f" dsColor="1.0,0.8941176533699036,0.7686274647712708,1.0" insColor="1.0,0.8941176533699036,0.7686274647712708,1.0">`, riverWidth)
+				w.Printf(` <p type="m" x="%f" y="%f"/>`, from.X, from.Y)
+				w.Printf(` <p x="%f" y="%f"/>`, midpointFrom.X, midpointFrom.Y)
+				w.Println(`</shape>`)
+
+				w.Printf(`<shape  type="Path" isCurve="false" isGMOnly="false" isSnapVertices="true" isMatchTileBorders="false" tags="" creationType="BASIC" isDropShadow="false" isInnerShadow="false" isBoxBlur="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" dsSpread="0.2" dsRadius="50.0" dsOffsetX="0.0" dsOffsetY="0.0" insChoke="0.2" insRadius="50.0" insOffsetX="0.0" insOffsetY="0.0" bbWidth="10.0" bbHeight="10.0" bbIterations="3" mapLayer="Above Terrain" fillTexture="" strokeTexture="" strokeType="SIMPLE" highestViewLevel="WORLD" currentShapeViewLevel="WORLD" lineCap="ROUND" lineJoin="ROUND" opacity="1.0" fillRule="NON_ZERO" strokeColor="0.6000000238418579,0.800000011920929,1.0,1.0" strokeWidth="%f" dsColor="1.0,0.8941176533699036,0.7686274647712708,1.0" insColor="1.0,0.8941176533699036,0.7686274647712708,1.0">`, riverWidth)
+				w.Printf(` <p type="m" x="%f" y="%f"/>`, midpointTo.X, midpointTo.Y)
+				w.Printf(` <p x="%f" y="%f"/>`, to.X, to.Y)
+				w.Println(`</shape>`)
+			}
+
+			for _, dir := range t.Features.Edges.River {
+				// if we have both a ford and a river, honor the ford
+				if fordEdges[dir] {
+					continue
+				}
+				switch dir {
+				case direction.North:
+					from, to = points[2], points[3]
+				case direction.NorthEast:
+					from, to = points[3], points[4]
+				case direction.SouthEast:
+					from, to = points[4], points[5]
+				case direction.South:
+					from, to = points[5], points[6]
+				case direction.SouthWest:
+					from, to = points[6], points[1]
+				case direction.NorthWest:
+					from, to = points[1], points[2]
+				default:
+					panic(fmt.Sprintf("assert(direction != %d)", dir))
+				}
+				w.Printf(`<shape  type="Path" isCurve="false" isGMOnly="false" isSnapVertices="true" isMatchTileBorders="false" tags="" creationType="BASIC" isDropShadow="false" isInnerShadow="false" isBoxBlur="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" dsSpread="0.2" dsRadius="50.0" dsOffsetX="0.0" dsOffsetY="0.0" insChoke="0.2" insRadius="50.0" insOffsetX="0.0" insOffsetY="0.0" bbWidth="10.0" bbHeight="10.0" bbIterations="3" mapLayer="Above Terrain" fillTexture="" strokeTexture="" strokeType="SIMPLE" highestViewLevel="WORLD" currentShapeViewLevel="WORLD" lineCap="ROUND" lineJoin="ROUND" opacity="1.0" fillRule="NON_ZERO" strokeColor="0.6000000238418579,0.800000011920929,1.0,1.0" strokeWidth="%f" dsColor="1.0,0.8941176533699036,0.7686274647712708,1.0" insColor="1.0,0.8941176533699036,0.7686274647712708,1.0">`, riverWidth)
+				w.Printf(` <p type="m" x="%f" y="%f"/>`, from.X, from.Y)
+				w.Printf(` <p x="%f" y="%f"/>`, to.X, to.Y)
+				w.Println(`</shape>`)
+			}
+
+			for _, dir := range t.Features.Edges.StoneRoad {
+				// get the center of the hex we're in
+				center := points[0]
+
+				// get the midpoint of the segment from the center to the edge
+				segmentEnd := edgeCenter(dir, points)
+				segmentStart := midpoint(midpoint(center, segmentEnd), segmentEnd)
+
+				w.Printf(`<shape  type="Path" isCurve="false" isGMOnly="false" isSnapVertices="true" isMatchTileBorders="false" tags="" creationType="BASIC" isDropShadow="false" isInnerShadow="false" isBoxBlur="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" dsSpread="0.2" dsRadius="50.0" dsOffsetX="0.0" dsOffsetY="0.0" insChoke="0.2" insRadius="50.0" insOffsetX="0.0" insOffsetY="0.0" bbWidth="10.0" bbHeight="10.0" bbIterations="3" mapLayer="Above Terrain" fillTexture="" strokeTexture="" strokeType="SIMPLE" highestViewLevel="WORLD" currentShapeViewLevel="WORLD" lineCap="ROUND" lineJoin="ROUND" opacity="1.0" fillRule="NON_ZERO" fillColor="0.7019608020782471,0.7019608020782471,0.7019608020782471,1.0" strokeColor="0.7019608020782471,0.7019608020782471,0.7019608020782471,1.0" strokeWidth="0.05" dsColor="1.0,0.8941176533699036,0.7686274647712708,1.0" insColor="1.0,0.8941176533699036,0.7686274647712708,1.0">`)
+				w.Printf(` <p type="m" x="%f" y="%f"/>`, segmentStart.X, segmentStart.Y)
+				w.Printf(` <p x="%f" y="%f"/>`, segmentEnd.X, segmentEnd.Y)
+				w.Println(`</shape>`)
 			}
 		}
 	}

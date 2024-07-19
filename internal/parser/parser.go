@@ -418,7 +418,13 @@ func ParseStatusLine(fid, tid string, unitId UnitId_t, lineNo int, line []byte, 
 		log.Printf("%s: %s: %d: %q\n", fid, unitId, lineNo, line)
 	}
 
-	return parseMovementLine(fid, tid, unitId, lineNo, line, debugSteps, debugNodes)
+	// status lines have to be tagged since they are reported as scouting lines
+	moves, err := parseMovementLine(fid, tid, unitId, lineNo, line, debugSteps, debugNodes)
+	if len(moves) > 0 && moves[0].Result == results.Succeeded {
+		moves[0].Result = results.StatusLine
+		//log.Printf("status: %s: %s: %s: %d: %d: %q\n", fid, tid, unitId, lineNo, len(moves), string(line))
+	}
+	return moves, err
 }
 
 func ParseTribeFollowsLine(fid, tid string, unitId UnitId_t, lineNo int, line []byte, debug bool) (*Move_t, error) {

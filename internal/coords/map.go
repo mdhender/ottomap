@@ -34,6 +34,10 @@ func (m Map) GridString() string {
 	return m.ToGrid().String()
 }
 
+func (m Map) IsZero() bool {
+	return m == Map{}
+}
+
 func (m Map) String() string {
 	return fmt.Sprintf("(%d, %d)", m.Column, m.Row)
 }
@@ -49,6 +53,14 @@ func (m Map) Add(d direction.Direction_e) Map {
 		Column: m.Column + vec[0],
 		Row:    m.Row + vec[1],
 	}
+}
+
+func (m Map) Move(ds ...direction.Direction_e) Map {
+	to := m
+	for _, d := range ds {
+		to = to.Add(d)
+	}
+	return to
 }
 
 func (m Map) ToGrid() Grid {
