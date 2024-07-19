@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-func Walk2(input []*parser.Turn_t, originGrid string, quitOnInvalidGrid, warnOnInvalidGrid, debug bool) (*tiles.Map_t, error) {
+func Walk(input []*parser.Turn_t, originGrid string, quitOnInvalidGrid, warnOnInvalidGrid, debug bool) (*tiles.Map_t, error) {
 	started := time.Now()
 	log.Printf("walk: input: %8d turns\n", len(input))
 

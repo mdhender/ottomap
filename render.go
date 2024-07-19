@@ -21,7 +21,7 @@ import (
 	"time"
 )
 
-var argsSammy struct {
+var argsRender struct {
 	paths struct {
 		data   string // path to data folder
 		input  string // path to input folder
@@ -55,109 +55,109 @@ var argsSammy struct {
 	}
 }
 
-var cmdSammy = &cobra.Command{
-	Use:   "sammy",
+var cmdRender = &cobra.Command{
+	Use:   "render",
 	Short: "Create a map from a report",
-	Long:  `Load a parsed report and create a map.`,
+	Long:  `Load and parse turn report and create a map.`,
 	PreRunE: func(cmd *cobra.Command, args []string) error {
-		if len(argsSammy.clanId) != 4 || argsSammy.clanId[0] != '0' {
+		if len(argsRender.clanId) != 4 || argsRender.clanId[0] != '0' {
 			return fmt.Errorf("clan-id must be a 4 digit number starting with 0")
-		} else if n, err := strconv.Atoi(argsSammy.clanId[1:]); err != nil || n < 0 || n > 9999 {
+		} else if n, err := strconv.Atoi(argsRender.clanId[1:]); err != nil || n < 0 || n > 9999 {
 			return fmt.Errorf("clan-id must be a 4 digit number starting with 0")
 		}
 
-		if argsSammy.paths.data == "" {
+		if argsRender.paths.data == "" {
 			return fmt.Errorf("path to data folder is required")
 		}
 
 		// do the abs path check for data
-		if strings.TrimSpace(argsSammy.paths.data) != argsSammy.paths.data {
+		if strings.TrimSpace(argsRender.paths.data) != argsRender.paths.data {
 			log.Fatalf("error: data: leading or trailing spaces are not allowed\n")
-		} else if path, err := abspath(argsSammy.paths.data); err != nil {
+		} else if path, err := abspath(argsRender.paths.data); err != nil {
 			log.Fatalf("error: data: %v\n", err)
 		} else if sb, err := os.Stat(path); err != nil {
 			log.Fatalf("error: data: %v\n", err)
 		} else if !sb.IsDir() {
 			log.Fatalf("error: data: %v is not a directory\n", path)
 		} else {
-			argsSammy.paths.data = path
+			argsRender.paths.data = path
 		}
 
-		argsSammy.paths.input = filepath.Join(argsSammy.paths.data, "input")
-		if path, err := abspath(argsSammy.paths.input); err != nil {
+		argsRender.paths.input = filepath.Join(argsRender.paths.data, "input")
+		if path, err := abspath(argsRender.paths.input); err != nil {
 			log.Fatalf("error: data: %v\n", err)
 		} else if sb, err := os.Stat(path); err != nil {
 			log.Fatalf("error: data: %v\n", err)
 		} else if !sb.IsDir() {
 			log.Fatalf("error: data: %v is not a directory\n", path)
 		} else {
-			argsSammy.paths.input = path
+			argsRender.paths.input = path
 		}
 
-		argsSammy.paths.output = filepath.Join(argsSammy.paths.data, "output")
-		if path, err := abspath(argsSammy.paths.output); err != nil {
+		argsRender.paths.output = filepath.Join(argsRender.paths.data, "output")
+		if path, err := abspath(argsRender.paths.output); err != nil {
 			log.Fatalf("error: data: %v\n", err)
 		} else if sb, err := os.Stat(path); err != nil {
 			log.Fatalf("error: data: %v\n", err)
 		} else if !sb.IsDir() {
 			log.Fatalf("error: data: %v is not a directory\n", path)
 		} else {
-			argsSammy.paths.output = path
+			argsRender.paths.output = path
 		}
 
-		if len(argsSammy.originGrid) == 0 {
+		if len(argsRender.originGrid) == 0 {
 			// terminate on ## in location
-			argsSammy.quitOnInvalidGrid = true
-		} else if len(argsSammy.originGrid) != 2 {
-			log.Fatalf("error: originGrid %q: must be two upper-case letters\n", argsSammy.originGrid)
-		} else if strings.Trim(argsSammy.originGrid, "ABCDEFGHIJKLMNOPQRSTUVWXYZ") != "" {
-			log.Fatalf("error: originGrid %q: must be two upper-case letters\n", argsSammy.originGrid)
+			argsRender.quitOnInvalidGrid = true
+		} else if len(argsRender.originGrid) != 2 {
+			log.Fatalf("error: originGrid %q: must be two upper-case letters\n", argsRender.originGrid)
+		} else if strings.Trim(argsRender.originGrid, "ABCDEFGHIJKLMNOPQRSTUVWXYZ") != "" {
+			log.Fatalf("error: originGrid %q: must be two upper-case letters\n", argsRender.originGrid)
 		} else {
 			// don't quit when we replace ## with the location
-			argsSammy.quitOnInvalidGrid = false
+			argsRender.quitOnInvalidGrid = false
 		}
-		argsSammy.warnOnInvalidGrid = !argsSammy.noWarnOnInvalidGrid
+		argsRender.warnOnInvalidGrid = !argsRender.noWarnOnInvalidGrid
 
-		if argsSammy.maxTurn.id == "" {
-			argsSammy.maxTurn.year, argsSammy.maxTurn.month = 9999, 12
-		} else if yyyy, mm, ok := strings.Cut(argsSammy.maxTurn.id, "-"); !ok {
-			log.Fatalf("error: turn-cutoff %q: must be yyyy-mm format", argsSammy.maxTurn.id)
+		if argsRender.maxTurn.id == "" {
+			argsRender.maxTurn.year, argsRender.maxTurn.month = 9999, 12
+		} else if yyyy, mm, ok := strings.Cut(argsRender.maxTurn.id, "-"); !ok {
+			log.Fatalf("error: turn-cutoff %q: must be yyyy-mm format", argsRender.maxTurn.id)
 		} else if year, err := strconv.Atoi(yyyy); err != nil {
-			log.Fatalf("error: turn-cutoff %q: must be yyyy-mm format", argsSammy.maxTurn.id)
+			log.Fatalf("error: turn-cutoff %q: must be yyyy-mm format", argsRender.maxTurn.id)
 		} else if month, err := strconv.Atoi(mm); err != nil {
-			log.Fatalf("error: turn-cutoff %q: must be yyyy-mm format", argsSammy.maxTurn.id)
+			log.Fatalf("error: turn-cutoff %q: must be yyyy-mm format", argsRender.maxTurn.id)
 		} else if year < 899 || year > 9999 {
-			log.Fatalf("error: turn-cutoff %q: invalid year %d", argsSammy.maxTurn.id, year)
+			log.Fatalf("error: turn-cutoff %q: invalid year %d", argsRender.maxTurn.id, year)
 		} else if month < 1 || month > 12 {
-			log.Fatalf("error: turn-cutoff %q: invalid month %d", argsSammy.maxTurn.id, month)
+			log.Fatalf("error: turn-cutoff %q: invalid month %d", argsRender.maxTurn.id, month)
 		} else {
-			argsSammy.maxTurn.year, argsSammy.maxTurn.month = year, month
+			argsRender.maxTurn.year, argsRender.maxTurn.month = year, month
 		}
 
-		if argsSammy.maxTurn.year < 0 {
-			argsSammy.maxTurn.year = 0
-		} else if argsSammy.maxTurn.year > 9999 {
-			argsSammy.maxTurn.year = 9999
+		if argsRender.maxTurn.year < 0 {
+			argsRender.maxTurn.year = 0
+		} else if argsRender.maxTurn.year > 9999 {
+			argsRender.maxTurn.year = 9999
 		}
-		if argsSammy.maxTurn.month < 0 {
-			argsSammy.maxTurn.month = 1
-		} else if argsSammy.maxTurn.month > 12 {
-			argsSammy.maxTurn.month = 12
+		if argsRender.maxTurn.month < 0 {
+			argsRender.maxTurn.month = 1
+		} else if argsRender.maxTurn.month > 12 {
+			argsRender.maxTurn.month = 12
 		}
-		argsSammy.maxTurn.id = fmt.Sprintf("%04d-%02d", argsSammy.maxTurn.year, argsSammy.maxTurn.month)
+		argsRender.maxTurn.id = fmt.Sprintf("%04d-%02d", argsRender.maxTurn.year, argsRender.maxTurn.month)
 
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		argsSammy.originGrid = "RR"
-		argsSammy.quitOnInvalidGrid = false
-		argsSammy.warnOnInvalidGrid = true
+		argsRender.originGrid = "RR"
+		argsRender.quitOnInvalidGrid = false
+		argsRender.warnOnInvalidGrid = true
 		started := time.Now()
-		log.Printf("data:   %s\n", argsSammy.paths.data)
-		log.Printf("input:  %s\n", argsSammy.paths.input)
-		log.Printf("output: %s\n", argsSammy.paths.output)
+		log.Printf("data:   %s\n", argsRender.paths.data)
+		log.Printf("input:  %s\n", argsRender.paths.input)
+		log.Printf("output: %s\n", argsRender.paths.output)
 
-		inputs, err := turns.CollectInputs(argsSammy.paths.input, argsSammy.maxTurn.year, argsSammy.maxTurn.month)
+		inputs, err := turns.CollectInputs(argsRender.paths.input, argsRender.maxTurn.year, argsRender.maxTurn.month)
 		if err != nil {
 			log.Fatalf("error: inputs: %v\n", err)
 		}
@@ -181,18 +181,18 @@ var cmdSammy = &cobra.Command{
 				continue
 			}
 			pastCutoff := false
-			if i.Turn.Year > argsSammy.maxTurn.year {
+			if i.Turn.Year > argsRender.maxTurn.year {
 				pastCutoff = true
-			} else if i.Turn.Year == argsSammy.maxTurn.year {
-				if i.Turn.Month > argsSammy.maxTurn.month {
+			} else if i.Turn.Year == argsRender.maxTurn.year {
+				if i.Turn.Month > argsRender.maxTurn.month {
 					pastCutoff = true
 				}
 			}
 			if pastCutoff {
-				log.Printf("warn: %q: past cutoff %04d-%02d\n", i.Id, argsSammy.maxTurn.year, argsSammy.maxTurn.month)
+				log.Printf("warn: %q: past cutoff %04d-%02d\n", i.Id, argsRender.maxTurn.year, argsRender.maxTurn.month)
 			}
 			turnId = fmt.Sprintf("%04d-%02d", i.Turn.Year, i.Turn.Month)
-			turn, err := parser.ParseInput(i.Id, turnId, data, argsSammy.debug.parser, argsSammy.debug.sections, argsSammy.debug.steps, argsSammy.debug.nodes, argsSammy.parser)
+			turn, err := parser.ParseInput(i.Id, turnId, data, argsRender.debug.parser, argsRender.debug.sections, argsRender.debug.steps, argsRender.debug.nodes, argsRender.parser)
 			if err != nil {
 				log.Fatal(err)
 			} else if turnId != fmt.Sprintf("%04d-%02d", turn.Year, turn.Month) {
@@ -351,29 +351,23 @@ var cmdSammy = &cobra.Command{
 		log.Printf("updated %8d obscured 'Current Hex'  locations\n", updatedCurrentLinks)
 
 		// dangerous but try to find the origin hex if asked
-		if argsSammy.show.origin {
+		if argsRender.show.origin {
 			for _, turn := range consolidatedTurns {
 				for _, unit := range turn.SortedMoves {
-					argsSammy.mapper.Origin = unit.Location
+					argsRender.mapper.Origin = unit.Location
 					break
 				}
 			}
-			log.Printf("info: origin hex set to %q\n", argsSammy.mapper.Origin)
+			log.Printf("info: origin hex set to %q\n", argsRender.mapper.Origin)
 		}
 
 		// walk the data
-		worldMap, err := turns.Walk2(consolidatedTurns, argsSammy.originGrid, argsSammy.quitOnInvalidGrid, argsSammy.warnOnInvalidGrid, argsSammy.debug.maps)
+		worldMap, err := turns.Walk(consolidatedTurns, argsRender.originGrid, argsRender.quitOnInvalidGrid, argsRender.warnOnInvalidGrid, argsRender.debug.maps)
 		if err != nil {
 			log.Fatalf("error: %v\n", err)
 		}
-		_ = worldMap
 
-		//err = turns.Walk(consolidatedTurns, argsSammy.originGrid, argsSammy.quitOnInvalidGrid, argsSammy.warnOnInvalidGrid, argsSammy.debug.maps)
-		//if err != nil {
-		//	log.Fatalf("error: %v\n", err)
-		//}
-
-		if argsSammy.debug.dumpAllTurns {
+		if argsRender.debug.dumpAllTurns {
 			log.Printf("hey, dumping it all\n")
 			for _, turn := range consolidatedTurns {
 				log.Printf("%s: sortedMoves %d\n", turn.Id, len(turn.SortedMoves))
@@ -416,20 +410,20 @@ var cmdSammy = &cobra.Command{
 		}
 		upperLeft, lowerRight := worldMap.Bounds()
 
-		if argsSammy.debug.dumpAllTiles {
+		if argsRender.debug.dumpAllTiles {
 			worldMap.Dump()
 		}
 
 		// map the data
-		wxxMap, err := actions.MapWorld(worldMap, parser.UnitId_t(argsSammy.clanId), argsSammy.mapper)
+		wxxMap, err := actions.MapWorld(worldMap, parser.UnitId_t(argsRender.clanId), argsRender.mapper)
 		if err != nil {
 			log.Fatalf("error: %v\n", err)
 		}
 		log.Printf("map: %8d nodes: elapsed %v\n", worldMap.Length(), time.Since(started))
 
 		// now we can create the Worldographer map!
-		mapName := filepath.Join(argsSammy.paths.output, fmt.Sprintf("%s.wxx", argsSammy.clanId))
-		if err := wxxMap.Create(mapName, turnId, upperLeft, lowerRight, argsSammy.render); err != nil {
+		mapName := filepath.Join(argsRender.paths.output, fmt.Sprintf("%s.wxx", argsRender.clanId))
+		if err := wxxMap.Create(mapName, turnId, upperLeft, lowerRight, argsRender.render); err != nil {
 			log.Printf("creating %s\n", mapName)
 			log.Fatalf("error: %v\n", err)
 		}

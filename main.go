@@ -27,28 +27,28 @@ func main() {
 }
 
 func Execute() error {
-	cmdRoot.AddCommand(cmdSammy, cmdVersion)
+	cmdRoot.AddCommand(cmdRender, cmdVersion)
 
-	cmdSammy.Flags().BoolVar(&argsSammy.debug.dumpAllTiles, "debug-dump-all-tiles", false, "dump all tiles")
-	cmdSammy.Flags().BoolVar(&argsSammy.debug.dumpAllTurns, "debug-dump-all-turns", false, "dump all turns")
-	cmdSammy.Flags().BoolVar(&argsSammy.debug.maps, "debug-maps", false, "enable maps debugging")
-	cmdSammy.Flags().BoolVar(&argsSammy.debug.nodes, "debug-nodes", false, "enable node debugging")
-	cmdSammy.Flags().BoolVar(&argsSammy.debug.parser, "debug-parser", false, "enable parser debugging")
-	cmdSammy.Flags().BoolVar(&argsSammy.debug.sections, "debug-sections", false, "enable sections debugging")
-	cmdSammy.Flags().BoolVar(&argsSammy.debug.steps, "debug-steps", false, "enable step debugging")
-	cmdSammy.Flags().BoolVar(&argsSammy.mapper.Dump.BorderCounts, "dump-border-counts", false, "dump border counts")
-	cmdSammy.Flags().BoolVar(&argsSammy.parser.Ignore.Scouts, "ignore-scouts", false, "ignore scout reports")
-	cmdSammy.Flags().BoolVar(&argsSammy.noWarnOnInvalidGrid, "no-warn-on-invalid-grid", false, "disable grid id warnings")
-	cmdSammy.Flags().BoolVar(&argsSammy.render.Show.Grid.Coords, "show-grid-coords", false, "show grid coordinates (XX CCRR)")
-	cmdSammy.Flags().BoolVar(&argsSammy.render.Show.Grid.Numbers, "show-grid-numbers", false, "show grid numbers (CCRR)")
-	cmdSammy.Flags().BoolVar(&argsSammy.show.origin, "show-origin", false, "show origin hex")
-	cmdSammy.Flags().StringVar(&argsSammy.clanId, "clan-id", "", "clan for output file names")
-	if err := cmdSammy.MarkFlagRequired("clan-id"); err != nil {
+	cmdRender.Flags().BoolVar(&argsRender.debug.dumpAllTiles, "debug-dump-all-tiles", false, "dump all tiles")
+	cmdRender.Flags().BoolVar(&argsRender.debug.dumpAllTurns, "debug-dump-all-turns", false, "dump all turns")
+	cmdRender.Flags().BoolVar(&argsRender.debug.maps, "debug-maps", false, "enable maps debugging")
+	cmdRender.Flags().BoolVar(&argsRender.debug.nodes, "debug-nodes", false, "enable node debugging")
+	cmdRender.Flags().BoolVar(&argsRender.debug.parser, "debug-parser", false, "enable parser debugging")
+	cmdRender.Flags().BoolVar(&argsRender.debug.sections, "debug-sections", false, "enable sections debugging")
+	cmdRender.Flags().BoolVar(&argsRender.debug.steps, "debug-steps", false, "enable step debugging")
+	cmdRender.Flags().BoolVar(&argsRender.mapper.Dump.BorderCounts, "dump-border-counts", false, "dump border counts")
+	cmdRender.Flags().BoolVar(&argsRender.parser.Ignore.Scouts, "ignore-scouts", false, "ignore scout reports")
+	cmdRender.Flags().BoolVar(&argsRender.noWarnOnInvalidGrid, "no-warn-on-invalid-grid", false, "disable grid id warnings")
+	cmdRender.Flags().BoolVar(&argsRender.render.Show.Grid.Coords, "show-grid-coords", false, "show grid coordinates (XX CCRR)")
+	cmdRender.Flags().BoolVar(&argsRender.render.Show.Grid.Numbers, "show-grid-numbers", false, "show grid numbers (CCRR)")
+	cmdRender.Flags().BoolVar(&argsRender.show.origin, "show-origin", false, "show origin hex")
+	cmdRender.Flags().StringVar(&argsRender.clanId, "clan-id", "", "clan for output file names")
+	if err := cmdRender.MarkFlagRequired("clan-id"); err != nil {
 		log.Fatalf("error: clan-id: %v\n", err)
 	}
-	cmdSammy.Flags().StringVar(&argsSammy.paths.data, "data", "data", "path to root of data files")
-	cmdSammy.Flags().StringVar(&argsSammy.originGrid, "origin-grid", "", "grid id to substitute for ##")
-	cmdSammy.Flags().StringVar(&argsSammy.maxTurn.id, "max-turn", "", "last turn to map (yyyy-mm format)")
+	cmdRender.Flags().StringVar(&argsRender.paths.data, "data", "data", "path to root of data files")
+	cmdRender.Flags().StringVar(&argsRender.originGrid, "origin-grid", "", "grid id to substitute for ##")
+	cmdRender.Flags().StringVar(&argsRender.maxTurn.id, "max-turn", "", "last turn to map (yyyy-mm format)")
 
 	return cmdRoot.Execute()
 }
