@@ -34,8 +34,37 @@ After you've made your update (again, please don't update your original `.docx` 
 just restart the application.
 
 > NOTE:
-I'm trying to get all the error messages to be consistent.
-If you notice one that's wonky, please report it.
+> I'm trying to get all the error messages to be consistent.
+> If you notice one that's wonky, please report it.
+
+## Expected unit to have parent
+You will get an error when Otto can't determine which hex a unit was created in.
+
+```text
+10:30:18 walk.go:60: 0901-04: 0138  : parent "0138": missing
+10:30:18 walk.go:61: error: expected unit to have parent
+```
+
+This happens when Otto can't determine the starting hex for the clan.
+It should happen only with the first turn's report and only when the grid is obscured
+(meaning it starts with "##").
+
+```text
+Tribe 0138, , Current Hex = ## 1304, (Previous Hex = ## 1304)
+```
+
+The fix is to update the report and add a grid id.
+
+```text
+Tribe 0138, , Current Hex = KK 1304, (Previous Hex = KK 1304)
+```
+
+> NOTE:
+> If you don't know which grid you're starting in, put in something like "KK."
+> You can update it later when you know the starting grid.
+
+Otto uses the starting location (the clan's origin) to plot out all the moves that units makes,
+that's why it needs an un-obscured location to begin mapping.
 
 ## No movement results found
 If you run `ottomap map` and it ends with a line like `map: no movement results found`,
@@ -151,3 +180,29 @@ Please insert the comma after the list of directions:
 ```text
 0138e1 Status: PRAIRIE,River S, 0138e1
 ```
+
+## Hexes don't align
+
+Otto steps through every move a unit makes in the turn and calculates the location of each hex.
+At the end of the move, Otto compares the calculated hex with the "Current Hex" from the turn report.
+If the two don't match, Otto reports this error.
+
+```text
+10:40:00 render.go:292: error: 0901-04: 0138  : to   "KK 1305"
+10:40:00 render.go:293:      : 0901-05: 0138  : from "KK 1304"
+10:40:00 render.go:300: links: 5 good, 1 bad
+10:40:00 render.go:303: sorry: the previous and current hexes don't align in some reports
+10:40:00 render.go:304: please report this error
+```
+
+This happens only when the location line from the report is missing the "Previous Hex" or there's a typo in one of the locations.
+
+```text
+Tribe 0138, , Current Hex = KK 1305, (Previous Hex = N/A)
+```
+
+I have only seen this happen when an element was created at the end of a parent's move.
+If that's the case, you will need to update the report and fix the starting and ending hexes for the unit.
+
+It not, please report this on the Discord server.
+It's a bug that I'd like to fix.

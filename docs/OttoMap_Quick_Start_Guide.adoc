@@ -16,6 +16,8 @@ The files must have a name like `YYYY-MM.CLAN.report.txt` (e.g., `0901-02.0138.r
 * Select all the text and copy it to the clipboard.
 * Open a text editor (e.g., Notepad on Windows, TextEdit on macOS, or Gedit on Linux).
 * Paste the text from the clipboard into the text editor.
+* Update the "Previous Hex" if it starts with a hash mark ("#").
+Change the hash marks to the grid that your clan is starting in (use "KK" if you're not sure).
 * Save the file in the `data/input` folder using the file naming convention described above.
 
 You can do this for a single turn report or multiple turn reports, but we recommend working with a single turn report at a time.
