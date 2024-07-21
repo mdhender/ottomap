@@ -190,24 +190,25 @@ func (t *Tile_t) MergeSettlement(s *parser.Settlement_t) {
 
 // MergeTerrain if it is not blank and is different
 func (t *Tile_t) MergeTerrain(n terrain.Terrain_e) {
-	// ignore the new terrain if it is blank
-	if n == terrain.Blank {
+	// ignore the new terrain if it is blank or the same as the existing terrain
+	if n == terrain.Blank || n == t.Terrain {
 		return
 	}
-
 	// always accept if the current terrain is blank
 	if t.Terrain == terrain.Blank {
 		t.Terrain = n
 		return
 	}
 
-	// don't overwrite existing terrain with a fleet observation
-	if n == terrain.UnknownLand || n == terrain.UnknownWater {
+	// at this point, we know that t.Terrain != terrain.Blank.
+	// we want to make sure that we don't overwrite the terrain with a fleet observation.
+	isFleetObservation := n == terrain.UnknownLand || n == terrain.UnknownWater
+	if isFleetObservation {
 		return
 	}
 
 	// log any deltas
-	if n != t.Terrain {
-		log.Printf("useless tidbit: terrain %q != terrain %q\n", t.Terrain, n)
-	}
+	log.Printf("useless tidbit: old terrain %-4q new terrain %q\n", t.Terrain, n)
+
+	t.Terrain = n
 }
