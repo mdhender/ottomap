@@ -236,19 +236,19 @@ func (w *WXX) Create(path string, turnId string, upperLeft, lowerRight coords.Ma
 				w.Printf("</feature>\n")
 			}
 
+			// unit notes are used only if there are multiple units in the hex
 			var unitNotes [2]struct {
-				id     string
-				origin Point
-				units  []string
+				id                                string
+				name                              string
+				origin                            Point
+				units                             []string
+				mapLayer, isFlipHorizontal, color string
 			}
 			for _, e := range t.Features.Encounters {
 				// for now, only show encounters that are in the current turn.
 				if e.TurnId != turnId {
 					continue
 				}
-
-				id := uuid.New().String()
-
 				// get the center of the hex we're in
 				center := points[0]
 
@@ -260,23 +260,39 @@ func (w *WXX) Create(path string, turnId string, upperLeft, lowerRight coords.Ma
 					edgePoint = edgeCenter(direction.NorthWest, points)
 				}
 				origin := midpoint(center, edgePoint)
-				var mapLayer, isFlipHorizontal, color string
+				//var mapLayer, isFlipHorizontal, color string
 				if e.Friendly {
-					mapLayer, isFlipHorizontal, color = "Tribenet Clan Units", "false", "null"
-					unitNotes[0].id = id
+					unitNotes[0].id = uuid.New().String()
+					unitNotes[0].name = string(e.UnitId)
 					unitNotes[0].origin = origin
 					unitNotes[0].units = append(unitNotes[0].units, string(e.UnitId))
+					unitNotes[0].mapLayer, unitNotes[0].isFlipHorizontal, unitNotes[0].color = "Tribenet Clan Units", "false", "null"
 				} else {
-					mapLayer, isFlipHorizontal, color = "Tribenet Encounters", "true", "1.0,0.0,0.0,1.0"
-					unitNotes[1].id = id
+					unitNotes[1].id = uuid.New().String()
+					unitNotes[1].name = string(e.UnitId)
 					unitNotes[1].origin = origin
 					unitNotes[1].units = append(unitNotes[1].units, string(e.UnitId))
+					unitNotes[1].mapLayer, unitNotes[1].isFlipHorizontal, unitNotes[1].color = "Tribenet Encounters", "true", "1.0,0.0,0.0,1.0"
 				}
-				w.Printf(`<feature type="Military Ancient Soldier" rotate="0.0" uuid="%s" mapLayer=%q isFlipHorizontal=%q isFlipVertical="false" scale="25.0" scaleHt="-1.0" tags="" color=%q ringcolor="null" isGMOnly="false" isPlaceFreely="false" labelPosition="12:00" labelDistance="-50" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isFillHexBottom="false" isHideTerrainIcon="false">`, id, mapLayer, isFlipHorizontal, color)
-				w.Printf(`<location viewLevel="WORLD" x="%f" y="%f" />`, origin.X, origin.Y)
-				w.Printf(`<label  mapLayer=%q style="null" fontFace="null" color="0.0,0.0,0.0,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags="">`, mapLayer)
-				w.Printf(`<location viewLevel="WORLD" x="%g" y="%g" scale="6.25" />`, origin.X, origin.Y)
-				w.Printf("%s", e.UnitId)
+			}
+			if len(unitNotes[0].units) > 1 {
+				unitNotes[0].name = "CLAN"
+			}
+			if len(unitNotes[1].units) > 1 {
+				unitNotes[1].name = "XXXX"
+			}
+
+			for _, un := range unitNotes {
+				// for now, only show encounters that are in the current turn.
+				if un.id == "" {
+					continue
+				}
+
+				w.Printf(`<feature type="Military Ancient Soldier" rotate="0.0" uuid="%s" mapLayer=%q isFlipHorizontal=%q isFlipVertical="false" scale="25.0" scaleHt="-1.0" tags="" color=%q ringcolor="null" isGMOnly="false" isPlaceFreely="false" labelPosition="12:00" labelDistance="-50" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isFillHexBottom="false" isHideTerrainIcon="false">`, un.id, un.mapLayer, un.isFlipHorizontal, un.color)
+				w.Printf(`<location viewLevel="WORLD" x="%f" y="%f" />`, un.origin.X, un.origin.Y)
+				w.Printf(`<label  mapLayer=%q style="null" fontFace="null" color="0.0,0.0,0.0,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags="">`, un.mapLayer)
+				w.Printf(`<location viewLevel="WORLD" x="%g" y="%g" scale="6.25" />`, un.origin.X, un.origin.Y)
+				w.Printf("%s", un.name)
 				w.Printf(`</label>`)
 				w.Println(`</feature>`)
 			}
