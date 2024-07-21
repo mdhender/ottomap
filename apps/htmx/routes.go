@@ -3,30 +3,44 @@
 package htmx
 
 import (
+	"bytes"
+	tmpls "github.com/mdhender/ottomap/templates/htmx"
+	"html/template"
 	"io"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 func (a *App) Routes() (*http.ServeMux, error) {
 	mux := http.NewServeMux() // default mux, no routes
 
-	mux.HandleFunc("GET /", getHomePage(a.paths.templates, "", a.paths.assets, false))
+	mux.HandleFunc("GET /", getHomePage(a.paths.templates, "", a.paths.assets, true))
+	mux.HandleFunc("GET /login/{id}", getLogin(a.sessions, true))
+	mux.HandleFunc("GET /logout", getLogout())
 
 	return mux, nil
 }
 
 func getHomePage(templatesPath string, prefix, root string, debug bool) http.HandlerFunc {
 	templateFiles := []string{
-		filepath.Join(templatesPath, "home_page.gohtml"),
+		filepath.Join(templatesPath, "content.gohtml"),
+		filepath.Join(templatesPath, "layout.gohtml"),
+		filepath.Join(templatesPath, "banner.gohtml"),
+		filepath.Join(templatesPath, "mainmenu.gohtml"),
+		filepath.Join(templatesPath, "sidebar.gohtml"),
+		filepath.Join(templatesPath, "leftmenu.gohtml"),
+		filepath.Join(templatesPath, "rightmenu.gohtml"),
+		filepath.Join(templatesPath, "menu_items.gohtml"),
+		filepath.Join(templatesPath, "footer.gohtml"),
 	}
 	_ = templateFiles
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		//log.Printf("%s: %s: entered\n", r.Method, r.URL.Path)
+		log.Printf("%s: %s: entered\n", r.Method, r.URL.Path)
 
 		// this is stupid, but Go treats "GET /" as a wild-card not-found match.
 		if r.URL.Path != "/" {
@@ -61,5 +75,168 @@ func getHomePage(templatesPath string, prefix, root string, debug bool) http.Han
 			http.ServeContent(w, r, file, stat.ModTime(), rdr)
 			return
 		}
+
+		// Parse the template file
+		tmpl, err := template.ParseFiles(templateFiles...)
+		if err != nil {
+			log.Printf("%s: %s: template: %v", r.Method, r.URL.Path, err)
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		var payload tmpls.Layout
+		payload.Banner = tmpls.Banner{
+			Title: "Ottomap",
+			Slug:  "trying to map the right thing...",
+		}
+		payload.MainMenu = tmpls.MainMenu{
+			Items: []tmpls.MenuItem{
+				{Label: "Main pages", Link: "#",
+					Children: []tmpls.MenuItem{
+						{Label: "Blog", Link: "#"},
+						{Label: "Archives", Link: "#"},
+						{Label: "Categories", Link: "#"},
+					},
+				},
+				{Label: "Blog topics", Link: "#",
+					Children: []tmpls.MenuItem{
+						{Label: "Web design", Link: "#"},
+						{Label: "Accessibility", Link: "#"},
+						{Label: "CMS solutions", Link: "#"},
+					},
+				},
+				{Label: "Extras", Link: "#",
+					Children: []tmpls.MenuItem{
+						{Label: "Music archive", Link: "#"},
+						{Label: "Photo gallery", Link: "#"},
+						{Label: "Poems and lyrics", Link: "#"},
+					},
+				},
+				{Label: "Community", Link: "#",
+					Children: []tmpls.MenuItem{
+						{Label: "Guestbook", Link: "#"},
+						{Label: "Members", Link: "#"},
+						{Label: "Link collections", Link: "#"},
+					},
+				},
+			},
+		}
+		payload.Sidebar.LeftMenu = tmpls.LeftMenu{
+			Items: []tmpls.MenuItem{
+				{Label: "Left menu", Class: "sidemenu",
+					Children: []tmpls.MenuItem{
+						{Label: "First page", Link: "#"},
+						{Label: "Second page", Link: "#"},
+						{Label: "Third page with subs", Link: "#",
+							Children: []tmpls.MenuItem{
+								{Label: "First subpage", Link: "#"},
+								{Label: "Second subpage", Link: "#"},
+							}},
+						{Label: "Fourth page", Link: "#"},
+					},
+				},
+			},
+		}
+		payload.Sidebar.RightMenu = tmpls.RightMenu{
+			Items: []tmpls.MenuItem{
+				{Label: "Right menu", Class: "sidemenu",
+					Children: []tmpls.MenuItem{
+						{Label: "Sixth page", Link: "#"},
+						{Label: "Seventh page", Link: "#"},
+						{Label: "Another page", Link: "#"},
+						{Label: "The last one", Link: "#"},
+					},
+				},
+				{Label: "Sample links",
+					Children: []tmpls.MenuItem{
+						{Label: "Sample link 1", Link: "#"},
+						{Label: "Sample link 2", Link: "#"},
+						{Label: "Sample link 3", Link: "#"},
+						{Label: "Sample link 4", Link: "#"},
+					},
+				},
+			},
+		}
+		payload.Sidebar.Notice = &tmpls.Notice{
+			Label: "Account",
+			Lines: []string{
+				"You aren't logged in. Please use your secret link to log in.",
+				"If you don't have an account, please visit the Discord server to request an account.",
+			},
+		}
+		payload.Footer = tmpls.Footer{
+			Author:        "Michael D Henderson",
+			CopyrightYear: "2024",
+		}
+
+		// create a buffer to write the response to. we need to do this to capture errors in a nice way.
+		buf := &bytes.Buffer{}
+
+		// execute the template with our payload
+		err = tmpl.ExecuteTemplate(buf, "layout", payload)
+		if err != nil {
+			log.Printf("%s: %s: template: %v", r.Method, r.URL.Path, err)
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(buf.Bytes())
+	}
+}
+
+func getLogin(sessionManager *sessionManager_t, debug bool) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("%s: %s: entered\n", r.Method, r.URL.Path)
+
+		id := r.PathValue("id")
+		if id == "" {
+			// delete any cookies that might be set.
+			http.SetCookie(w, &http.Cookie{
+				Path:    "/",
+				Name:    "ottomap",
+				Expires: time.Unix(0, 0),
+			})
+			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+			return
+		}
+
+		sess := sessionManager.getSession(id)
+		if !sess.isValid() {
+			// delete any cookies that might be set.
+			http.SetCookie(w, &http.Cookie{
+				Path:    "/",
+				Name:    "ottomap",
+				Expires: time.Unix(0, 0),
+			})
+			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+			return
+		}
+
+		// set a new cookie with the new expiration date
+		http.SetCookie(w, &http.Cookie{
+			Path:    "/",
+			Name:    "ottomap",
+			Value:   sess.key,
+			Expires: sess.expires,
+		})
+
+		http.Redirect(w, r, "/index.html", http.StatusSeeOther)
+	}
+}
+
+func getLogout() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("%s: %s: entered\n", r.Method, r.URL.Path)
+
+		// delete any cookies that might be set.
+		http.SetCookie(w, &http.Cookie{
+			Path:    "/",
+			Name:    "ottomap",
+			Expires: time.Unix(0, 0),
+		})
+
+		http.Redirect(w, r, "/index.html", http.StatusSeeOther)
 	}
 }

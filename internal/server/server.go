@@ -56,4 +56,6 @@ func (s *Server) Router() http.Handler {
 func (s *Server) ShowMeSomeRoutes() {
 	log.Printf("serve: %s%s\n", s.BaseURL(), "/index.html")
 	log.Printf("serve: %s%s\n", s.BaseURL(), "/about.html")
+	log.Printf("serve: %s%s\n", s.BaseURL(), "/login")
+	log.Printf("serve: %s%s\n", s.BaseURL(), "/logout")
 }

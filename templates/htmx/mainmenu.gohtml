@@ -1,0 +1,17 @@
+{{define "mainmenu"}}{{- /*gotype:github.com/mdhender/ottomap/templates/htmx.MainMenu*/ -}}
+<div id="mainmenu">
+    {{range .Items}}{{- /*gotype:github.com/mdhender/ottomap/templates/htmx.MenuItem*/ -}}
+        <dl class="nav">
+            <dt><a href="{{.Link}}">{{.Label}}</a></dt>
+            {{range .Children}}
+                <dd><a href="{{.Link}}">{{.Label}}</a></dd>
+            {{end}}
+        </dl>
+    {{end}}
+    <dl class="introduction">
+        <dt><a href="https://github.com/mdhender/ottomap/releases" target="_blank">Releases</a></dt>
+        <dd><a href="https://github.com/mdhender/ottomap/releases/tag/v0.13.4" target="_blank">v0.13.4</a></dd>
+    </dl>
+    <hr class="clear" />
+</div>
+{{end}}
