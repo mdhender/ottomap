@@ -29,6 +29,17 @@ type RenderConfig struct {
 	}
 }
 
+type FeatureNotes struct {
+	Notes map[string]*FeatureNote
+}
+
+type FeatureNote struct {
+	Id     string // uuid of the feature
+	Title  string
+	Text   []string
+	Origin Point // origin of the feature
+}
+
 func (w *WXX) Create(path string, turnId string, upperLeft, lowerRight coords.Map, cfg RenderConfig) error {
 	if len(w.tiles) == 0 {
 		return fmt.Errorf("wxx: create: no tiles")
@@ -40,6 +51,10 @@ func (w *WXX) Create(path string, turnId string, upperLeft, lowerRight coords.Ma
 	//log.Printf("origin (%f, %f)\n", origin[0].X, origin[0].Y)
 	//x, y := 148.14830212120597, 241.81408953094206
 	//log.Printf("delta (%f, %f)\n", x-origin[0].X, y-origin[0].Y)
+
+	notes := FeatureNotes{
+		Notes: make(map[string]*FeatureNote),
+	}
 
 	var err error
 
@@ -221,11 +236,18 @@ func (w *WXX) Create(path string, turnId string, upperLeft, lowerRight coords.Ma
 				w.Printf("</feature>\n")
 			}
 
+			var unitNotes [2]struct {
+				id     string
+				origin Point
+				units  []string
+			}
 			for _, e := range t.Features.Encounters {
 				// for now, only show encounters that are in the current turn.
 				if e.TurnId != turnId {
 					continue
 				}
+
+				id := uuid.New().String()
 
 				// get the center of the hex we're in
 				center := points[0]
@@ -241,16 +263,39 @@ func (w *WXX) Create(path string, turnId string, upperLeft, lowerRight coords.Ma
 				var mapLayer, isFlipHorizontal, color string
 				if e.Friendly {
 					mapLayer, isFlipHorizontal, color = "Tribenet Clan Units", "false", "null"
+					unitNotes[0].id = id
+					unitNotes[0].origin = origin
+					unitNotes[0].units = append(unitNotes[0].units, string(e.UnitId))
 				} else {
 					mapLayer, isFlipHorizontal, color = "Tribenet Encounters", "true", "1.0,0.0,0.0,1.0"
+					unitNotes[1].id = id
+					unitNotes[1].origin = origin
+					unitNotes[1].units = append(unitNotes[1].units, string(e.UnitId))
 				}
-				w.Printf(`<feature type="Military Ancient Soldier" rotate="0.0" uuid="%s" mapLayer=%q isFlipHorizontal=%q isFlipVertical="false" scale="25.0" scaleHt="-1.0" tags="" color=%q ringcolor="null" isGMOnly="false" isPlaceFreely="false" labelPosition="12:00" labelDistance="-50" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isFillHexBottom="false" isHideTerrainIcon="false">`, uuid.New().String(), mapLayer, isFlipHorizontal, color)
+				w.Printf(`<feature type="Military Ancient Soldier" rotate="0.0" uuid="%s" mapLayer=%q isFlipHorizontal=%q isFlipVertical="false" scale="25.0" scaleHt="-1.0" tags="" color=%q ringcolor="null" isGMOnly="false" isPlaceFreely="false" labelPosition="12:00" labelDistance="-50" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isFillHexBottom="false" isHideTerrainIcon="false">`, id, mapLayer, isFlipHorizontal, color)
 				w.Printf(`<location viewLevel="WORLD" x="%f" y="%f" />`, origin.X, origin.Y)
 				w.Printf(`<label  mapLayer=%q style="null" fontFace="null" color="0.0,0.0,0.0,1.0" outlineColor="1.0,1.0,1.0,1.0" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags="">`, mapLayer)
 				w.Printf(`<location viewLevel="WORLD" x="%g" y="%g" scale="6.25" />`, origin.X, origin.Y)
 				w.Printf("%s", e.UnitId)
 				w.Printf(`</label>`)
 				w.Println(`</feature>`)
+			}
+			// do we need to add notes for units?
+			if len(unitNotes[0].units) > 1 {
+				notes.Notes[unitNotes[0].id] = &FeatureNote{
+					Id:     unitNotes[0].id,
+					Title:  "Clan Units",
+					Text:   unitNotes[0].units,
+					Origin: unitNotes[0].origin,
+				}
+			}
+			if len(unitNotes[1].units) > 1 {
+				notes.Notes[unitNotes[1].id] = &FeatureNote{
+					Id:     unitNotes[1].id,
+					Title:  "Non-Clan Units",
+					Text:   unitNotes[1].units,
+					Origin: unitNotes[1].origin,
+				}
 			}
 
 			for _, r := range t.Features.Resources {
@@ -451,6 +496,18 @@ func (w *WXX) Create(path string, turnId string, upperLeft, lowerRight coords.Ma
 	w.Println(`</shapes>`)
 
 	w.Println(`<notes>`)
+	/*
+		<note key="WORLD,2343.75,3112.5" viewLevel="WORLD" x="2343.75" y="3112.5" filename="" parent="dde12f75-dcc9-4cb7-a96d-f18011601143" color="1.0,1.0,0.0,1.0" title="Units (Notes Title)">
+		<notetext><![CDATA[<html dir="ltr"><head></head><body contenteditable="true">Paragraph (Notes Paragraph)</body></html>]]></notetext></note>
+	*/
+	for _, note := range notes.Notes {
+		w.Printf(`<note key="WORLD,%f,%f" viewLevel="WORLD" x="%f" y="%f" filename="" parent=%q color="1.0,1.0,0.0,1.0" title=%q>`, note.Origin.X, note.Origin.Y, note.Origin.X, note.Origin.Y, note.Id, note.Title)
+		w.Printf(`<notetext><![CDATA[<html dir="ltr"><head></head><body contenteditable="true">`)
+		for _, line := range note.Text {
+			w.Printf(`%s<br/>`, line)
+		}
+		w.Println(`</body></html>]]></notetext></note>`)
+	}
 	w.Println(`</notes>`)
 	w.Println(`<informations>`)
 	w.Println(`</informations>`)
