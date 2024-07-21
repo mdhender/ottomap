@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	version = semver.Version{Major: 0, Minor: 13, Patch: 4}
+	version = semver.Version{Major: 0, Minor: 13, Patch: 5}
 )
 
 func main() {
@@ -27,7 +27,7 @@ func main() {
 }
 
 func Execute() error {
-	cmdRoot.AddCommand(cmdRender, cmdVersion)
+	cmdRoot.AddCommand(cmdRender, cmdServe, cmdVersion)
 
 	cmdRender.Flags().BoolVar(&argsRender.debug.dumpAllTiles, "debug-dump-all-tiles", false, "dump all tiles")
 	cmdRender.Flags().BoolVar(&argsRender.debug.dumpAllTurns, "debug-dump-all-turns", false, "dump all turns")
@@ -49,6 +49,12 @@ func Execute() error {
 	cmdRender.Flags().StringVar(&argsRender.paths.data, "data", "data", "path to root of data files")
 	cmdRender.Flags().StringVar(&argsRender.originGrid, "origin-grid", "", "grid id to substitute for ##")
 	cmdRender.Flags().StringVar(&argsRender.maxTurn.id, "max-turn", "", "last turn to map (yyyy-mm format)")
+
+	cmdServe.Flags().StringVar(&argsServe.paths.assets, "assets", "assets", "path to public assets")
+	cmdServe.Flags().StringVar(&argsServe.paths.data, "data", "userdata", "path to root of user data files")
+	cmdServe.Flags().StringVar(&argsServe.paths.templates, "templates", "templates", "path to template files")
+	cmdServe.Flags().StringVar(&argsServe.server.host, "host", "localhost", "host to serve on")
+	cmdServe.Flags().StringVar(&argsServe.server.port, "port", "29631", "port to bind to")
 
 	return cmdRoot.Execute()
 }
