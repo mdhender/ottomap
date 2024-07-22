@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	version = semver.Version{Major: 0, Minor: 13, Patch: 6}
+	version = semver.Version{Major: 0, Minor: 13, Patch: 7}
 )
 
 func main() {
@@ -42,6 +42,7 @@ func Execute() error {
 	cmdRender.Flags().BoolVar(&argsRender.render.Show.Grid.Coords, "show-grid-coords", false, "show grid coordinates (XX CCRR)")
 	cmdRender.Flags().BoolVar(&argsRender.render.Show.Grid.Numbers, "show-grid-numbers", false, "show grid numbers (CCRR)")
 	cmdRender.Flags().BoolVar(&argsRender.show.origin, "show-origin", false, "show origin hex")
+	cmdRender.Flags().BoolVar(&argsRender.show.shiftMap, "shift-map", false, "shift map up and left")
 	cmdRender.Flags().StringVar(&argsRender.clanId, "clan-id", "", "clan for output file names")
 	if err := cmdRender.MarkFlagRequired("clan-id"); err != nil {
 		log.Fatalf("error: clan-id: %v\n", err)

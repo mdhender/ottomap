@@ -51,7 +51,8 @@ var argsRender struct {
 		steps        bool
 	}
 	show struct {
-		origin bool
+		shiftMap bool
+		origin   bool
 	}
 }
 
@@ -359,6 +360,12 @@ var cmdRender = &cobra.Command{
 				}
 			}
 			log.Printf("info: origin hex set to %q\n", argsRender.mapper.Origin)
+		}
+
+		// dangerous, shift the map
+		argsRender.mapper.Render.ShiftMap = argsRender.show.shiftMap
+		if argsRender.mapper.Render.ShiftMap {
+			log.Printf("warn: will shift map up and left\n")
 		}
 
 		// walk the data

@@ -19,7 +19,10 @@ type MapConfig struct {
 		BorderCounts bool
 	}
 	Origin coords.Map
-	Show   struct {
+	Render struct {
+		ShiftMap bool // if true, shift the map up and left to make it smaller
+	}
+	Show struct {
 		Origin bool // if set, put a marker in the origin hex
 	}
 }
@@ -46,12 +49,15 @@ func MapWorld(allTiles *tiles.Map_t, clan parser.UnitId_t, cfg MapConfig) (*wxx.
 	upperLeft, lowerRight := allTiles.Bounds()
 	log.Printf("map: upper left  grid %s\n", upperLeft.GridString())
 	log.Printf("map: lower right grid %s\n", lowerRight.GridString())
-	log.Printf("map: todo: move grid creation from merge to here\n")
-	if upperLeft.Column > 4 {
-		renderOffset.Column = upperLeft.Column - 4
-	}
-	if upperLeft.Row > 4 {
-		renderOffset.Row = upperLeft.Row - 4
+	if cfg.Render.ShiftMap {
+		if upperLeft.Column > 4 {
+			renderOffset.Column = upperLeft.Column - 4
+		}
+		if upperLeft.Row > 4 {
+			renderOffset.Row = upperLeft.Row - 4
+		}
+		log.Printf("map: shift up    %5d rows\n", renderOffset.Row)
+		log.Printf("map: shift left  %5d columns\n", renderOffset.Column)
 	}
 
 	// world hex map is indexed by render location, not true location
