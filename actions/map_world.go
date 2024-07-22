@@ -52,6 +52,10 @@ func MapWorld(allTiles *tiles.Map_t, clan parser.UnitId_t, cfg MapConfig) (*wxx.
 	if cfg.Render.ShiftMap {
 		if upperLeft.Column > 4 {
 			renderOffset.Column = upperLeft.Column - 4
+			// we will have issues drawing the map if the column offset is not even
+			if renderOffset.Column%2 != 0 {
+				renderOffset.Column--
+			}
 		}
 		if upperLeft.Row > 4 {
 			renderOffset.Row = upperLeft.Row - 4
@@ -118,48 +122,6 @@ func MapWorld(allTiles *tiles.Map_t, clan parser.UnitId_t, cfg MapConfig) (*wxx.
 			log.Fatalf("error: wxx: mergeHexes: newHexes: %v\n", err)
 		}
 	}
-
-	//for _, report := range allTiles {
-	//	gridCoords := report.Location.GridString()
-	//	gridColumn, gridRow := report.Location.GridColumnRow()
-	//	hex := &wxx.Hex{
-	//		Location: report.Location,
-	//		Offset: wxx.Offset{
-	//			Column: gridColumn,
-	//			Row:    gridRow,
-	//		},
-	//		Terrain: report.Terrain,
-	//		Features: wxx.Features{
-	//			IsOrigin: cfg.Show.Origin == gridCoords,
-	//			//Resources: report.Resources,
-	//		},
-	//		WasScouted: report.ScoutedTurnId != "",
-	//	}
-	//	for _, settlement := range report.Settlements {
-	//		hex.Features.Settlements = append(hex.Features.Settlements, settlement)
-	//	}
-	//	worldHexMap[hex.Location.GridString()] = hex
-	//
-	//	//for _, border := range report.Borders {
-	//	//	switch border.Edge {
-	//	//	case edges.None:
-	//	//	case edges.Ford:
-	//	//		hex.Features.Edges.Ford = append(hex.Features.Edges.Ford, border.Direction)
-	//	//	case edges.Pass:
-	//	//		hex.Features.Edges.Pass = append(hex.Features.Edges.Pass, border.Direction)
-	//	//	case edges.River:
-	//	//		hex.Features.Edges.River = append(hex.Features.Edges.River, border.Direction)
-	//	//	case edges.StoneRoad:
-	//	//		hex.Features.Edges.StoneRoad = append(hex.Features.Edges.StoneRoad, border.Direction)
-	//	//	default:
-	//	//		panic(fmt.Sprintf("assert(edge != %d)", border.Edge))
-	//	//	}
-	//	//}
-	//
-	//	if err := consolidatedMap.MergeHex(report.TurnId, hex); err != nil {
-	//		log.Fatalf("error: wxx: mergeHexes: newHexes: %v\n", err)
-	//	}
-	//}
 
 	log.Printf("map: collected %8d new     hexes\n", len(worldHexMap))
 
