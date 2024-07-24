@@ -290,8 +290,8 @@ var cmdRender = &cobra.Command{
 				}
 				if unitMoves.ToHex[2:] != nextUnitMoves.FromHex[2:] {
 					badLinks++
-					log.Printf("error: %s: %-6s: to   %q\n", turn.Id, unitMoves.Id, unitMoves.ToHex)
-					log.Printf("     : %s: %-6s: from %q\n", turn.Next.Id, nextUnitMoves.Id, nextUnitMoves.FromHex)
+					log.Printf("error: %s: %-6s: from %q\n", turn.Id, unitMoves.Id, unitMoves.ToHex)
+					log.Printf("     : %s: %-6s: to   %q\n", turn.Next.Id, nextUnitMoves.Id, nextUnitMoves.FromHex)
 				} else {
 					goodLinks++
 				}

@@ -120,6 +120,12 @@ func getHomePage(templatesPath string, prefix, root string, debug bool) http.Han
 					},
 				},
 			},
+			Releases: tmpls.Releases{
+				DT: tmpls.Link{Label: "Releases", Link: "https://github.com/mdhender/ottomap/releases", Target: "_blank"},
+				DDs: []tmpls.Link{
+					{Label: "v0.13.8", Link: "https://github.com/mdhender/ottomap/releases/tag/v0.13.8", Target: "_blank"},
+				},
+			},
 		}
 		payload.Sidebar.LeftMenu = tmpls.LeftMenu{
 			Items: []tmpls.MenuItem{

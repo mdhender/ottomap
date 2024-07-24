@@ -22,9 +22,14 @@ type Banner struct {
 }
 
 type MainMenu struct {
-	Items []MenuItem
+	Items    []MenuItem
+	Releases Releases
 }
 
+type Releases struct {
+	DT  Link
+	DDs []Link
+}
 type Sidebar struct {
 	LeftMenu  LeftMenu
 	RightMenu RightMenu
@@ -55,4 +60,11 @@ type MenuItem struct {
 type Footer struct {
 	Author        string
 	CopyrightYear string
+}
+
+type Link struct {
+	Label  string
+	Link   string
+	Target string
+	Class  string
 }

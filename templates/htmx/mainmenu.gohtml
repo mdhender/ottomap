@@ -9,8 +9,12 @@
         </dl>
     {{end}}
     <dl class="introduction">
-        <dt><a href="https://github.com/mdhender/ottomap/releases" target="_blank">Releases</a></dt>
-        <dd><a href="https://github.com/mdhender/ottomap/releases/tag/v0.13.4" target="_blank">v0.13.4</a></dd>
+    {{with .Releases}}{{- /*gotype:github.com/mdhender/ottomap/templates/htmx.Releases*/ -}}
+        <dt><a href="{{.DT.Link}}" {{with .DT.Target}}target="{{.}}"{{end}}>{{.DT.Label}}</a></dt>
+        {{range .DDs}}
+        <dd><a href="{{.Link}}" {{with .Target}}target="{{.}}"{{end}}>{{.Label}}</a></dd>
+        {{end}}
+    {{end}}
     </dl>
     <hr class="clear" />
 </div>
