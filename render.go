@@ -50,9 +50,10 @@ var argsRender struct {
 		sections     bool
 		steps        bool
 	}
-	show struct {
-		shiftMap bool
+	saveWithTurnId bool
+	show           struct {
 		origin   bool
+		shiftMap bool
 	}
 }
 
@@ -167,7 +168,7 @@ var cmdRender = &cobra.Command{
 		// allTurns holds the turn and move data and allows multiple clans to be loaded.
 		allTurns := map[string][]*parser.Turn_t{}
 		totalUnitMoves := 0
-		var turnId string // will be set to the last turnId we process
+		var turnId, maxTurnId string // will be set to the last/maximum turnId we process
 		for _, i := range inputs {
 			started := time.Now()
 			data, err := os.ReadFile(i.Path)
@@ -193,6 +194,9 @@ var cmdRender = &cobra.Command{
 				log.Printf("warn: %q: past cutoff %04d-%02d\n", i.Id, argsRender.maxTurn.year, argsRender.maxTurn.month)
 			}
 			turnId = fmt.Sprintf("%04d-%02d", i.Turn.Year, i.Turn.Month)
+			if turnId > maxTurnId {
+				maxTurnId = turnId
+			}
 			turn, err := parser.ParseInput(i.Id, turnId, data, argsRender.debug.parser, argsRender.debug.sections, argsRender.debug.steps, argsRender.debug.nodes, argsRender.parser)
 			if err != nil {
 				log.Fatal(err)
@@ -429,7 +433,12 @@ var cmdRender = &cobra.Command{
 		log.Printf("map: %8d nodes: elapsed %v\n", worldMap.Length(), time.Since(started))
 
 		// now we can create the Worldographer map!
-		mapName := filepath.Join(argsRender.paths.output, fmt.Sprintf("%s.wxx", argsRender.clanId))
+		var mapName string
+		if argsRender.saveWithTurnId {
+			mapName = filepath.Join(argsRender.paths.output, fmt.Sprintf("%s.%s.wxx", maxTurnId, argsRender.clanId))
+		} else {
+			mapName = filepath.Join(argsRender.paths.output, fmt.Sprintf("%s.wxx", argsRender.clanId))
+		}
 		if err := wxxMap.Create(mapName, turnId, upperLeft, lowerRight, argsRender.render); err != nil {
 			log.Printf("creating %s\n", mapName)
 			log.Fatalf("error: %v\n", err)
