@@ -4,6 +4,7 @@ package htmx
 
 import (
 	"fmt"
+	"github.com/mdhender/ottomap/stores/ffs"
 	"os"
 )
 
@@ -14,6 +15,7 @@ type App struct {
 		templates string
 	}
 	sessions *sessionManager_t
+	store    *ffs.FFS
 }
 
 func New(options ...Option) (*App, error) {
@@ -48,6 +50,12 @@ func New(options ...Option) (*App, error) {
 	// add all existing sessions to the sessions map
 	a.sessions = newSessionManager(a.paths.data)
 	a.sessions.loadSessions()
+
+	var err error
+	a.store, err = ffs.New(a.paths.data)
+	if err != nil {
+		return nil, err
+	}
 
 	return a, nil
 }

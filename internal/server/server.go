@@ -54,8 +54,14 @@ func (s *Server) Router() http.Handler {
 }
 
 func (s *Server) ShowMeSomeRoutes() {
-	log.Printf("serve: %s%s\n", s.BaseURL(), "/index.html")
-	log.Printf("serve: %s%s\n", s.BaseURL(), "/about.html")
+	log.Printf("serve: %s%s\n", s.BaseURL(), "/")
+	log.Printf("serve: %s%s\n", s.BaseURL(), "/tn3")
+	for _, turn := range []string{"0899-12", "0900-01", "0900-02"} {
+		log.Printf("serve: %s/tn3/%s\n", s.BaseURL(), turn)
+		log.Printf("serve: %s/tn3/%s/0138\n", s.BaseURL(), turn)
+		log.Printf("serve: %s/tn3/%s/0138/report\n", s.BaseURL(), turn)
+		log.Printf("serve: %s/tn3/%s/0138/map\n", s.BaseURL(), turn)
+	}
 	log.Printf("serve: %s%s\n", s.BaseURL(), "/login")
 	log.Printf("serve: %s%s\n", s.BaseURL(), "/logout")
 }

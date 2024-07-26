@@ -27,6 +27,8 @@ type sessionManager_t struct {
 func newSessionManager(path string) *sessionManager_t {
 	rxSessionId := regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
 
+	log.Printf("session: data path %q\n", path)
+
 	return &sessionManager_t{
 		data:     path,
 		pattern:  rxSessionId,
@@ -48,10 +50,13 @@ func (sm *sessionManager_t) addSession(id string) {
 }
 
 func (sm *sessionManager_t) fromRequest(r *http.Request) session_t {
-	cookie, err := r.Cookie("session")
+	log.Printf("session: fromRequest: cookie %q\n", "ottomap")
+	cookie, err := r.Cookie("ottomap")
 	if err != nil {
+		log.Printf("session: fromRequest: no cookie: %v\n", err)
 		return session_t{}
 	}
+	log.Printf("session: fromRequest: cookie %q: %q\n", "ottomap", cookie.Value)
 	return sm.getSession(cookie.Value)
 }
 
@@ -70,6 +75,8 @@ func (sm *sessionManager_t) loadSessions() {
 func (sm *sessionManager_t) refresh() {
 	sm.Lock()
 	defer sm.Unlock()
+
+	log.Printf("session: refresh: data %q\n", sm.data)
 
 	sm.sessions = make(map[string]session_t)
 
@@ -116,11 +123,21 @@ func (sm *sessionManager_t) removeSession(id string) {
 	sm.refresh()
 }
 
+func (sm *sessionManager_t) currentUser(r *http.Request) session_t {
+	log.Printf("session: currentUser: data %q\n", sm.data)
+
+	return sm.fromRequest(r)
+}
+
 type session_t struct {
 	clan    string // clan name
 	id      string // session ID
 	key     string // hashed session ID
 	expires time.Time
+}
+
+func (s session_t) isAuthenticated() bool {
+	return time.Now().Before(s.expires)
 }
 
 func (s session_t) isValid() bool {

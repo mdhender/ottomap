@@ -4,7 +4,9 @@ package htmx
 
 import (
 	"bytes"
+	"github.com/mdhender/ottomap/stores/ffs"
 	tmpls "github.com/mdhender/ottomap/templates/htmx"
+	"github.com/mdhender/ottomap/templates/tw"
 	"html/template"
 	"io"
 	"log"
@@ -18,26 +20,53 @@ import (
 func (a *App) Routes() (*http.ServeMux, error) {
 	mux := http.NewServeMux() // default mux, no routes
 
-	mux.HandleFunc("GET /", getHomePage(a.paths.templates, "", a.paths.assets, true))
-	mux.HandleFunc("GET /login/{id}", getLogin(a.sessions, true))
+	mux.HandleFunc("GET /", getHomePage(a.paths.templates, "", a.paths.assets, true, true))
+	mux.HandleFunc("GET /login/{clan}/{id}", getLogin(a.sessions, true))
 	mux.HandleFunc("GET /logout", getLogout())
+
+	// https://datatracker.ietf.org/doc/html/rfc9110 for POST vs PUT
+
+	mux.HandleFunc("GET /tn3", getListOfTurns(a.paths.templates, a.store, a.sessions))
+
+	mux.HandleFunc("GET /tn3/{turnId}", handleNotImplemented())
+	mux.HandleFunc("DELETE /tn3/{turnId}", handleNotImplemented())
+
+	mux.HandleFunc("GET /tn3/{turnId}/{clanId}", handleNotImplemented())
+	mux.HandleFunc("DELETE /tn3/{turnId}/{clanId}", handleNotImplemented())
+
+	mux.HandleFunc("GET /tn3/{turnId}/{clanId}/map", handleNotImplemented())
+	mux.HandleFunc("POST /tn3/{turnId}/{clanId}/map", handleNotImplemented())
+	mux.HandleFunc("PUT /tn3/{turnId}/{clanId}/map", handleNotImplemented())
+	mux.HandleFunc("DELETE /tn3/{turnId}/{clanId}/map", handleNotImplemented())
+
+	mux.HandleFunc("GET /tn3/{turnId}/{clanId}/report", handleNotImplemented())
+	mux.HandleFunc("POST /tn3/{turnId}/{clanId}/report", handleNotImplemented())
+	mux.HandleFunc("PUT /tn3/{turnId}/{clanId}/report", handleNotImplemented())
+	mux.HandleFunc("DELETE /tn3/{turnId}/{clanId}/report", handleNotImplemented())
 
 	return mux, nil
 }
 
-func getHomePage(templatesPath string, prefix, root string, debug bool) http.HandlerFunc {
-	templateFiles := []string{
-		filepath.Join(templatesPath, "content.gohtml"),
-		filepath.Join(templatesPath, "layout.gohtml"),
-		filepath.Join(templatesPath, "banner.gohtml"),
-		filepath.Join(templatesPath, "mainmenu.gohtml"),
-		filepath.Join(templatesPath, "sidebar.gohtml"),
-		filepath.Join(templatesPath, "leftmenu.gohtml"),
-		filepath.Join(templatesPath, "rightmenu.gohtml"),
-		filepath.Join(templatesPath, "menu_items.gohtml"),
-		filepath.Join(templatesPath, "footer.gohtml"),
+func handleNotImplemented() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("%s: %s: not implemented\n", r.Method, r.URL.Path)
+		http.Error(w, http.StatusText(http.StatusNotImplemented), http.StatusNotImplemented)
 	}
-	_ = templateFiles
+}
+
+// the home page is displayed when the URL is empty or doesn't match any other route.
+
+func getHomePage(templatesPath string, prefix, root string, debug, debugAssets bool) http.HandlerFunc {
+	// we can display two types of content. the first is for unauthenticated users,
+	// the second is for authenticated users.
+
+	anonTemplateFiles := []string{
+		filepath.Join(templatesPath, "layout.gohtml"),
+	}
+	authTemplateFiles := []string{
+		filepath.Join(templatesPath, "layout.gohtml"),
+	}
+	_, _ = anonTemplateFiles, authTemplateFiles
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("%s: %s: entered\n", r.Method, r.URL.Path)
@@ -45,7 +74,7 @@ func getHomePage(templatesPath string, prefix, root string, debug bool) http.Han
 		// this is stupid, but Go treats "GET /" as a wild-card not-found match.
 		if r.URL.Path != "/" {
 			file := filepath.Join(root, filepath.Clean(strings.TrimPrefix(r.URL.Path, prefix)))
-			if debug {
+			if debugAssets {
 				log.Printf("%s: %s: assets\n", r.Method, r.URL.Path)
 			}
 
@@ -77,7 +106,7 @@ func getHomePage(templatesPath string, prefix, root string, debug bool) http.Han
 		}
 
 		// Parse the template file
-		tmpl, err := template.ParseFiles(templateFiles...)
+		tmpl, err := template.ParseFiles(anonTemplateFiles...)
 		if err != nil {
 			log.Printf("%s: %s: template: %v", r.Method, r.URL.Path, err)
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
@@ -224,7 +253,7 @@ func getLogin(sessionManager *sessionManager_t, debug bool) http.HandlerFunc {
 		http.SetCookie(w, &http.Cookie{
 			Path:    "/",
 			Name:    "ottomap",
-			Value:   sess.key,
+			Value:   sess.id,
 			Expires: sess.expires,
 		})
 
@@ -244,5 +273,57 @@ func getLogout() http.HandlerFunc {
 		})
 
 		http.Redirect(w, r, "/index.html", http.StatusSeeOther)
+	}
+}
+
+type SessionManager_i interface {
+	currentUser(r *http.Request) session_t
+}
+
+type AllTurns_i interface {
+	GetAllTurns(id string) []ffs.Turn_t
+}
+
+func getListOfTurns(templatesPath string, s AllTurns_i, sm SessionManager_i) http.HandlerFunc {
+	templateFiles := []string{
+		filepath.Join(templatesPath, "layout.gohtml"),
+		filepath.Join(templatesPath, "turn_list.gohtml"),
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("%s: %s: entered\n", r.Method, r.URL.Path)
+		log.Printf("%s: %s: session: id %q\n", r.Method, r.URL.Path, sm.currentUser(r).id)
+		if !sm.currentUser(r).isAuthenticated() {
+			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+			return
+		}
+		turns := s.GetAllTurns(sm.currentUser(r).id)
+		log.Printf("%s: %s: turns %+v\n", r.Method, r.URL.Path, turns)
+
+		// Parse the template file
+		tmpl, err := template.ParseFiles(templateFiles...)
+		if err != nil {
+			log.Printf("%s: %s: template: %v", r.Method, r.URL.Path, err)
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		var payload tw.Layout_t
+		payload.Content = tw.TurnList_t{Turns: turns}
+
+		// create a buffer to write the response to. we need to do this to capture errors in a nice way.
+		buf := &bytes.Buffer{}
+
+		// execute the template with our payload
+		err = tmpl.ExecuteTemplate(buf, "layout", payload)
+		if err != nil {
+			log.Printf("%s: %s: template: %v", r.Method, r.URL.Path, err)
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(buf.Bytes())
 	}
 }
