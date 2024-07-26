@@ -2,12 +2,15 @@
 
 package tw
 
-import "github.com/mdhender/ottomap/stores/ffs"
-
 type Layout_t struct {
 	Content any
 }
 
 type TurnList_t struct {
-	Turns []ffs.Turn_t
+	Turns []string
+}
+
+type TurnDetails_t struct {
+	Id    string
+	Clans []string
 }

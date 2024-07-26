@@ -1,0 +1,12 @@
+{{define "content"}}{{- /*gotype:github.com/mdhender/ottomap/templates/tw.TurnDetails_t*/ -}}
+<h2>Turn Details</h2>
+{{with .Clans}}
+    <ul>
+        {{range .}}
+            <li><a href="/tn3/{{$.Id}}/{{.}}">Clan {{.}}</a></li>
+        {{end}}
+    </ul>
+{{else}}
+    <p>Turn {{.Id}} not found.</p>
+{{end}}
+{{end}}

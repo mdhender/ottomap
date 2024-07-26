@@ -26,9 +26,9 @@ func (a *App) Routes() (*http.ServeMux, error) {
 
 	// https://datatracker.ietf.org/doc/html/rfc9110 for POST vs PUT
 
-	mux.HandleFunc("GET /tn3", getListOfTurns(a.paths.templates, a.store, a.sessions))
+	mux.HandleFunc("GET /tn3", getTurnListing(a.paths.templates, a.store, a.sessions))
 
-	mux.HandleFunc("GET /tn3/{turnId}", handleNotImplemented())
+	mux.HandleFunc("GET /tn3/{turnId}", getTurnDetails(a.paths.templates, a.store, a.sessions))
 	mux.HandleFunc("DELETE /tn3/{turnId}", handleNotImplemented())
 
 	mux.HandleFunc("GET /tn3/{turnId}/{clanId}", handleNotImplemented())
@@ -281,10 +281,11 @@ type SessionManager_i interface {
 }
 
 type AllTurns_i interface {
-	GetAllTurns(id string) []ffs.Turn_t
+	GetTurnListing(id string) ([]ffs.Turn_t, error)
+	GetTurnDetails(id string, turnId string) (ffs.TurnDetail_t, error)
 }
 
-func getListOfTurns(templatesPath string, s AllTurns_i, sm SessionManager_i) http.HandlerFunc {
+func getTurnListing(templatesPath string, s AllTurns_i, sm SessionManager_i) http.HandlerFunc {
 	templateFiles := []string{
 		filepath.Join(templatesPath, "layout.gohtml"),
 		filepath.Join(templatesPath, "turn_list.gohtml"),
@@ -297,8 +298,16 @@ func getListOfTurns(templatesPath string, s AllTurns_i, sm SessionManager_i) htt
 			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 			return
 		}
-		turns := s.GetAllTurns(sm.currentUser(r).id)
+		turns, _ := s.GetTurnListing(sm.currentUser(r).id)
 		log.Printf("%s: %s: turns %+v\n", r.Method, r.URL.Path, turns)
+
+		var payload tw.Layout_t
+
+		var content tw.TurnList_t
+		for _, turn := range turns {
+			content.Turns = append(content.Turns, turn.Id)
+		}
+		payload.Content = content
 
 		// Parse the template file
 		tmpl, err := template.ParseFiles(templateFiles...)
@@ -308,8 +317,55 @@ func getListOfTurns(templatesPath string, s AllTurns_i, sm SessionManager_i) htt
 			return
 		}
 
+		// create a buffer to write the response to. we need to do this to capture errors in a nice way.
+		buf := &bytes.Buffer{}
+
+		// execute the template with our payload
+		err = tmpl.ExecuteTemplate(buf, "layout", payload)
+		if err != nil {
+			log.Printf("%s: %s: template: %v", r.Method, r.URL.Path, err)
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(buf.Bytes())
+	}
+}
+
+func getTurnDetails(templatesPath string, s AllTurns_i, sm SessionManager_i) http.HandlerFunc {
+	templateFiles := []string{
+		filepath.Join(templatesPath, "layout.gohtml"),
+		filepath.Join(templatesPath, "turn_details.gohtml"),
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("%s: %s: entered\n", r.Method, r.URL.Path)
+		log.Printf("%s: %s: session: id %q\n", r.Method, r.URL.Path, sm.currentUser(r).id)
+		if !sm.currentUser(r).isAuthenticated() {
+			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+			return
+		}
+		turnId := r.PathValue("turnId")
+		turn, _ := s.GetTurnDetails(sm.currentUser(r).id, turnId)
+		log.Printf("%s: %s: turns %+v\n", r.Method, r.URL.Path, turn)
+
 		var payload tw.Layout_t
-		payload.Content = tw.TurnList_t{Turns: turns}
+		var content tw.TurnDetails_t
+		content.Id = turnId
+		for _, clan := range turn.Clans {
+			content.Clans = append(content.Clans, clan)
+		}
+		payload.Content = content
+
+		// Parse the template file
+		tmpl, err := template.ParseFiles(templateFiles...)
+		if err != nil {
+			log.Printf("%s: %s: template: %v", r.Method, r.URL.Path, err)
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
 
 		// create a buffer to write the response to. we need to do this to capture errors in a nice way.
 		buf := &bytes.Buffer{}
