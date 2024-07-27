@@ -26,23 +26,23 @@ func (a *App) Routes() (*http.ServeMux, error) {
 
 	// https://datatracker.ietf.org/doc/html/rfc9110 for POST vs PUT
 
-	mux.HandleFunc("GET /tn3", getTurnListing(a.paths.templates, a.store, a.sessions))
+	mux.HandleFunc("GET /tn3", authonly(a.sessions, getTurnListing(a.paths.templates, a.store, a.sessions)))
 
-	mux.HandleFunc("GET /tn3/{turnId}", getTurnDetails(a.paths.templates, a.store, a.sessions))
-	mux.HandleFunc("DELETE /tn3/{turnId}", handleNotImplemented())
+	mux.HandleFunc("GET /tn3/{turnId}", authonly(a.sessions, getTurnDetails(a.paths.templates, a.store, a.sessions)))
+	mux.HandleFunc("DELETE /tn3/{turnId}", authonly(a.sessions, handleNotImplemented()))
 
-	mux.HandleFunc("GET /tn3/{turnId}/{clanId}", handleNotImplemented())
-	mux.HandleFunc("DELETE /tn3/{turnId}/{clanId}", handleNotImplemented())
+	mux.HandleFunc("GET /tn3/{turnId}/{clanId}", authonly(a.sessions, handleNotImplemented()))
+	mux.HandleFunc("DELETE /tn3/{turnId}/{clanId}", authonly(a.sessions, handleNotImplemented()))
 
-	mux.HandleFunc("GET /tn3/{turnId}/{clanId}/map", handleNotImplemented())
-	mux.HandleFunc("POST /tn3/{turnId}/{clanId}/map", handleNotImplemented())
-	mux.HandleFunc("PUT /tn3/{turnId}/{clanId}/map", handleNotImplemented())
-	mux.HandleFunc("DELETE /tn3/{turnId}/{clanId}/map", handleNotImplemented())
+	mux.HandleFunc("GET /tn3/{turnId}/{clanId}/map", authonly(a.sessions, handleNotImplemented()))
+	mux.HandleFunc("POST /tn3/{turnId}/{clanId}/map", authonly(a.sessions, handleNotImplemented()))
+	mux.HandleFunc("PUT /tn3/{turnId}/{clanId}/map", authonly(a.sessions, handleNotImplemented()))
+	mux.HandleFunc("DELETE /tn3/{turnId}/{clanId}/map", authonly(a.sessions, handleNotImplemented()))
 
-	mux.HandleFunc("GET /tn3/{turnId}/{clanId}/report", handleNotImplemented())
-	mux.HandleFunc("POST /tn3/{turnId}/{clanId}/report", handleNotImplemented())
-	mux.HandleFunc("PUT /tn3/{turnId}/{clanId}/report", handleNotImplemented())
-	mux.HandleFunc("DELETE /tn3/{turnId}/{clanId}/report", handleNotImplemented())
+	mux.HandleFunc("GET /tn3/{turnId}/{clanId}/report", authonly(a.sessions, handleNotImplemented()))
+	mux.HandleFunc("POST /tn3/{turnId}/{clanId}/report", authonly(a.sessions, handleNotImplemented()))
+	mux.HandleFunc("PUT /tn3/{turnId}/{clanId}/report", authonly(a.sessions, handleNotImplemented()))
+	mux.HandleFunc("DELETE /tn3/{turnId}/{clanId}/report", authonly(a.sessions, handleNotImplemented()))
 
 	return mux, nil
 }

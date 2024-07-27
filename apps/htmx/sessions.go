@@ -50,13 +50,13 @@ func (sm *sessionManager_t) addSession(id string) {
 }
 
 func (sm *sessionManager_t) fromRequest(r *http.Request) session_t {
-	log.Printf("session: fromRequest: cookie %q\n", "ottomap")
+	//log.Printf("session: fromRequest: cookie %q\n", "ottomap")
 	cookie, err := r.Cookie("ottomap")
 	if err != nil {
 		log.Printf("session: fromRequest: no cookie: %v\n", err)
 		return session_t{}
 	}
-	log.Printf("session: fromRequest: cookie %q: %q\n", "ottomap", cookie.Value)
+	//log.Printf("session: fromRequest: cookie %q: %q\n", "ottomap", cookie.Value)
 	return sm.getSession(cookie.Value)
 }
 
@@ -124,7 +124,7 @@ func (sm *sessionManager_t) removeSession(id string) {
 }
 
 func (sm *sessionManager_t) currentUser(r *http.Request) session_t {
-	log.Printf("session: currentUser: data %q\n", sm.data)
+	// log.Printf("session: currentUser: data %q\n", sm.data)
 
 	return sm.fromRequest(r)
 }

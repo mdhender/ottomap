@@ -1,5 +1,11 @@
 {{define "content"}}{{- /*gotype:github.com/mdhender/ottomap/templates/tw.TurnDetails_t*/ -}}
 <h2>Turn Details</h2>
+<p>
+    The purpose of this page is to show the details of a turn.
+    We should include a link to the turn reports that will be parsed to render the map.
+    We should also have a button to delete the entire turn.
+</p>
+<h3>Reports</h3>
 {{with .Clans}}
     <ul>
         {{range .}}
@@ -9,4 +15,8 @@
 {{else}}
     <p>Turn {{.Id}} not found.</p>
 {{end}}
+
+<footer>
+    <p>Back to <a href="/tn3">parent</a>.</p>
+</footer>
 {{end}}

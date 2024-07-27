@@ -12,6 +12,16 @@ import (
 	"strings"
 )
 
+func authonly(sm *sessionManager_t, next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !sm.currentUser(r).isAuthenticated() {
+			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+			return
+		}
+		next(w, r)
+	}
+}
+
 // serveStaticAssets serves static assets from the given root directory if they are present.
 // if not, it calls the next handler. note that we never serve directories or directory listings.
 // panics if the path is not a valid directory.
