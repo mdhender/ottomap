@@ -8,8 +8,9 @@
 </p>
 <h3>Turn {{.Id}}</h3>
 <h4>Clan {{.Clan}}</h4>
+    {{if .Map}}<p><a href="/tn3/{{.Id}}/{{.Clan}}/{{.Id}}.{{.Clan}}.wxx">Map {{.Map}}</a></p>{{end}}
 <h5>Sections</h5>
-{{if .Sections}}
+{{if .Units}}
     <table border="2">
         <thead>
         <tr>
@@ -19,9 +20,9 @@
         </tr>
         </thead>
         <tbody>
-        {{range .Sections}}
+        {{range .Units}}{{- /*gotype:github.com/mdhender/ottomap/templates/tw.UnitDetails_t*/ -}}
         <tr>
-            <td>{{.Unit}}</td>
+            <td>{{.Id}}</td>
             <td>{{.CurrentHex}}</td>
             <td>{{.PreviousHex}}</td>
         </tr>

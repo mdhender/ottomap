@@ -283,7 +283,7 @@ type SessionManager_i interface {
 type AllTurns_i interface {
 	GetTurnListing(id string) ([]ffs.Turn_t, error)
 	GetTurnDetails(id string, turnId string) (ffs.TurnDetail_t, error)
-	GetTurnSections(id string, turnId, clanId string) ([]ffs.TurnSection_t, error)
+	GetTurnReportDetails(id string, turnId, clanId string) (ffs.TurnReportDetails_t, error)
 }
 
 func getTurnListing(templatesPath string, s AllTurns_i, sm SessionManager_i) http.HandlerFunc {
@@ -406,14 +406,13 @@ func getTurnReportDetails(templatesPath string, s AllTurns_i, sm SessionManager_
 		var content tw.TurnReportDetails_t
 		content.Id = turnId
 		content.Clan = clanId
-		sections, _ := s.GetTurnSections(sm.currentUser(r).id, turnId, clanId)
-		for _, section := range sections {
-			content.Sections = append(content.Sections, tw.TurnReportSection_t{
-				Id:          section.Id,
-				Clan:        section.Clan,
-				Unit:        section.Unit,
-				CurrentHex:  section.CurrentHex,
-				PreviousHex: section.PreviousHex,
+		report, _ := s.GetTurnReportDetails(sm.currentUser(r).id, turnId, clanId)
+		content.Map = report.Map
+		for _, unit := range report.Units {
+			content.Units = append(content.Units, tw.UnitDetails_t{
+				Id:          unit.Id,
+				CurrentHex:  unit.CurrentHex,
+				PreviousHex: unit.PreviousHex,
 			})
 		}
 

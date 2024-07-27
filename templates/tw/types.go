@@ -16,15 +16,14 @@ type TurnDetails_t struct {
 }
 
 type TurnReportDetails_t struct {
-	Id       string
-	Clan     string
-	Sections []TurnReportSection_t
+	Id    string
+	Clan  string
+	Map   string // set when there is a map file
+	Units []UnitDetails_t
 }
 
-type TurnReportSection_t struct {
+type UnitDetails_t struct {
 	Id          string
-	Clan        string
-	Unit        string
 	CurrentHex  string
 	PreviousHex string
 }
