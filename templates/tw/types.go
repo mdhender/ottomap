@@ -14,3 +14,17 @@ type TurnDetails_t struct {
 	Id    string
 	Clans []string
 }
+
+type TurnReportDetails_t struct {
+	Id       string
+	Clan     string
+	Sections []TurnReportSection_t
+}
+
+type TurnReportSection_t struct {
+	Id          string
+	Clan        string
+	Unit        string
+	CurrentHex  string
+	PreviousHex string
+}

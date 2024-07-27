@@ -4,6 +4,8 @@
 package ffs
 
 import (
+	"bytes"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -87,4 +89,76 @@ func (f *FFS) GetTurnDetails(id string, turnId string) (row TurnDetail_t, err er
 	})
 
 	return row, nil
+}
+
+type TurnSection_t struct {
+	Id          string
+	Clan        string
+	Unit        string
+	CurrentHex  string
+	PreviousHex string
+}
+
+func (f *FFS) GetTurnSections(id string, turnId, clanId string) (sections []TurnSection_t, err error) {
+	rxCourierSection := regexp.MustCompile(`^Courier (\d{4}c)\d, `)
+	rxElementSection := regexp.MustCompile(`^Element (\d{4}e)\d, `)
+	rxFleetSection := regexp.MustCompile(`^Fleet (\d{4}f)\d, `)
+	rxGarrisonSection := regexp.MustCompile(`^Garrison (\d{4}g)\d, `)
+	rxTribeSection := regexp.MustCompile(`^Tribe (\d{4}), `)
+
+	turnReportFile := filepath.Join(f.path, id, fmt.Sprintf("%s.%s.report.txt", turnId, clanId))
+	if data, err := os.ReadFile(turnReportFile); err != nil {
+		log.Printf("getTurnSections: %s: %v\n", turnReportFile, err)
+	} else {
+		for _, line := range bytes.Split(data, []byte("\n")) {
+			if matches := rxCourierSection.FindStringSubmatch(string(line)); len(matches) == 2 {
+				sections = append(sections, TurnSection_t{
+					Id:          turnId,
+					Clan:        clanId,
+					Unit:        matches[1],
+					CurrentHex:  "",
+					PreviousHex: "",
+				})
+			} else if matches = rxElementSection.FindStringSubmatch(string(line)); len(matches) == 2 {
+				sections = append(sections, TurnSection_t{
+					Id:          turnId,
+					Clan:        clanId,
+					Unit:        matches[1],
+					CurrentHex:  "",
+					PreviousHex: "",
+				})
+			} else if matches = rxFleetSection.FindStringSubmatch(string(line)); len(matches) == 2 {
+				sections = append(sections, TurnSection_t{
+					Id:          turnId,
+					Clan:        clanId,
+					Unit:        matches[1],
+					CurrentHex:  "",
+					PreviousHex: "",
+				})
+			} else if matches = rxGarrisonSection.FindStringSubmatch(string(line)); len(matches) == 2 {
+				sections = append(sections, TurnSection_t{
+					Id:          turnId,
+					Clan:        clanId,
+					Unit:        matches[1],
+					CurrentHex:  "",
+					PreviousHex: "",
+				})
+			} else if matches = rxTribeSection.FindStringSubmatch(string(line)); len(matches) == 2 {
+				sections = append(sections, TurnSection_t{
+					Id:          turnId,
+					Clan:        clanId,
+					Unit:        matches[1],
+					CurrentHex:  "",
+					PreviousHex: "",
+				})
+			}
+		}
+	}
+
+	// sort the list, not sure why.
+	sort.Slice(sections, func(i, j int) bool {
+		return sections[i].Unit < sections[j].Unit
+	})
+
+	return sections, nil
 }

@@ -31,7 +31,7 @@ func (a *App) Routes() (*http.ServeMux, error) {
 	mux.HandleFunc("GET /tn3/{turnId}", authonly(a.sessions, getTurnDetails(a.paths.templates, a.store, a.sessions)))
 	mux.HandleFunc("DELETE /tn3/{turnId}", authonly(a.sessions, handleNotImplemented()))
 
-	mux.HandleFunc("GET /tn3/{turnId}/{clanId}", authonly(a.sessions, handleNotImplemented()))
+	mux.HandleFunc("GET /tn3/{turnId}/{clanId}", authonly(a.sessions, getTurnReportDetails(a.paths.templates, a.store, a.sessions)))
 	mux.HandleFunc("DELETE /tn3/{turnId}/{clanId}", authonly(a.sessions, handleNotImplemented()))
 
 	mux.HandleFunc("GET /tn3/{turnId}/{clanId}/map", authonly(a.sessions, handleNotImplemented()))
@@ -283,6 +283,7 @@ type SessionManager_i interface {
 type AllTurns_i interface {
 	GetTurnListing(id string) ([]ffs.Turn_t, error)
 	GetTurnDetails(id string, turnId string) (ffs.TurnDetail_t, error)
+	GetTurnSections(id string, turnId, clanId string) ([]ffs.TurnSection_t, error)
 }
 
 func getTurnListing(templatesPath string, s AllTurns_i, sm SessionManager_i) http.HandlerFunc {
@@ -357,6 +358,66 @@ func getTurnDetails(templatesPath string, s AllTurns_i, sm SessionManager_i) htt
 		for _, clan := range turn.Clans {
 			content.Clans = append(content.Clans, clan)
 		}
+		payload.Content = content
+
+		// Parse the template file
+		tmpl, err := template.ParseFiles(templateFiles...)
+		if err != nil {
+			log.Printf("%s: %s: template: %v", r.Method, r.URL.Path, err)
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		// create a buffer to write the response to. we need to do this to capture errors in a nice way.
+		buf := &bytes.Buffer{}
+
+		// execute the template with our payload
+		err = tmpl.ExecuteTemplate(buf, "layout", payload)
+		if err != nil {
+			log.Printf("%s: %s: template: %v", r.Method, r.URL.Path, err)
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(buf.Bytes())
+	}
+}
+
+func getTurnReportDetails(templatesPath string, s AllTurns_i, sm SessionManager_i) http.HandlerFunc {
+	templateFiles := []string{
+		filepath.Join(templatesPath, "layout.gohtml"),
+		filepath.Join(templatesPath, "turn_report_details.gohtml"),
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("%s: %s: entered\n", r.Method, r.URL.Path)
+		log.Printf("%s: %s: session: id %q\n", r.Method, r.URL.Path, sm.currentUser(r).id)
+		if !sm.currentUser(r).isAuthenticated() {
+			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+			return
+		}
+		turnId := r.PathValue("turnId")
+		clanId := r.PathValue("clanId")
+		turn, _ := s.GetTurnDetails(sm.currentUser(r).id, turnId)
+		log.Printf("%s: %s: turns %+v\n", r.Method, r.URL.Path, turn)
+
+		var content tw.TurnReportDetails_t
+		content.Id = turnId
+		content.Clan = clanId
+		sections, _ := s.GetTurnSections(sm.currentUser(r).id, turnId, clanId)
+		for _, section := range sections {
+			content.Sections = append(content.Sections, tw.TurnReportSection_t{
+				Id:          section.Id,
+				Clan:        section.Clan,
+				Unit:        section.Unit,
+				CurrentHex:  section.CurrentHex,
+				PreviousHex: section.PreviousHex,
+			})
+		}
+
+		var payload tw.Layout_t
 		payload.Content = content
 
 		// Parse the template file
