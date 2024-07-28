@@ -26,23 +26,23 @@ func (a *App) Routes() (*http.ServeMux, error) {
 
 	// https://datatracker.ietf.org/doc/html/rfc9110 for POST vs PUT
 
-	mux.HandleFunc("GET /tn3", authonly(a.sessions, getTurnListing(a.paths.templates, a.store, a.sessions)))
+	mux.HandleFunc("GET /tn3", authonly(a.sessions, getClansList(a.paths.templates, a.store, a.sessions)))
 
-	mux.HandleFunc("GET /tn3/{turnId}", authonly(a.sessions, getTurnDetails(a.paths.templates, a.store, a.sessions)))
-	mux.HandleFunc("DELETE /tn3/{turnId}", authonly(a.sessions, handleNotImplemented()))
+	mux.HandleFunc("GET /tn3/{clanId}", authonly(a.sessions, getClanDetails(a.paths.templates, a.store, a.sessions)))
+	mux.HandleFunc("DELETE /tn3/{clanId}", authonly(a.sessions, handleNotImplemented()))
 
-	mux.HandleFunc("GET /tn3/{turnId}/{clanId}", authonly(a.sessions, getTurnReportDetails(a.paths.templates, a.store, a.sessions)))
-	mux.HandleFunc("DELETE /tn3/{turnId}/{clanId}", authonly(a.sessions, handleNotImplemented()))
+	mux.HandleFunc("GET /tn3/{clanId}/{turnId}", authonly(a.sessions, getClanTurnDetails(a.paths.templates, a.store, a.sessions)))
+	mux.HandleFunc("DELETE /tn3/{clanId}/{turnId}", authonly(a.sessions, handleNotImplemented()))
 
-	mux.HandleFunc("GET /tn3/{turnId}/{clanId}/map", authonly(a.sessions, handleNotImplemented()))
-	mux.HandleFunc("POST /tn3/{turnId}/{clanId}/map", authonly(a.sessions, handleNotImplemented()))
-	mux.HandleFunc("PUT /tn3/{turnId}/{clanId}/map", authonly(a.sessions, handleNotImplemented()))
-	mux.HandleFunc("DELETE /tn3/{turnId}/{clanId}/map", authonly(a.sessions, handleNotImplemented()))
+	mux.HandleFunc("GET /tn3/{clanId}/{turnId}/map", authonly(a.sessions, handleNotImplemented()))
+	mux.HandleFunc("POST /tn3/{clanId}/{turnId}/map", authonly(a.sessions, handleNotImplemented()))
+	mux.HandleFunc("PUT /tn3/{clanId}/{turnId}/map", authonly(a.sessions, handleNotImplemented()))
+	mux.HandleFunc("DELETE /tn3/{clanId}/{turnId}/map", authonly(a.sessions, handleNotImplemented()))
 
-	mux.HandleFunc("GET /tn3/{turnId}/{clanId}/report", authonly(a.sessions, handleNotImplemented()))
-	mux.HandleFunc("POST /tn3/{turnId}/{clanId}/report", authonly(a.sessions, handleNotImplemented()))
-	mux.HandleFunc("PUT /tn3/{turnId}/{clanId}/report", authonly(a.sessions, handleNotImplemented()))
-	mux.HandleFunc("DELETE /tn3/{turnId}/{clanId}/report", authonly(a.sessions, handleNotImplemented()))
+	mux.HandleFunc("GET /tn3/{clanId}/{turnId}/report", authonly(a.sessions, handleNotImplemented()))
+	mux.HandleFunc("POST /tn3/{clanId}/{turnId}/report", authonly(a.sessions, handleNotImplemented()))
+	mux.HandleFunc("PUT /tn3/{clanId}/{turnId}/report", authonly(a.sessions, handleNotImplemented()))
+	mux.HandleFunc("DELETE /tn3/{clanId}/{turnId}/report", authonly(a.sessions, handleNotImplemented()))
 
 	return mux, nil
 }
@@ -286,7 +286,7 @@ type AllTurns_i interface {
 	GetTurnReportDetails(id string, turnId, clanId string) (ffs.TurnReportDetails_t, error)
 }
 
-func getTurnListing(templatesPath string, s AllTurns_i, sm SessionManager_i) http.HandlerFunc {
+func getClansList(templatesPath string, s AllTurns_i, sm SessionManager_i) http.HandlerFunc {
 	templateFiles := []string{
 		filepath.Join(templatesPath, "layout.gohtml"),
 		filepath.Join(templatesPath, "turn_list.gohtml"),
@@ -335,7 +335,7 @@ func getTurnListing(templatesPath string, s AllTurns_i, sm SessionManager_i) htt
 	}
 }
 
-func getTurnDetails(templatesPath string, s AllTurns_i, sm SessionManager_i) http.HandlerFunc {
+func getClanDetails(templatesPath string, s AllTurns_i, sm SessionManager_i) http.HandlerFunc {
 	templateFiles := []string{
 		filepath.Join(templatesPath, "layout.gohtml"),
 		filepath.Join(templatesPath, "turn_details.gohtml"),
@@ -385,7 +385,7 @@ func getTurnDetails(templatesPath string, s AllTurns_i, sm SessionManager_i) htt
 	}
 }
 
-func getTurnReportDetails(templatesPath string, s AllTurns_i, sm SessionManager_i) http.HandlerFunc {
+func getClanTurnDetails(templatesPath string, s AllTurns_i, sm SessionManager_i) http.HandlerFunc {
 	templateFiles := []string{
 		filepath.Join(templatesPath, "layout.gohtml"),
 		filepath.Join(templatesPath, "turn_report_details.gohtml"),

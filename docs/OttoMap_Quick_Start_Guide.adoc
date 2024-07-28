@@ -20,6 +20,15 @@ The files must have a name like `YYYY-MM.CLAN.report.txt` (e.g., `0901-02.0138.r
 Change the hash marks to the grid that your clan is starting in (use "KK" if you're not sure).
 * Save the file in the `data/input` folder using the file naming convention described above.
 
+1. If you're using Word on a Mac, you can save your Turn Report into a text File:
+* Open the Turn Report (the `DOCX` file that was emailed to you).
+* Select `File > Save As...` from the menu.
+* Select "Plain Text (.txt)" as the File Format.
+* Click the Save button.
+* In the "File Conversion" dialog, select "Mac OS (Default)" as the Text Encoding, "LF Only" for the Ends line with, and "Left to Right" for the Document Direction.
+* Click the OK button.
+
+
 You can do this for a single turn report or multiple turn reports, but we recommend working with a single turn report at a time.
 
 NOTE: You must start with your first turn report file.

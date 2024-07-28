@@ -562,45 +562,45 @@ NUMBER <- [0-9]+ {
     return int(n), nil
 }
 
-RESOURCE <- "Coal" {
+RESOURCE <- "Coal"i {
     return resources.Coal, nil
-} / "Copper Ore" {
+} / "Copper Ore"i {
     return resources.CopperOre, nil
-} / "Diamond" {
+} / "Diamond"i {
     return resources.Diamond, nil
-} / "Frankincense" {
+} / "Frankincense"i {
     return resources.Frankincense, nil
-} / "Gold" {
+} / "Gold"i {
     return resources.Gold, nil
-} / "Iron Ore" {
+} / "Iron Ore"i {
     return resources.IronOre, nil
-} / "Jade" {
+} / "Jade"i {
     return resources.Jade, nil
-} / "Kaolin" {
+} / "Kaolin"i {
     return resources.Kaolin, nil
-} / "Lead Ore" {
+} / "Lead Ore"i {
     return resources.LeadOre, nil
-} / "Limestone" {
+} / "Limestone"i {
     return resources.Limestone, nil
-} / "Nickel Ore" {
+} / "Nickel Ore"i {
     return resources.NickelOre, nil
-} / "Pearls" {
+} / "Pearls"i {
     return resources.Pearls, nil
-} / "Pyrite" {
+} / "Pyrite"i {
     return resources.Pyrite, nil
-} / "Rubies" {
+} / "Rubies"i {
     return resources.Rubies, nil
-} / "Salt" {
+} / "Salt"i {
     return resources.Salt, nil
-} / "Silver" {
+} / "Silver"i {
     return resources.Silver, nil
-} / "Sulphur" {
+} / "Sulphur"i {
     return resources.Sulphur, nil
-} / "Tin Ore" {
+} / "Tin Ore"i {
     return resources.TinOre, nil
-} / "Vanadium Ore" {
+} / "Vanadium Ore"i {
     return resources.VanadiumOre, nil
-} / "Zinc Ore" {
+} / "Zinc Ore"i {
     return resources.ZincOre, nil
 }
 
