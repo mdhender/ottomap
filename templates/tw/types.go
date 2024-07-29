@@ -3,7 +3,17 @@
 package tw
 
 type Layout_t struct {
+	Site    Site_t
 	Content any
+}
+
+type Site_t struct {
+	Title string
+}
+
+type Clans_t struct {
+	Id    string   // id of the player's clan
+	Clans []string // clans that the player has uploaded reports for
 }
 
 type TurnList_t struct {

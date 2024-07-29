@@ -1,10 +1,10 @@
-{{define "layout"}}{{- /*gotype:github.com/mdhender/ottomap/templates/tw.Layout*/ -}}
+{{define "layout"}}{{- /*gotype:github.com/mdhender/ottomap/templates/tw.Layout_t*/ -}}
 <!doctype html>
 <html class="no-js" lang="en">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>OttoMap</title>
+    <title>{{with .Site.Title}}{{.}}{{else}}OttoMap{{end}}</title>
     <link rel="stylesheet" href="/css/style.css">
     <meta name="description" content="">
 
@@ -30,4 +30,8 @@
 
 </body>
 </html>
+{{end}}
+
+{{define "content"}}
+<p>Internal server error: content is not defined.</p>
 {{end}}

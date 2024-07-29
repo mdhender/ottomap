@@ -4,6 +4,7 @@ package htmx
 
 import (
 	"bytes"
+	"fmt"
 	"github.com/mdhender/ottomap/stores/ffs"
 	tmpls "github.com/mdhender/ottomap/templates/htmx"
 	"github.com/mdhender/ottomap/templates/tw"
@@ -20,16 +21,16 @@ import (
 func (a *App) Routes() (*http.ServeMux, error) {
 	mux := http.NewServeMux() // default mux, no routes
 
-	mux.HandleFunc("GET /", getHomePage(a.paths.templates, "", a.paths.assets, true, true))
+	mux.HandleFunc("GET /", getHomePage(a.sessions, a.paths.templates, "", a.paths.assets, true, true))
 	mux.HandleFunc("GET /login/{clan}/{id}", getLogin(a.sessions, true))
 	mux.HandleFunc("GET /logout", getLogout())
 
 	// https://datatracker.ietf.org/doc/html/rfc9110 for POST vs PUT
 
-	mux.HandleFunc("GET /tn3", authonly(a.sessions, getClansList(a.paths.templates, a.store, a.sessions)))
+	mux.HandleFunc("GET /clans", authonly(a.sessions, getClansList(a.paths.templates, a.store, a.sessions)))
 
-	mux.HandleFunc("GET /tn3/{clanId}", authonly(a.sessions, getClanDetails(a.paths.templates, a.store, a.sessions)))
-	mux.HandleFunc("DELETE /tn3/{clanId}", authonly(a.sessions, handleNotImplemented()))
+	mux.HandleFunc("GET /clans/{clanId}", authonly(a.sessions, getClanDetails(a.paths.templates, a.store, a.sessions)))
+	mux.HandleFunc("DELETE /clans/{clanId}", authonly(a.sessions, handleNotImplemented()))
 
 	mux.HandleFunc("GET /tn3/{clanId}/{turnId}", authonly(a.sessions, getClanTurnDetails(a.paths.templates, a.store, a.sessions)))
 	mux.HandleFunc("DELETE /tn3/{clanId}/{turnId}", authonly(a.sessions, handleNotImplemented()))
@@ -56,7 +57,7 @@ func handleNotImplemented() http.HandlerFunc {
 
 // the home page is displayed when the URL is empty or doesn't match any other route.
 
-func getHomePage(templatesPath string, prefix, root string, debug, debugAssets bool) http.HandlerFunc {
+func getHomePage(sessionManager *sessionManager_t, templatesPath string, prefix, root string, debug, debugAssets bool) http.HandlerFunc {
 	// we can display two types of content. the first is for unauthenticated users,
 	// the second is for authenticated users.
 
@@ -70,6 +71,15 @@ func getHomePage(templatesPath string, prefix, root string, debug, debugAssets b
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("%s: %s: entered\n", r.Method, r.URL.Path)
+
+		if r.URL.Path == "/" {
+			r.URL.Path = "/index.html"
+		}
+
+		if r.URL.Path == "/index.html" && sessionManager.currentUser(r).isAuthenticated() {
+			http.Redirect(w, r, "/clans", http.StatusSeeOther)
+			return
+		}
 
 		// this is stupid, but Go treats "GET /" as a wild-card not-found match.
 		if r.URL.Path != "/" {
@@ -104,6 +114,8 @@ func getHomePage(templatesPath string, prefix, root string, debug, debugAssets b
 			http.ServeContent(w, r, file, stat.ModTime(), rdr)
 			return
 		}
+
+		// otherwise, this route is an alias for index.html. send them there
 
 		// Parse the template file
 		tmpl, err := template.ParseFiles(anonTemplateFiles...)
@@ -289,7 +301,7 @@ type AllTurns_i interface {
 func getClansList(templatesPath string, s AllTurns_i, sm SessionManager_i) http.HandlerFunc {
 	templateFiles := []string{
 		filepath.Join(templatesPath, "layout.gohtml"),
-		filepath.Join(templatesPath, "turn_list.gohtml"),
+		filepath.Join(templatesPath, "clans.gohtml"),
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -299,15 +311,14 @@ func getClansList(templatesPath string, s AllTurns_i, sm SessionManager_i) http.
 			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 			return
 		}
-		turns, _ := s.GetTurnListing(sm.currentUser(r).id)
-		log.Printf("%s: %s: turns %+v\n", r.Method, r.URL.Path, turns)
+		clan := sm.currentUser(r).clan
+		log.Printf("%s: %s: clan %q\n", r.Method, r.URL.Path, clan)
 
 		var payload tw.Layout_t
+		payload.Site.Title = fmt.Sprintf("Clan %s", clan)
 
-		var content tw.TurnList_t
-		for _, turn := range turns {
-			content.Turns = append(content.Turns, turn.Id)
-		}
+		var content tw.Clans_t
+		content.Id = clan
 		payload.Content = content
 
 		// Parse the template file
@@ -338,7 +349,7 @@ func getClansList(templatesPath string, s AllTurns_i, sm SessionManager_i) http.
 func getClanDetails(templatesPath string, s AllTurns_i, sm SessionManager_i) http.HandlerFunc {
 	templateFiles := []string{
 		filepath.Join(templatesPath, "layout.gohtml"),
-		filepath.Join(templatesPath, "turn_details.gohtml"),
+		filepath.Join(templatesPath, "clan_details.gohtml"),
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
