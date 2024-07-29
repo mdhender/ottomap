@@ -269,7 +269,7 @@ func getLogin(sessionManager *sessionManager_t, debug bool) http.HandlerFunc {
 			Expires: sess.expires,
 		})
 
-		http.Redirect(w, r, "/index.html", http.StatusSeeOther)
+		http.Redirect(w, r, "/clans", http.StatusSeeOther)
 	}
 }
 
@@ -284,7 +284,7 @@ func getLogout() http.HandlerFunc {
 			Expires: time.Unix(0, 0),
 		})
 
-		http.Redirect(w, r, "/index.html", http.StatusSeeOther)
+		http.Redirect(w, r, "/", http.StatusSeeOther)
 	}
 }
 
