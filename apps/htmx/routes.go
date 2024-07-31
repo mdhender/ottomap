@@ -293,6 +293,7 @@ type SessionManager_i interface {
 }
 
 type AllTurns_i interface {
+	GetClans(id string) ([]string, error)
 	GetTurnListing(id string) ([]ffs.Turn_t, error)
 	GetTurnDetails(id string, turnId string) (ffs.TurnDetail_t, error)
 	GetTurnReportDetails(id string, turnId, clanId string) (ffs.TurnReportDetails_t, error)
@@ -314,11 +315,14 @@ func getClansList(templatesPath string, s AllTurns_i, sm SessionManager_i) http.
 		clan := sm.currentUser(r).clan
 		log.Printf("%s: %s: clan %q\n", r.Method, r.URL.Path, clan)
 
+		clans, _ := s.GetClans(sm.currentUser(r).id)
+
 		var payload tw.Layout_t
 		payload.Site.Title = fmt.Sprintf("Clan %s", clan)
 
 		var content tw.Clans_t
 		content.Id = clan
+		content.Clans = clans
 		payload.Content = content
 
 		// Parse the template file

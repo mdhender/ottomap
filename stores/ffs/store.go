@@ -27,6 +27,39 @@ type FFS struct {
 	rxTurnMap     *regexp.Regexp
 }
 
+func (f *FFS) GetClans(id string) ([]string, error) {
+	var clans []string
+
+	entries, err := os.ReadDir(filepath.Join(f.path, id))
+	if err != nil {
+		log.Printf("ffs: getClans: %v\n", err)
+		return nil, nil
+	}
+
+	// find all turn reports and add them to the list of clans
+	list := map[string]bool{}
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		matches := f.rxTurnReports.FindStringSubmatch(entry.Name())
+		if len(matches) != 3 {
+			continue
+		}
+		clan := matches[2]
+		list[clan] = true
+	}
+
+	for k := range list {
+		clans = append(clans, k)
+	}
+
+	// sort the list, not sure why.
+	sort.Strings(clans)
+
+	return clans, nil
+}
+
 type Turn_t struct {
 	Id string
 }
