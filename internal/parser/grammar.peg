@@ -348,7 +348,7 @@ TurnSeason <- [A-Z][A-Za-z]+ {
     return c.text, nil
 }
 
-TurnWeather <- [A-Z][A-Za-z]+ {
+TurnWeather <- [A-Z][A-Za-z-]+ {
     //log.Printf("turnWeather %q\n", c.text)
     return c.text, nil
 }
@@ -610,6 +610,8 @@ TERRAIN <- "ALPS" {
     return terrain.AridTundra, nil
 } / "ARID" {
     return terrain.AridHills, nil
+} / "BRUSH FLAT" {
+    return terrain.BrushFlat, nil
 } / "BRUSH HILLS" {
     return terrain.BrushHills, nil
 } / "BRUSH" {
