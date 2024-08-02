@@ -29,11 +29,11 @@ func (a *App) Routes() (*http.ServeMux, error) {
 
 	mux.HandleFunc("GET /clans", authonly(a.sessions, getClansList(a.paths.templates, a.store, a.sessions)))
 
-	mux.HandleFunc("GET /clans/{clanId}", authonly(a.sessions, getClanDetails(a.paths.templates, a.store, a.sessions)))
-	mux.HandleFunc("DELETE /clans/{clanId}", authonly(a.sessions, handleNotImplemented()))
+	mux.HandleFunc("GET /clan/{clanId}", authonly(a.sessions, getClanDetails(a.paths.templates, a.store, a.sessions)))
+	mux.HandleFunc("DELETE /clan/{clanId}", authonly(a.sessions, handleNotImplemented()))
 
-	mux.HandleFunc("GET /tn3/{clanId}/{turnId}", authonly(a.sessions, getClanTurnDetails(a.paths.templates, a.store, a.sessions)))
-	mux.HandleFunc("DELETE /tn3/{clanId}/{turnId}", authonly(a.sessions, handleNotImplemented()))
+	mux.HandleFunc("GET /clan/{clanId}/report/{turnId}", authonly(a.sessions, getClanTurnDetails(a.paths.templates, a.store, a.sessions)))
+	mux.HandleFunc("DELETE /clan/{clanId}/report/{turnId}", authonly(a.sessions, handleNotImplemented()))
 
 	mux.HandleFunc("GET /tn3/{clanId}/{turnId}/map", authonly(a.sessions, handleNotImplemented()))
 	mux.HandleFunc("POST /tn3/{clanId}/{turnId}/map", authonly(a.sessions, handleNotImplemented()))
@@ -294,6 +294,7 @@ type SessionManager_i interface {
 
 type AllTurns_i interface {
 	GetClans(id string) ([]string, error)
+	GetClanDetails(id, clan string) (ffs.ClanDetail_t, error)
 	GetTurnListing(id string) ([]ffs.Turn_t, error)
 	GetTurnDetails(id string, turnId string) (ffs.TurnDetail_t, error)
 	GetTurnReportDetails(id string, turnId, clanId string) (ffs.TurnReportDetails_t, error)
@@ -363,15 +364,18 @@ func getClanDetails(templatesPath string, s AllTurns_i, sm SessionManager_i) htt
 			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 			return
 		}
-		turnId := r.PathValue("turnId")
-		turn, _ := s.GetTurnDetails(sm.currentUser(r).id, turnId)
-		log.Printf("%s: %s: turns %+v\n", r.Method, r.URL.Path, turn)
+		clanId := r.PathValue("clanId")
+		clanDetails, _ := s.GetClanDetails(sm.currentUser(r).id, clanId)
+		log.Printf("%s: %s: clan %+v\n", r.Method, r.URL.Path, clanDetails)
 
 		var payload tw.Layout_t
-		var content tw.TurnDetails_t
-		content.Id = turnId
-		for _, clan := range turn.Clans {
-			content.Clans = append(content.Clans, clan)
+		var content tw.ClanDetail_t
+		content.Id = clanId
+		for _, file := range clanDetails.Maps {
+			content.Maps = append(content.Maps, file)
+		}
+		for _, file := range clanDetails.Reports {
+			content.Turns = append(content.Turns, file)
 		}
 		payload.Content = content
 

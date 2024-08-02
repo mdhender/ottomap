@@ -59,11 +59,10 @@ func (s *Server) ShowMeSomeRoutes() {
 	log.Printf("serve: %s%s\n", s.BaseURL(), "/clans")
 	for _, clan := range []string{"0138"} {
 		log.Printf("serve: %s/clan/%s\n", s.BaseURL(), clan)
-		log.Printf("serve: %s/clan/%s/turns\n", s.BaseURL(), clan)
+		log.Printf("serve: %s/clan/%s/report\n", s.BaseURL(), clan)
 		for _, turn := range []string{"0899-12", "0900-01", "0900-02"} {
-			log.Printf("serve: %s/clan/%s/turn/%s\n", s.BaseURL(), clan, turn)
-			log.Printf("serve: %s/clan/%s/turn/%s/report\n", s.BaseURL(), clan, turn)
-			log.Printf("serve: %s/clan/%s/turn/%s/map\n", s.BaseURL(), clan, turn)
+			log.Printf("serve: %s/clan/%s/report/%s\n", s.BaseURL(), clan, turn)
+			log.Printf("serve: %s/clan/%s/map/%s\n", s.BaseURL(), clan, turn)
 		}
 	}
 	log.Printf("serve: %s%s\n", s.BaseURL(), "/login")

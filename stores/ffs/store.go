@@ -60,6 +60,42 @@ func (f *FFS) GetClans(id string) ([]string, error) {
 	return clans, nil
 }
 
+type ClanDetail_t struct {
+	Id      string
+	Clan    string
+	Maps    []string
+	Reports []string
+}
+
+func (f *FFS) GetClanDetails(id, clan string) (ClanDetail_t, error) {
+	var clanDetail ClanDetail_t
+
+	entries, err := os.ReadDir(filepath.Join(f.path, id))
+	if err != nil {
+		log.Printf("ffs: getClans: %v\n", err)
+		return clanDetail, nil
+	}
+
+	// find all turn reports and add them to the list of clans
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		if f.rxTurnMap.MatchString(entry.Name()) {
+			clanDetail.Maps = append(clanDetail.Maps, entry.Name())
+		}
+		if f.rxTurnReports.MatchString(entry.Name()) {
+			clanDetail.Reports = append(clanDetail.Reports, entry.Name())
+		}
+	}
+
+	// sort the list, not sure why.
+	sort.Strings(clanDetail.Maps)
+	sort.Strings(clanDetail.Reports)
+
+	return clanDetail, nil
+}
+
 type Turn_t struct {
 	Id string
 }

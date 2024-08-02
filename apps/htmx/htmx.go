@@ -4,6 +4,7 @@ package htmx
 
 import (
 	"fmt"
+	ffss "github.com/mdhender/ottomap/internal/stores/ffs"
 	"github.com/mdhender/ottomap/stores/ffs"
 	"os"
 )
@@ -56,6 +57,12 @@ func New(options ...Option) (*App, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	afs, err := ffss.New(ffss.WithPath(a.paths.data))
+	if err != nil {
+		return nil, err
+	}
+	_ = afs.Close()
 
 	return a, nil
 }

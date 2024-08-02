@@ -16,6 +16,12 @@ type Clans_t struct {
 	Clans []string // clans that the player has uploaded reports for
 }
 
+type ClanDetail_t struct {
+	Id    string
+	Maps  []string
+	Turns []string
+}
+
 type TurnList_t struct {
 	Turns []string
 }
