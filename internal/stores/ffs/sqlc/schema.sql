@@ -3,7 +3,10 @@
 -- foreign keys must be disabled to drop tables with foreign keys
 PRAGMA foreign_keys = OFF;
 
+DROP TABLE IF EXISTS maps;
+DROP TABLE IF EXISTS reports;
 DROP TABLE IF EXISTS sessions;
+DROP TABLE IF EXISTS units;
 DROP TABLE IF EXISTS users;
 
 -- foreign keys must be enabled with every database connection
@@ -15,7 +18,7 @@ PRAGMA foreign_keys = ON;
 
 CREATE TABLE users
 (
-    uid             INTEGER PRIMARY KEY,
+    id              INTEGER PRIMARY KEY,
     handle          TEXT      NOT NULL,
     hashed_password TEXT      NOT NULL,                           -- bcrypt hash of the password
     clan            TEXT      NOT NULL,
@@ -31,10 +34,41 @@ CREATE UNIQUE INDEX IF NOT EXISTS users_magic_key_index ON users (magic_key);
 
 CREATE TABLE sessions
 (
-    sid          TEXT      NOT NULL,
+    id           TEXT      NOT NULL,
     uid          INTEGER   NOT NULL,
     expires_dttm TIMESTAMP NOT NULL, -- when the session will expire
-    PRIMARY KEY (sid),
-    FOREIGN KEY (uid) REFERENCES users (uid) ON DELETE CASCADE
+    PRIMARY KEY (id),
+    FOREIGN KEY (uid) REFERENCES users (id) ON DELETE CASCADE
 );
 
+
+CREATE TABLE maps
+(
+    id   INTEGER PRIMARY KEY,
+    uid  INTEGER NOT NULL,
+    turn TEXT    NOT NULL,
+    clan TEXT    NOT NULL,
+    path TEXT    NOT NULL,
+    FOREIGN KEY (uid) REFERENCES users (id) ON DELETE CASCADE
+);
+
+CREATE TABLE reports
+(
+    id   INTEGER PRIMARY KEY,
+    uid  INTEGER NOT NULL,
+    turn TEXT    NOT NULL,
+    clan TEXT    NOT NULL,
+    path TEXT    NOT NULL,
+    FOREIGN KEY (uid) REFERENCES users (id) ON DELETE CASCADE
+);
+
+CREATE TABLE units
+(
+    rid INTEGER NOT NULL,
+    turn TEXT NOT NULL,
+    name TEXT NOT NULL,
+    starting_hex TEXT NOT NULL,
+    ending_hex TEXT NOT NULL,
+    PRIMARY KEY (rid, turn, name),
+    FOREIGN KEY (rid) REFERENCES reports (id) ON DELETE CASCADE
+);

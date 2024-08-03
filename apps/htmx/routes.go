@@ -5,7 +5,7 @@ package htmx
 import (
 	"bytes"
 	"fmt"
-	"github.com/mdhender/ottomap/stores/ffs"
+	"github.com/mdhender/ottomap/internal/stores/ffs"
 	tmpls "github.com/mdhender/ottomap/templates/htmx"
 	"github.com/mdhender/ottomap/templates/tw"
 	"html/template"
@@ -292,15 +292,7 @@ type SessionManager_i interface {
 	currentUser(r *http.Request) session_t
 }
 
-type AllTurns_i interface {
-	GetClans(id string) ([]string, error)
-	GetClanDetails(id, clan string) (ffs.ClanDetail_t, error)
-	GetTurnListing(id string) ([]ffs.Turn_t, error)
-	GetTurnDetails(id string, turnId string) (ffs.TurnDetail_t, error)
-	GetTurnReportDetails(id string, turnId, clanId string) (ffs.TurnReportDetails_t, error)
-}
-
-func getClansList(templatesPath string, s AllTurns_i, sm SessionManager_i) http.HandlerFunc {
+func getClansList(templatesPath string, s *ffs.Store, sm SessionManager_i) http.HandlerFunc {
 	templateFiles := []string{
 		filepath.Join(templatesPath, "layout.gohtml"),
 		filepath.Join(templatesPath, "clans.gohtml"),
@@ -351,7 +343,7 @@ func getClansList(templatesPath string, s AllTurns_i, sm SessionManager_i) http.
 	}
 }
 
-func getClanDetails(templatesPath string, s AllTurns_i, sm SessionManager_i) http.HandlerFunc {
+func getClanDetails(templatesPath string, s *ffs.Store, sm SessionManager_i) http.HandlerFunc {
 	templateFiles := []string{
 		filepath.Join(templatesPath, "layout.gohtml"),
 		filepath.Join(templatesPath, "clan_details.gohtml"),
@@ -404,7 +396,7 @@ func getClanDetails(templatesPath string, s AllTurns_i, sm SessionManager_i) htt
 	}
 }
 
-func getClanTurnDetails(templatesPath string, s AllTurns_i, sm SessionManager_i) http.HandlerFunc {
+func getClanTurnDetails(templatesPath string, s *ffs.Store, sm SessionManager_i) http.HandlerFunc {
 	templateFiles := []string{
 		filepath.Join(templatesPath, "layout.gohtml"),
 		filepath.Join(templatesPath, "turn_report_details.gohtml"),

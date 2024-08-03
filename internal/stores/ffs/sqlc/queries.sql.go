@@ -9,12 +9,86 @@ import (
 	"context"
 )
 
+const createTurnMap = `-- name: CreateTurnMap :one
+INSERT INTO maps (uid, turn, clan, path)
+VALUES (?1, ?2, ?3, ?4)
+RETURNING id
+`
+
+type CreateTurnMapParams struct {
+	Uid  int64
+	Turn string
+	Clan string
+	Path string
+}
+
+func (q *Queries) CreateTurnMap(ctx context.Context, arg CreateTurnMapParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, createTurnMap,
+		arg.Uid,
+		arg.Turn,
+		arg.Clan,
+		arg.Path,
+	)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+
+const createTurnReport = `-- name: CreateTurnReport :one
+INSERT INTO reports (uid, turn, clan, path)
+VALUES (?1, ?2, ?3, ?4)
+RETURNING id
+`
+
+type CreateTurnReportParams struct {
+	Uid  int64
+	Turn string
+	Clan string
+	Path string
+}
+
+func (q *Queries) CreateTurnReport(ctx context.Context, arg CreateTurnReportParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, createTurnReport,
+		arg.Uid,
+		arg.Turn,
+		arg.Clan,
+		arg.Path,
+	)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+
+const createUnit = `-- name: CreateUnit :exec
+INSERT INTO units (rid, turn, name, starting_hex, ending_hex)
+VALUES (?1, ?2, ?3, ?4, ?5)
+`
+
+type CreateUnitParams struct {
+	Rid         int64
+	Turn        string
+	Name        string
+	StartingHex string
+	EndingHex   string
+}
+
+func (q *Queries) CreateUnit(ctx context.Context, arg CreateUnitParams) error {
+	_, err := q.db.ExecContext(ctx, createUnit,
+		arg.Rid,
+		arg.Turn,
+		arg.Name,
+		arg.StartingHex,
+		arg.EndingHex,
+	)
+	return err
+}
+
 const createUser = `-- name: CreateUser :one
 
 
 INSERT INTO users (handle, hashed_password, clan, magic_key, path)
 VALUES (?1, ?2, ?3, ?4, ?5)
-RETURNING uid
+RETURNING id
 `
 
 type CreateUserParams struct {
@@ -34,7 +108,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (int64, 
 		arg.MagicKey,
 		arg.Path,
 	)
-	var uid int64
-	err := row.Scan(&uid)
-	return uid, err
+	var id int64
+	err := row.Scan(&id)
+	return id, err
 }

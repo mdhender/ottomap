@@ -4,8 +4,7 @@ package htmx
 
 import (
 	"fmt"
-	ffss "github.com/mdhender/ottomap/internal/stores/ffs"
-	"github.com/mdhender/ottomap/stores/ffs"
+	"github.com/mdhender/ottomap/internal/stores/ffs"
 	"os"
 )
 
@@ -16,7 +15,7 @@ type App struct {
 		templates string
 	}
 	sessions *sessionManager_t
-	store    *ffs.FFS
+	store    *ffs.Store
 }
 
 func New(options ...Option) (*App, error) {
@@ -53,16 +52,10 @@ func New(options ...Option) (*App, error) {
 	a.sessions.loadSessions()
 
 	var err error
-	a.store, err = ffs.New(a.paths.data)
+	a.store, err = ffs.New(ffs.WithPath(a.paths.data))
 	if err != nil {
 		return nil, err
 	}
-
-	afs, err := ffss.New(ffss.WithPath(a.paths.data))
-	if err != nil {
-		return nil, err
-	}
-	_ = afs.Close()
 
 	return a, nil
 }

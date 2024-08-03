@@ -8,14 +8,38 @@ import (
 	"time"
 )
 
+type Map struct {
+	ID   int64
+	Uid  int64
+	Turn string
+	Clan string
+	Path string
+}
+
+type Report struct {
+	ID   int64
+	Uid  int64
+	Turn string
+	Clan string
+	Path string
+}
+
 type Session struct {
-	Sid         string
+	ID          string
 	Uid         int64
 	ExpiresDttm time.Time
 }
 
+type Unit struct {
+	Rid         int64
+	Turn        string
+	Name        string
+	StartingHex string
+	EndingHex   string
+}
+
 type User struct {
-	Uid            int64
+	ID             int64
 	Handle         string
 	HashedPassword string
 	Clan           string
