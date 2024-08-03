@@ -210,3 +210,45 @@ func (q *Queries) GetUser(ctx context.Context, id int64) (GetUserRow, error) {
 	err := row.Scan(&i.ID, &i.Clan)
 	return i, err
 }
+
+const getUserReports = `-- name: GetUserReports :many
+SELECT id, turn, clan, path
+FROM reports
+WHERE uid = ?1
+ORDER BY turn, clan
+`
+
+type GetUserReportsRow struct {
+	ID   int64
+	Turn string
+	Clan string
+	Path string
+}
+
+func (q *Queries) GetUserReports(ctx context.Context, uid int64) ([]GetUserReportsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getUserReports, uid)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetUserReportsRow
+	for rows.Next() {
+		var i GetUserReportsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Turn,
+			&i.Clan,
+			&i.Path,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

@@ -270,6 +270,16 @@ func New(options ...Option) (*Store, error) {
 		//log.Printf("session: load %q -> %q\n", entry.Name(), hashStr)
 	}
 
+	// todo: remove this stuff in the testing session
+	// 97084c3e-0a4e-462f-bf6b-b2fa15bc10a9|3|2024-08-04 07:19:59.625609 -0600 MDT m=+50446.881029751
+	if err := s.queries.CreateSession(s.ctx, sqlc.CreateSessionParams{
+		ID:          "97084c3e-0a4e-462f-bf6b-b2fa15bc10a9",
+		Uid:         3,
+		ExpiresDttm: time.Now().Add(2 * 7 * 24 * time.Hour),
+	}); err != nil {
+		return nil, err
+	}
+
 	log.Printf("ffs: store: created in %v\n", time.Since(started))
 
 	return s, nil

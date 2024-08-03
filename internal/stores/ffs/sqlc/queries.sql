@@ -36,6 +36,11 @@ SELECT clan
 FROM users
 WHERE id = :id;
 
+-- name: GetUserReports :many
+SELECT id, turn, clan, path
+FROM reports
+WHERE uid = :uid
+ORDER BY turn, clan;
 
 -- name: CreateSession :exec
 INSERT INTO sessions (id, uid, expires_dttm)

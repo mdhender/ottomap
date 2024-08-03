@@ -79,7 +79,21 @@ func (a *App) getClan() http.HandlerFunc {
 
 		var content tw.Clan_t
 		c, err := a.store.GetClan(sess.Uid)
+		if err != nil {
+			log.Printf("%s: %s: store: %v", r.Method, r.URL.Path, err)
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
 		content.Id = c.Id
+
+		log.Printf("%s: %s: clan: %d turns\n", r.Method, r.URL.Path, len(c.Turns))
+		for _, turn := range c.Turns {
+			content.Turns = append(content.Turns, &tw.Turn_t{
+				Id: turn.Id,
+				// todo: get turn details
+			})
+		}
+
 		payload.Content = content
 
 		// Parse the template file
