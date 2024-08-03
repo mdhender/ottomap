@@ -7,7 +7,48 @@ package sqlc
 
 import (
 	"context"
+	"time"
 )
+
+const authenticateUser = `-- name: AuthenticateUser :one
+SELECT id, clan
+FROM users
+WHERE clan = ?1
+  AND hashed_password = ?2
+`
+
+type AuthenticateUserParams struct {
+	Clan           string
+	HashedPassword string
+}
+
+type AuthenticateUserRow struct {
+	ID   int64
+	Clan string
+}
+
+func (q *Queries) AuthenticateUser(ctx context.Context, arg AuthenticateUserParams) (AuthenticateUserRow, error) {
+	row := q.db.QueryRowContext(ctx, authenticateUser, arg.Clan, arg.HashedPassword)
+	var i AuthenticateUserRow
+	err := row.Scan(&i.ID, &i.Clan)
+	return i, err
+}
+
+const createSession = `-- name: CreateSession :exec
+INSERT INTO sessions (id, uid, expires_dttm)
+VALUES (?1, ?2, ?3)
+`
+
+type CreateSessionParams struct {
+	ID          string
+	Uid         int64
+	ExpiresDttm time.Time
+}
+
+func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) error {
+	_, err := q.db.ExecContext(ctx, createSession, arg.ID, arg.Uid, arg.ExpiresDttm)
+	return err
+}
 
 const createTurnMap = `-- name: CreateTurnMap :one
 INSERT INTO maps (uid, turn, clan, path)
@@ -111,4 +152,61 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (int64, 
 	var id int64
 	err := row.Scan(&id)
 	return id, err
+}
+
+const deleteSession = `-- name: DeleteSession :exec
+DELETE
+FROM sessions
+WHERE id = ?1
+   OR CURRENT_TIMESTAMP >= expires_dttm
+`
+
+func (q *Queries) DeleteSession(ctx context.Context, id string) error {
+	_, err := q.db.ExecContext(ctx, deleteSession, id)
+	return err
+}
+
+const getClan = `-- name: GetClan :one
+SELECT clan
+FROM users
+WHERE id = ?1
+`
+
+func (q *Queries) GetClan(ctx context.Context, id int64) (string, error) {
+	row := q.db.QueryRowContext(ctx, getClan, id)
+	var clan string
+	err := row.Scan(&clan)
+	return clan, err
+}
+
+const getSession = `-- name: GetSession :one
+SELECT id, uid, expires_dttm
+FROM sessions
+WHERE id = ?1
+  AND CURRENT_TIMESTAMP < expires_dttm
+`
+
+func (q *Queries) GetSession(ctx context.Context, id string) (Session, error) {
+	row := q.db.QueryRowContext(ctx, getSession, id)
+	var i Session
+	err := row.Scan(&i.ID, &i.Uid, &i.ExpiresDttm)
+	return i, err
+}
+
+const getUser = `-- name: GetUser :one
+SELECT id, clan
+FROM users
+WHERE id = ?1
+`
+
+type GetUserRow struct {
+	ID   int64
+	Clan string
+}
+
+func (q *Queries) GetUser(ctx context.Context, id int64) (GetUserRow, error) {
+	row := q.db.QueryRowContext(ctx, getUser, id)
+	var i GetUserRow
+	err := row.Scan(&i.ID, &i.Clan)
+	return i, err
 }

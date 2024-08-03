@@ -7,54 +7,39 @@ func (s *Store) GetClans(id string) ([]string, error) {
 	panic("implement me")
 }
 
-type ClanDetail_t struct {
-	Id      string
-	Clan    string
-	Maps    []string
-	Reports []string
+type Clan_t struct {
+	Id    string   // id of the player's clan
+	Turns []Turn_t // list of turns that the clan has uploaded reports for
 }
 
 type Turn_t struct {
-	Id string
+	Id      string
+	Reports []Report_t // list of reports that the clan has uploaded for this turn
 }
 
-type TurnDetail_t struct {
+type Report_t struct {
 	Id    string
-	Clans []string
-	Maps  []string
+	Clan  string   // id of the clan that owns the report
+	Units []Unit_t // list of units included in this report
+	Map   string   // set when there is a map file
 }
 
-type TurnReportDetails_t struct {
-	Id    string
-	Clan  string
-	Map   string // set only if there is a single map
-	Units []UnitDetails_t
-}
-
-type UnitDetails_t struct {
+type Unit_t struct {
 	Id          string
 	CurrentHex  string
 	PreviousHex string
 }
 
-func (s *Store) GetClanDetails(id, clan string) (ClanDetail_t, error) {
-	//TODO implement me
-	panic("implement me")
-}
+func (s *Store) GetClan(uid int64) (Clan_t, error) {
+	var c Clan_t
 
-func (s *Store) GetTurnListing(id string) ([]Turn_t, error) {
-	//TODO implement me
-	panic("implement me")
-}
+	user, err := s.queries.GetUser(s.ctx, uid)
+	if err != nil {
+		return c, err
+	}
+	c.Id = user.Clan
 
-func (s *Store) GetTurnDetails(id string, turnId string) (TurnDetail_t, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (s *Store) GetTurnReportDetails(id string, turnId, clanId string) (TurnReportDetails_t, error) {
-	//TODO implement me
-	panic("implement me")
+	return c, nil
 }
 
 func (s *Store) createSchema() error {

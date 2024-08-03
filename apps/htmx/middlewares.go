@@ -12,9 +12,13 @@ import (
 	"strings"
 )
 
-func authonly(sm *sessionManager_t, next http.HandlerFunc) http.HandlerFunc {
+func (a *App) authonly(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if !sm.currentUser(r).isAuthenticated() {
+		log.Printf("%s: %s: authonly: entered\n", r.Method, r.URL.Path)
+
+		sess := a.store.GetSession(r)
+		log.Printf("%s: %s: authonly: session %+v\n", r.Method, r.URL.Path, sess)
+		if !sess.IsAuthenticated() {
 			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 			return
 		}

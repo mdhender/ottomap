@@ -34,8 +34,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS users_magic_key_index ON users (magic_key);
 
 CREATE TABLE sessions
 (
-    id           TEXT      NOT NULL,
-    uid          INTEGER   NOT NULL,
+    id           TEXT      NOT NULL, -- session id
+    uid          INTEGER   NOT NULL, -- user id attached to the session
     expires_dttm TIMESTAMP NOT NULL, -- when the session will expire
     PRIMARY KEY (id),
     FOREIGN KEY (uid) REFERENCES users (id) ON DELETE CASCADE

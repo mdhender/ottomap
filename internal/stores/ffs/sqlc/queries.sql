@@ -19,3 +19,37 @@ RETURNING id;
 -- name: CreateUnit :exec
 INSERT INTO units (rid, turn, name, starting_hex, ending_hex)
 VALUES (:rid, :turn, :name, :starting_hex, :ending_hex);
+
+-- name: AuthenticateUser :one
+SELECT id, clan
+FROM users
+WHERE clan = :clan
+  AND hashed_password = :hashed_password;
+
+-- name: GetUser :one
+SELECT id, clan
+FROM users
+WHERE id = :id;
+
+-- name: GetClan :one
+SELECT clan
+FROM users
+WHERE id = :id;
+
+
+-- name: CreateSession :exec
+INSERT INTO sessions (id, uid, expires_dttm)
+VALUES (:id, :uid, :expires_dttm);
+
+-- name: DeleteSession :exec
+DELETE
+FROM sessions
+WHERE id = :id
+   OR CURRENT_TIMESTAMP >= expires_dttm;
+
+-- name: GetSession :one
+SELECT id, uid, expires_dttm
+FROM sessions
+WHERE id = :id
+  AND CURRENT_TIMESTAMP < expires_dttm;
+

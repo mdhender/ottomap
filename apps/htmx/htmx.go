@@ -14,8 +14,7 @@ type App struct {
 		data      string
 		templates string
 	}
-	sessions *sessionManager_t
-	store    *ffs.Store
+	store *ffs.Store
 }
 
 func New(options ...Option) (*App, error) {
@@ -46,10 +45,6 @@ func New(options ...Option) (*App, error) {
 	} else if !sb.IsDir() {
 		return nil, fmt.Errorf("%s: not a directory", a.paths.templates)
 	}
-
-	// add all existing sessions to the sessions map
-	a.sessions = newSessionManager(a.paths.data)
-	a.sessions.loadSessions()
 
 	var err error
 	a.store, err = ffs.New(ffs.WithPath(a.paths.data))

@@ -1,22 +1,24 @@
 {{define "content"}}{{- /*gotype:github.com/mdhender/ottomap/templates/tw.ClanDetail_t*/ -}}
-<h2>Clan {{.Id}} Details</h2>
+<h2>Clan {{.Id}}</h2>
 <p>
     The purpose of this page is to show the details of a clan.
     This includes links to the clan's reports and the list of turns that have been uploaded.
     We should also have a button to delete the entire clan.
 </p>
 
-<h3>Reports</h3>
+<h3>Turns</h3>
 <p>
-    This section should have links to the reports that have been uploaded for this clan.
+    This section should list the turns that have data, with the report and map for the turn.
 </p>
 
 {{with .Turns}}
-    <ul>
-        {{range .}}
-            <li><a href="/clan/{{$.Id}}/report/{{.}}">Report {{.}}</a></li>
-        {{end}}
-    </ul>
+<table>
+    {{range .}}
+        <tr>
+            <td>
+        </tr>
+    {{end}}
+</table>
 {{else}}
     <p>
         It looks like you have not uploaded any turn reports for this clan.
