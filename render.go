@@ -3,6 +3,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/mdhender/ottomap/actions"
 	"github.com/mdhender/ottomap/internal/edges"
@@ -49,6 +50,7 @@ var argsRender struct {
 		parser       bool
 		sections     bool
 		steps        bool
+		stripCR      bool
 	}
 	saveWithTurnId bool
 	show           struct {
@@ -174,6 +176,9 @@ var cmdRender = &cobra.Command{
 			data, err := os.ReadFile(i.Path)
 			if err != nil {
 				log.Fatalf("error: read: %v\n", err)
+			}
+			if argsRender.debug.stripCR {
+				data = bytes.ReplaceAll(data, []byte{'\r', '\n'}, []byte{'\n'})
 			}
 			if i.Turn.Year < 899 || i.Turn.Year > 9999 || i.Turn.Month < 1 || i.Turn.Month > 12 {
 				log.Printf("warn: %q: invalid turn year '%d'\n", i.Id, i.Turn.Year)

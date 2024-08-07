@@ -142,9 +142,11 @@ Longhouse <- szi:(DIGIT+) SP+ "Longhouse" SP+ idi:(LETTER DIGIT+) {
     return lh, nil
 }
 
-ObviousNeighboringTerrainCode <- "Lcm" {
+ObviousNeighboringTerrainCode <- "HSM"i {
+    return terrain.HighSnowyMountains, nil
+} / "LCM"i {
     return terrain.LowConiferMountains, nil
-} / "LJm" {
+} / "LJM"i {
     return terrain.LowJungleMountains, nil
 } / "L" {
     return terrain.Lake, nil
@@ -630,6 +632,8 @@ TERRAIN <- "ALPS" {
     return terrain.GrassyHillsPlateau, nil
 } / "GRASSY HILLS" {
     return terrain.GrassyHills, nil
+} / "HIGH SNOWY MOUNTAINS" {
+    return terrain.HighSnowyMountains, nil
 } / "JUNGLE HILLS" {
     return terrain.JungleHills, nil
 } / "JUNGLE" {

@@ -691,6 +691,7 @@ func parseMovementLine(fid, tid string, unitId UnitId_t, lineNo int, line []byte
 
 // parseMove parses a single step of a move, returning the results or an error
 func parseMove(fid, tid string, unitId UnitId_t, lineNo, stepNo int, line []byte, debugSteps, debugNodes bool) (*Move_t, error) {
+	//debugSteps, debugNodes = true, true
 	line = bytes.TrimSpace(bytes.TrimRight(line, ","))
 	if debugSteps {
 		log.Printf("%s: %s: %d: step %d: %q\n", fid, unitId, lineNo, stepNo, line)
