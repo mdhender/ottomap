@@ -58,6 +58,13 @@ func (w *WXX) Create(path string, turnId string, upperLeft, lowerRight coords.Ma
 
 	var err error
 
+	var mountainPass struct {
+		R, G, B float64
+	}
+	if mountainPass.R, mountainPass.G, mountainPass.B, err = hexToRGB("#ffff00"); err != nil {
+		panic(err)
+	}
+
 	type niceLabel struct {
 		OffsetFromCenter Point
 		R, G, B          float64
@@ -490,6 +497,20 @@ func (w *WXX) Create(path string, turnId string, upperLeft, lowerRight coords.Ma
 				w.Printf(`<shape  type="Path" isCurve="false" isGMOnly="false" isSnapVertices="true" isMatchTileBorders="false" tags="" creationType="BASIC" isDropShadow="false" isInnerShadow="false" isBoxBlur="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" dsSpread="0.2" dsRadius="50.0" dsOffsetX="0.0" dsOffsetY="0.0" insChoke="0.2" insRadius="50.0" insOffsetX="0.0" insOffsetY="0.0" bbWidth="10.0" bbHeight="10.0" bbIterations="3" mapLayer="Above Terrain" fillTexture="" strokeTexture="" strokeType="SIMPLE" highestViewLevel="WORLD" currentShapeViewLevel="WORLD" lineCap="ROUND" lineJoin="ROUND" opacity="1.0" fillRule="NON_ZERO" strokeColor="0.6000000238418579,0.800000011920929,1.0,1.0" strokeWidth="%f" dsColor="1.0,0.8941176533699036,0.7686274647712708,1.0" insColor="1.0,0.8941176533699036,0.7686274647712708,1.0">`, riverWidth)
 				w.Printf(` <p type="m" x="%f" y="%f"/>`, from.X, from.Y)
 				w.Printf(` <p x="%f" y="%f"/>`, to.X, to.Y)
+				w.Println(`</shape>`)
+			}
+
+			for _, dir := range t.Features.Edges.Pass {
+				// get the center of the hex we're in
+				center := points[0]
+
+				// get the midpoint of the segment from the center to the edge
+				segmentEnd := edgeCenter(dir, points)
+				segmentStart := midpoint(midpoint(center, segmentEnd), segmentEnd)
+
+				w.Printf(`<shape  type="Path" isCurve="false" isGMOnly="false" isSnapVertices="true" isMatchTileBorders="false" tags="" creationType="BASIC" isDropShadow="false" isInnerShadow="false" isBoxBlur="false" isWorld="true" isContinent="true" isKingdom="true" isProvince="true" dsSpread="0.2" dsRadius="50.0" dsOffsetX="0.0" dsOffsetY="0.0" insChoke="0.2" insRadius="50.0" insOffsetX="0.0" insOffsetY="0.0" bbWidth="10.0" bbHeight="10.0" bbIterations="3" mapLayer="Above Terrain" fillTexture="" strokeTexture="" strokeType="SIMPLE" highestViewLevel="WORLD" currentShapeViewLevel="WORLD" lineCap="ROUND" lineJoin="ROUND" opacity="1.0" fillRule="NON_ZERO" fillColor="%g,%g,%g,1.0" strokeColor="%g,%g,%g,1.0" strokeWidth="0.09" dsColor="1.0,0.8941176533699036,0.7686274647712708,1.0" insColor="1.0,0.8941176533699036,0.7686274647712708,1.0">`, mountainPass.R, mountainPass.G, mountainPass.B, mountainPass.R, mountainPass.G, mountainPass.B)
+				w.Printf(` <p type="m" x="%f" y="%f"/>`, segmentStart.X, segmentStart.Y)
+				w.Printf(` <p x="%f" y="%f"/>`, segmentEnd.X, segmentEnd.Y)
 				w.Println(`</shape>`)
 			}
 
