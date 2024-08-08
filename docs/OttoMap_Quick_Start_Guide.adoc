@@ -67,15 +67,15 @@ Finally, you can render the maps using the `render` command.
 You need to specify the clan for which you want to render the map.
 
 ----
-ottomap render --clan 0138
+ottomap render --clan-id 0138
 ----
 
-* The `--clan` option specifies the clan number (e.g., `0138`).
+* The `--clan-id` option specifies the clan number (e.g., `0138`).
 
 Note: you can specify the last turn that you want to render using the `--turn` option.
 
 ----
-ottomap render --turn 0901-12 --clan 0138
+ottomap render --turn 0901-12 --clan-id 0138
 ----
 
 * The `--turn` option specifies the maximum turn year and month to map (e.g., `901-12`).
@@ -87,7 +87,7 @@ After running this command, your maps will be generated and saved in the `data/o
 1. **Prepare your Turn Report file:** Save it in the `data/input` folder.
 2. **Open a Terminal or Command Prompt:** Use the appropriate method for your operating system.
 3. **Navigate to the OttoMap Project Directory:** Use the `cd` command.
-4. **Generate Maps:** Run `ottomap render --clan <clan>`.
+4. **Generate Maps:** Run `ottomap render --clan-id <clan>`.
 
 That's it!
 You are now ready to use OttoMap to generate maps from your TribeNet turn reports.

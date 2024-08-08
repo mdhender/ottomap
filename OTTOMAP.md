@@ -38,7 +38,7 @@ The `render` command reads the configuration and generates maps for each turn re
 Only the files in the `data/input` folder that match the YYYY-MM.CLAN.report.txt pattern are processed.
 
 ```bash
-$ ottomap render --clan 0991 --show-grid-coords
+$ ottomap render --clan-id 0991 --show-grid-coords
 ```
 
 Output example:
@@ -104,7 +104,7 @@ Output example:
 The `render` command generates a map from the turn report files.
 
 ```bash
-$ ottomap render --clan 0991 --show-grid-coords
+$ ottomap render --clan-id 0991 --show-grid-coords
 ```
 
 You can specify additional options for the `map` command:
@@ -131,7 +131,7 @@ To run OttoMap, follow these steps:
 4. **Run the desired command with any necessary options**:
     - To generate a map using the default settings, run:
       ```bash
-      $ ottomap render --clan 0991
+      $ ottomap render --clan-id 0991
       ```
 
 This will read all the turn report files in the `data/input` folder and create the Worldographer file `data/output/0991.wxx`.

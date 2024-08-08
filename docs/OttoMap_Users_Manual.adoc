@@ -23,7 +23,7 @@ ottomap version
 Generates maps from the turn report files in the `data/input` directory.
 
 ----
-ottomap render --turn 901-12 --clan 0991 --show-grid-coords
+ottomap render --turn 901-12 --clan-id 0991 --show-grid-coords
 ----
 
 == File Naming Convention
@@ -46,7 +46,7 @@ Turn report files must be named in the format `YYYY-MM.CLAN.report.txt`:
 * Specify the clan for which you want to generate a map.
 
 ----
-ottomap render --clan 0991 --show-grid-coords
+ottomap render --clan-id 0991 --show-grid-coords
 ----
 
 == Error Handling
