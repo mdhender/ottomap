@@ -45,7 +45,7 @@ type ParseConfig struct {
 	}
 }
 
-func ParseInput(fid, tid string, input []byte, debugParser, debugSections, debugSteps, debugNodes bool, cfg ParseConfig) (*Turn_t, error) {
+func ParseInput(fid, tid string, input []byte, debugParser, debugSections, debugSteps, debugNodes bool, experimentalUnitSplit bool, cfg ParseConfig) (*Turn_t, error) {
 	debugp := func(format string, args ...any) {
 		if debugParser {
 			log.Printf(format, args...)
@@ -174,7 +174,7 @@ func ParseInput(fid, tid string, input []byte, debugParser, debugSections, debug
 				pfx = []byte(slug(line, 23))
 			}
 			debugs("%s: %s: %d: found %q\n", fid, unitId, lineNo, pfx)
-			unitMoves, err := ParseFleetMovementLine(fid, tid, unitId, lineNo, line, debugSteps, debugNodes)
+			unitMoves, err := ParseFleetMovementLine(fid, tid, unitId, lineNo, line, debugSteps, debugNodes, experimentalUnitSplit)
 			if err != nil {
 				return t, err
 			}
@@ -207,7 +207,7 @@ func ParseInput(fid, tid string, input []byte, debugParser, debugSections, debug
 			moves.Moves = append(moves.Moves, goesToMove)
 		} else if bytes.HasPrefix(line, []byte("Tribe Movement: ")) {
 			debugs("%s: %s: %d: found %q\n", fid, unitId, lineNo, slug(line, 14))
-			unitMoves, err := ParseTribeMovementLine(fid, tid, unitId, lineNo, line, debugSteps, debugNodes)
+			unitMoves, err := ParseTribeMovementLine(fid, tid, unitId, lineNo, line, debugSteps, debugNodes, experimentalUnitSplit)
 			if err != nil {
 				return t, err
 			}
@@ -222,7 +222,7 @@ func ParseInput(fid, tid string, input []byte, debugParser, debugSections, debug
 				}
 			} else {
 				debugs("%s: %s: %d: found %q\n", fid, unitId, lineNo, slug(line, 14))
-				scoutMoves, err := ParseScoutMovementLine(fid, tid, unitId, lineNo, line, debugSteps, debugNodes)
+				scoutMoves, err := ParseScoutMovementLine(fid, tid, unitId, lineNo, line, debugSteps, debugNodes, experimentalUnitSplit)
 				if err != nil {
 					return t, err
 				}
@@ -230,7 +230,7 @@ func ParseInput(fid, tid string, input []byte, debugParser, debugSections, debug
 			}
 		} else if bytes.HasPrefix(line, statusLinePrefix) {
 			debugs("%s: %s: %d: found %q\n", fid, unitId, lineNo, statusLinePrefix)
-			statusMoves, err := ParseStatusLine(fid, tid, unitId, lineNo, line, debugSteps, debugNodes)
+			statusMoves, err := ParseStatusLine(fid, tid, unitId, lineNo, line, debugSteps, debugNodes, experimentalUnitSplit)
 			if err != nil {
 				return t, err
 			}
@@ -321,7 +321,7 @@ type Step_t struct {
 
 // ParseFleetMovementLine parses a fleet movement line.
 // It returns the generic struct that covers all the known movement steps and cases.
-func ParseFleetMovementLine(fid, tid string, unitId UnitId_t, lineNo int, line []byte, debugSteps, debugNodes bool) ([]*Move_t, error) {
+func ParseFleetMovementLine(fid, tid string, unitId UnitId_t, lineNo int, line []byte, debugSteps, debugNodes bool, experimentalUnitSplit bool) ([]*Move_t, error) {
 	if va, err := Parse(fid, line, Entrypoint("FleetMovement")); err != nil {
 		return nil, err
 	} else if mt, ok := va.(Movement_t); !ok {
@@ -342,7 +342,7 @@ func ParseFleetMovementLine(fid, tid string, unitId UnitId_t, lineNo int, line [
 	}
 	line = bytes.TrimPrefix(line, []byte{'M', 'o', 'v', 'e'})
 
-	return parseMovementLine(fid, tid, unitId, lineNo, line, debugSteps, debugNodes)
+	return parseMovementLine(fid, tid, unitId, lineNo, line, debugSteps, debugNodes, experimentalUnitSplit)
 }
 
 func ParseLocationLine(fid, tid string, unitId UnitId_t, lineNo int, line []byte, debug bool) (Location_t, error) {
@@ -359,7 +359,7 @@ func ParseLocationLine(fid, tid string, unitId UnitId_t, lineNo int, line []byte
 	}
 }
 
-func ParseScoutMovementLine(fid, tid string, unitId UnitId_t, lineNo int, line []byte, debugSteps, debugNodes bool) (*Scout_t, error) {
+func ParseScoutMovementLine(fid, tid string, unitId UnitId_t, lineNo int, line []byte, debugSteps, debugNodes bool, experimentalUnitSplit bool) (*Scout_t, error) {
 	scout := &Scout_t{
 		TurnId: tid,
 		LineNo: lineNo,
@@ -389,7 +389,7 @@ func ParseScoutMovementLine(fid, tid string, unitId UnitId_t, lineNo int, line [
 	line = bytes.TrimPrefix(line, []byte{'S', 'c', 'o', 'u', 't'})
 
 	// parse the moves and then update each with the turn we did the scouting in
-	moves, err := parseMovementLine(fid, tid, unitId, lineNo, line, debugSteps, debugNodes)
+	moves, err := parseMovementLine(fid, tid, unitId, lineNo, line, debugSteps, debugNodes, experimentalUnitSplit)
 	if err != nil {
 		return nil, err
 	}
@@ -402,7 +402,7 @@ func ParseScoutMovementLine(fid, tid string, unitId UnitId_t, lineNo int, line [
 	return scout, nil
 }
 
-func ParseStatusLine(fid, tid string, unitId UnitId_t, lineNo int, line []byte, debugSteps, debugNodes bool) ([]*Move_t, error) {
+func ParseStatusLine(fid, tid string, unitId UnitId_t, lineNo int, line []byte, debugSteps, debugNodes bool, experimentalUnitSplit bool) ([]*Move_t, error) {
 	if va, err := Parse(fid, line, Entrypoint("StatusLine")); err != nil {
 		log.Printf("status %v\n", err)
 		return nil, err
@@ -419,7 +419,7 @@ func ParseStatusLine(fid, tid string, unitId UnitId_t, lineNo int, line []byte, 
 	}
 
 	// status lines have to be tagged since they are reported as scouting lines
-	moves, err := parseMovementLine(fid, tid, unitId, lineNo, line, debugSteps, debugNodes)
+	moves, err := parseMovementLine(fid, tid, unitId, lineNo, line, debugSteps, debugNodes, experimentalUnitSplit)
 	if len(moves) > 0 && moves[0].Result == results.Succeeded {
 		moves[0].Result = results.StatusLine
 		//log.Printf("status: %s: %s: %s: %d: %d: %q\n", fid, tid, unitId, lineNo, len(moves), string(line))
@@ -479,7 +479,7 @@ func ParseTribeGoesToLine(fid, tid string, unitId UnitId_t, lineNo int, line []b
 	}, nil
 }
 
-func ParseTribeMovementLine(fid, tid string, unitId UnitId_t, lineNo int, line []byte, debugSteps, debugNodes bool) ([]*Move_t, error) {
+func ParseTribeMovementLine(fid, tid string, unitId UnitId_t, lineNo int, line []byte, debugSteps, debugNodes bool, experimentalUnitSplit bool) ([]*Move_t, error) {
 	if va, err := Parse(fid, line, Entrypoint("TribeMovement")); err != nil {
 		return nil, err
 	} else if mt, ok := va.(Movement_t); !ok {
@@ -500,7 +500,7 @@ func ParseTribeMovementLine(fid, tid string, unitId UnitId_t, lineNo int, line [
 	}
 	line = bytes.TrimPrefix(line, []byte{'M', 'o', 'v', 'e'})
 
-	moves, err := parseMovementLine(fid, tid, unitId, lineNo, line, debugSteps, debugNodes)
+	moves, err := parseMovementLine(fid, tid, unitId, lineNo, line, debugSteps, debugNodes, experimentalUnitSplit)
 	if err != nil {
 		return nil, err
 	}
@@ -513,7 +513,7 @@ func ParseTribeMovementLine(fid, tid string, unitId UnitId_t, lineNo int, line [
 
 // parseMovementLine parses all the moves on a single line.
 // it returns a slice containing the results for each move or an error.
-func parseMovementLine(fid, tid string, unitId UnitId_t, lineNo int, line []byte, debugSteps, debugNodes bool) ([]*Move_t, error) {
+func parseMovementLine(fid, tid string, unitId UnitId_t, lineNo int, line []byte, debugSteps, debugNodes bool, experimentalUnitSplit bool) ([]*Move_t, error) {
 	var moves []*Move_t
 
 	line = bytes.TrimSpace(line)
@@ -576,7 +576,7 @@ func parseMovementLine(fid, tid string, unitId UnitId_t, lineNo int, line []byte
 				log.Printf("%s: %s: %d: step %d: dirt %q\n", fid, unitId, lineNo, move.StepNo, slug(thisHex, 44))
 			}
 
-			mt, err := parseMove(fid, tid, unitId, move.LineNo, move.StepNo, thisHex, debugSteps, debugNodes)
+			mt, err := parseMove(fid, tid, unitId, move.LineNo, move.StepNo, thisHex, debugSteps, debugNodes, experimentalUnitSplit)
 			if err != nil {
 				return nil, err
 			}
@@ -690,7 +690,7 @@ func parseMovementLine(fid, tid string, unitId UnitId_t, lineNo int, line []byte
 }
 
 // parseMove parses a single step of a move, returning the results or an error
-func parseMove(fid, tid string, unitId UnitId_t, lineNo, stepNo int, line []byte, debugSteps, debugNodes bool) (*Move_t, error) {
+func parseMove(fid, tid string, unitId UnitId_t, lineNo, stepNo int, line []byte, debugSteps, debugNodes bool, experimentalUnitSplit bool) (*Move_t, error) {
 	//debugSteps, debugNodes = true, true
 	line = bytes.TrimSpace(bytes.TrimRight(line, ","))
 	if debugSteps {
@@ -702,7 +702,7 @@ func parseMove(fid, tid string, unitId UnitId_t, lineNo, stepNo int, line []byte
 	// each move should find at most one settlement
 	var settlement *Settlement_t
 
-	root := hexReportToNodes(line, debugNodes)
+	root := hexReportToNodes(line, debugNodes, experimentalUnitSplit)
 	steps, err := nodesToSteps(root)
 	if err != nil {
 		log.Printf("parser: %s: %s: %d: step %d: %q\n", fid, unitId, lineNo, stepNo, line)

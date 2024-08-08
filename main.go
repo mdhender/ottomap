@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	version = semver.Version{Major: 0, Minor: 14, Patch: 3}
+	version = semver.Version{Major: 0, Minor: 14, Patch: 4}
 )
 
 func main() {
@@ -36,7 +36,8 @@ func Execute() error {
 	cmdRender.Flags().BoolVar(&argsRender.debug.parser, "debug-parser", false, "enable parser debugging")
 	cmdRender.Flags().BoolVar(&argsRender.debug.sections, "debug-sections", false, "enable sections debugging")
 	cmdRender.Flags().BoolVar(&argsRender.debug.steps, "debug-steps", false, "enable step debugging")
-	cmdRender.Flags().BoolVar(&argsRender.debug.stripCR, "debug-strip-cr", false, "enable conversion of DOS EOL")
+	cmdRender.Flags().BoolVar(&argsRender.experimental.stripCR, "debug-strip-cr", false, "experimental: enable conversion of DOS EOL")
+	cmdRender.Flags().BoolVar(&argsRender.experimental.splitTrailingUnits, "x-split-units", false, "experimental: split trailing units")
 	cmdRender.Flags().BoolVar(&argsRender.mapper.Dump.BorderCounts, "dump-border-counts", false, "dump border counts")
 	cmdRender.Flags().BoolVar(&argsRender.parser.Ignore.Scouts, "ignore-scouts", false, "ignore scout reports")
 	cmdRender.Flags().BoolVar(&argsRender.noWarnOnInvalidGrid, "no-warn-on-invalid-grid", false, "disable grid id warnings")

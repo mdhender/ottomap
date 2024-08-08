@@ -50,7 +50,10 @@ var argsRender struct {
 		parser       bool
 		sections     bool
 		steps        bool
-		stripCR      bool
+	}
+	experimental struct {
+		splitTrailingUnits bool
+		stripCR            bool
 	}
 	saveWithTurnId bool
 	show           struct {
@@ -177,7 +180,7 @@ var cmdRender = &cobra.Command{
 			if err != nil {
 				log.Fatalf("error: read: %v\n", err)
 			}
-			if argsRender.debug.stripCR {
+			if argsRender.experimental.stripCR {
 				data = bytes.ReplaceAll(data, []byte{'\r', '\n'}, []byte{'\n'})
 			}
 			if i.Turn.Year < 899 || i.Turn.Year > 9999 || i.Turn.Month < 1 || i.Turn.Month > 12 {
@@ -202,7 +205,7 @@ var cmdRender = &cobra.Command{
 			if turnId > maxTurnId {
 				maxTurnId = turnId
 			}
-			turn, err := parser.ParseInput(i.Id, turnId, data, argsRender.debug.parser, argsRender.debug.sections, argsRender.debug.steps, argsRender.debug.nodes, argsRender.parser)
+			turn, err := parser.ParseInput(i.Id, turnId, data, argsRender.debug.parser, argsRender.debug.sections, argsRender.debug.steps, argsRender.debug.nodes, argsRender.experimental.splitTrailingUnits, argsRender.parser)
 			if err != nil {
 				log.Fatal(err)
 			} else if turnId != fmt.Sprintf("%04d-%02d", turn.Year, turn.Month) {

@@ -13,7 +13,7 @@ import (
 // hexReportToNodes converts a hex report into a linked list of nodes
 // where each node contains all the arguments for each component of
 // the hex report.
-func hexReportToNodes(hexReport []byte, debugNodes bool) (root *node) {
+func hexReportToNodes(hexReport []byte, debugNodes bool, experimentalUnitSplit bool) (root *node) {
 	if debugNodes {
 		log.Printf("parser: root: before split %s\n", string(hexReport))
 	}
@@ -48,6 +48,37 @@ func hexReportToNodes(hexReport []byte, debugNodes bool) (root *node) {
 
 	if debugNodes {
 		log.Printf("parser: root: after split %s\n", printNodes(root))
+	}
+
+	// experimental: if the last node in a list is a unit, split it out
+	if experimentalUnitSplit {
+		foundUnits := 0
+		for tmp := root; tmp != nil; {
+			// no good solution for patrols
+			if bytes.HasPrefix(tmp.text, []byte("Patrolled and found")) {
+				tmp = tmp.next
+				continue
+			}
+			// does this node start with text and end with a unit?
+			matches := rxTextUnitId.FindSubmatch(tmp.text)
+			// move on to the next if it doesn't
+			if len(matches) != 4 {
+				tmp = tmp.next
+				continue
+			}
+			foundUnits++
+			// otherwise, create a new node with the text and unit
+			text, unit := matches[1], matches[2]
+			newNode := &node{text: unit, next: tmp.next}
+			// update this node with the trimmed text
+			tmp.text = text
+			// insert the new node after this one
+			tmp.next = newNode
+			// stay on this node because we may have multiple units at the end
+		}
+		if foundUnits != 0 {
+			log.Printf("parser: experiment: %d units split %s\n", foundUnits, printNodes(root))
+		}
 	}
 
 	// splitting like that has broke some things.
@@ -289,7 +320,8 @@ func (n *node) isUnitId() bool {
 var (
 	rxFindQuantityItem = regexp.MustCompile(`^Find [0-9]+ [a-zA-Z][a-zA-Z ]+`)
 	rxQuantityItem     = regexp.MustCompile(`^[0-9]+ [a-zA-Z][a-zA-Z ]+`)
-	rxUnitId           = regexp.MustCompile(`^[0-9][[0-9][0-9][0-9]([cefg][0-9])?`)
+	rxUnitId           = regexp.MustCompile(`^[0-9][0-9][0-9][0-9]([cefg][0-9])?`)
+	rxTextUnitId       = regexp.MustCompile(`^(.*)\s+([0-9][0-9][0-9][0-9]([cefg][0-9])?)$`)
 )
 
 func isDirDashTerrain(text []byte) bool {
@@ -307,4 +339,13 @@ func isDirDashTerrain(text []byte) bool {
 		return true
 	}
 	return false
+}
+
+// trimUnit is a placeholder for your function that returns the updated text and the unit
+func trimUnit(input []byte) (text, unit []byte) {
+	matches := rxTextUnitId.FindSubmatch(input)
+	if len(matches) != 3 {
+		return input, nil
+	}
+	return matches[1], matches[2]
 }
