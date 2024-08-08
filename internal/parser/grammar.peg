@@ -148,6 +148,8 @@ ObviousNeighboringTerrainCode <- "HSM"i {
     return terrain.LowConiferMountains, nil
 } / "LJM"i {
     return terrain.LowJungleMountains, nil
+} / "LSM"i {
+    return terrain.LowSnowyMountains, nil
 } / "L" {
     return terrain.Lake, nil
 } / "O" {
@@ -678,6 +680,7 @@ TERRAIN_CODE <- "ALPS" {    return terrain.Alps, nil
 } / "LJM" { return terrain.LowJungleMountains, nil
 } / "LSM" { return terrain.LowSnowyMountains, nil
 } / "LVM" { return terrain.LowVolcanicMountains, nil
+} / "PGH" { return terrain.GrassyHillsPlateau, nil
 } / "PPR" { return terrain.PrairiePlateau, nil
 } / "AH" { return terrain.AridHills, nil
 } / "AR" { return terrain.AridTundra, nil
