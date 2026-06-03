@@ -24,8 +24,9 @@ type Map struct {
 	labels   []Label
 	notes    []Note
 
-	bounds      *bounds // nil = derive from tiles on write
-	nextEntity  uint64  // monotonic counter for auto-assigned IDs
+	layout     hex.Layout // offset convention for col/row projection
+	bounds     *bounds    // nil = derive from tiles on write
+	nextEntity uint64     // monotonic counter for auto-assigned IDs
 }
 
 type bounds struct {
@@ -100,6 +101,19 @@ func (m *Map) Tiles() iter.Seq2[hex.Axial, Tile] {
 	}
 }
 
+// --- layout -------------------------------------------------------------
+
+// Layout returns the offset-coordinate convention used when projecting this
+// map's axial coordinates onto a (column, row) grid. The zero value is
+// hex.OddQ (flat-top columns), which matches Worldographer's "COLUMNS"
+// orientation; use hex.OddR for "ROWS" (pointy-top rows).
+func (m *Map) Layout() hex.Layout { return m.layout }
+
+// SetLayout records the offset convention used by this map. It does not
+// move any tiles; it only affects how Bounds are projected to offset space
+// and how on-disk formats interpret the (column, row) grid.
+func (m *Map) SetLayout(l hex.Layout) { m.layout = l }
+
 // --- bounds -------------------------------------------------------------
 
 // SetBounds pins the map's bounding box. Writers will emit exactly this
@@ -149,6 +163,55 @@ func (m *Map) Bounds() (min, max hex.Axial, explicit bool) {
 		}
 		if c.R > max.R {
 			max.R = c.R
+		}
+	}
+	return min, max, false
+}
+
+// BoundsOffset returns the map's bounding box projected onto the
+// (column, row) grid implied by the map's Layout. The third return is true
+// if the box came from SetBounds, false if it was derived from the tiles.
+// If the map has no tiles and no pinned bounds, returns the zero box and
+// false.
+//
+// When the bounds are derived from tiles, BoundsOffset scans every tile in
+// offset space rather than converting only the axial extremes (which, for
+// hex grids, are not the same rectangle). The result is therefore the
+// tight (column, row) bounding box of the present tiles.
+func (m *Map) BoundsOffset() (min, max hex.OffsetCoord, explicit bool) {
+	if m.bounds != nil {
+		min = m.bounds.min.ToOffset(m.layout)
+		max = m.bounds.max.ToOffset(m.layout)
+		if max.Col < min.Col {
+			min.Col, max.Col = max.Col, min.Col
+		}
+		if max.Row < min.Row {
+			min.Row, max.Row = max.Row, min.Row
+		}
+		return min, max, true
+	}
+	if len(m.tiles) == 0 {
+		return hex.OffsetCoord{}, hex.OffsetCoord{}, false
+	}
+	first := true
+	for c := range m.tiles {
+		o := c.ToOffset(m.layout)
+		if first {
+			min, max = o, o
+			first = false
+			continue
+		}
+		if o.Col < min.Col {
+			min.Col = o.Col
+		}
+		if o.Row < min.Row {
+			min.Row = o.Row
+		}
+		if o.Col > max.Col {
+			max.Col = o.Col
+		}
+		if o.Row > max.Row {
+			max.Row = o.Row
 		}
 	}
 	return min, max, false
@@ -317,6 +380,7 @@ func (m *Map) Clone() *Map {
 		features:   make([]Feature, len(m.features)),
 		labels:     make([]Label, len(m.labels)),
 		notes:      append([]Note(nil), m.notes...),
+		layout:     m.layout,
 		nextEntity: m.nextEntity,
 	}
 	for k, v := range m.tiles {

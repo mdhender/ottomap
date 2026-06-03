@@ -43,6 +43,42 @@ func TestReadAllSamples(t *testing.T) {
 	}
 }
 
+func TestReadOrientationAndBounds(t *testing.T) {
+	cases := []struct {
+		path        string
+		wantLayout  hex.Layout
+		wantCols    int // tiles wide
+		wantRows    int // tiles high
+	}{
+		{"../testdata/input/2025-2.06-columns-13x11.wxx", hex.OddQ, 13, 11},
+		{"../testdata/input/2025-2.06-rows-13x11.wxx", hex.OddR, 13, 11},
+	}
+	for _, tc := range cases {
+		tc := tc
+		t.Run(filepath.Base(tc.path), func(t *testing.T) {
+			f, err := os.Open(tc.path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer f.Close()
+			m, _, err := wog.Read(f)
+			if err != nil {
+				t.Fatalf("Read: %v", err)
+			}
+			if got := m.Layout(); got != tc.wantLayout {
+				t.Errorf("Layout: got %v want %v", got, tc.wantLayout)
+			}
+			min, max, _ := m.BoundsOffset()
+			cols := max.Col - min.Col + 1
+			rows := max.Row - min.Row + 1
+			if cols != tc.wantCols || rows != tc.wantRows {
+				t.Errorf("BoundsOffset: got %dx%d (min=%+v max=%+v) want %dx%d",
+					cols, rows, min, max, tc.wantCols, tc.wantRows)
+			}
+		})
+	}
+}
+
 func TestWriteRequiresVersion(t *testing.T) {
 	m := ottomap.NewMap()
 	var buf bytes.Buffer

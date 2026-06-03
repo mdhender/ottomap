@@ -46,16 +46,11 @@ func Encode(m *ottomap.Map, opts Options) ([]byte, error) {
 	b.WriteString("</terrainmap>\n")
 	writeMapLayers(&b)
 
-	var tilesWide, tilesHigh int
-	if orientation == "ROWS" {
-		tilesWide = rows
-		tilesHigh = cols
-	} else {
-		tilesWide = cols
-		tilesHigh = rows
-	}
-	fmt.Fprintf(&b, `<tiles viewLevel="WORLD" tilesWide="%d" tilesHigh="%d">`+"\n", tilesWide, tilesHigh)
-	writeTileGrid(&b, m, registry, offMin, cols, rows, layout, orientation)
+	// Worldographer emits cols outer <tilerow> elements, each containing
+	// rows tile lines, for both orientations. tilesWide always reports the
+	// column count and tilesHigh the row count.
+	fmt.Fprintf(&b, `<tiles viewLevel="WORLD" tilesWide="%d" tilesHigh="%d">`+"\n", cols, rows)
+	writeTileGrid(&b, m, registry, offMin, cols, rows, layout)
 	b.WriteString("</tiles>\n")
 
 	writeMapKey(&b)
@@ -135,21 +130,11 @@ func writeTileGrid(
 	offMin hex.OffsetCoord,
 	cols, rows int,
 	layout hex.Layout,
-	orientation string,
 ) {
-	outer, inner := cols, rows
-	if orientation == "ROWS" {
-		outer, inner = rows, cols
-	}
-	for o := 0; o < outer; o++ {
+	for col := 0; col < cols; col++ {
 		b.WriteString("<tilerow>\n")
-		for i := 0; i < inner; i++ {
-			var oc hex.OffsetCoord
-			if orientation == "ROWS" {
-				oc = hex.OffsetCoord{Col: offMin.Col + i, Row: offMin.Row + o}
-			} else {
-				oc = hex.OffsetCoord{Col: offMin.Col + o, Row: offMin.Row + i}
-			}
+		for row := 0; row < rows; row++ {
+			oc := hex.OffsetCoord{Col: offMin.Col + col, Row: offMin.Row + row}
 			c := hex.FromOffset(oc, layout)
 			t, _ := m.Tile(c)
 			wxxio.FormatTileLine(b, t, reg.Slot(t.Terrain))

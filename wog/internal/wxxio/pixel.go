@@ -43,14 +43,17 @@ func AxialToPixel(a hex.Axial, off ottomap.Offset, orientation string) (float64,
 }
 
 // TileCoord converts an on-disk (rowIdx, tileIdx) position within a
-// <tiles> grid into axial coordinates. The meaning of rowIdx vs tileIdx
-// depends on orientation: in COLUMNS mode rowIdx is the column index, in
-// ROWS mode it is the row index.
+// <tiles> grid into axial coordinates. Worldographer emits the same
+// column-major layout for both orientations: there are tilesWide
+// <tilerow> elements (despite the name), each containing tilesHigh tile
+// lines. So rowIdx is always the column and tileIdx is always the row;
+// only the offset layout (OddQ vs OddR) changes with orientation.
 func TileCoord(orientation string, rowIdx, tileIdx int) hex.Axial {
+	layout := hex.OddQ
 	if orientation == "ROWS" {
-		return hex.FromOffset(hex.OffsetCoord{Col: tileIdx, Row: rowIdx}, hex.OddR)
+		layout = hex.OddR
 	}
-	return hex.FromOffset(hex.OffsetCoord{Col: rowIdx, Row: tileIdx}, hex.OddQ)
+	return hex.FromOffset(hex.OffsetCoord{Col: rowIdx, Row: tileIdx}, layout)
 }
 
 // AxialRangeToOffset projects an axial bounding box onto the offset grid

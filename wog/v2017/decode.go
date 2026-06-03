@@ -32,6 +32,11 @@ func Decode(xmlBytes []byte) (*ottomap.Map, error) {
 	if orientation == "" {
 		orientation = "COLUMNS"
 	}
+	if orientation == "ROWS" {
+		m.SetLayout(hex.OddR)
+	} else {
+		m.SetLayout(hex.OddQ)
+	}
 	if err := decodeTiles(m, &s.Tiles, terrainBySlot, orientation); err != nil {
 		return nil, fmt.Errorf("tiles: %w", err)
 	}
