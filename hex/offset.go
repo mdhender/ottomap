@@ -1,5 +1,7 @@
 package hex
 
+import "fmt"
+
 // Layout identifies one of the four offset-coordinate conventions used by
 // renderers and on-disk formats.
 //
@@ -18,6 +20,21 @@ const (
 	OddR
 	EvenR
 )
+
+// String implements the fmt.Stringer interface.
+func (l Layout) String() string {
+	switch l {
+	case OddQ:
+		return "odd-q"
+	case EvenQ:
+		return "even-q"
+	case OddR:
+		return "odd-r"
+	case EvenR:
+		return "even-r"
+	}
+	return fmt.Sprintf("Layout(%d)", int(l))
+}
 
 // OffsetCoord is a (column, row) coordinate pair as used by most map files.
 type OffsetCoord struct {
