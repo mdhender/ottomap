@@ -157,13 +157,13 @@ func writeFeature(b *strings.Builder, f ottomap.Feature, orientation string) {
 	}
 	fmt.Fprintf(b,
 		`<feature type="%s" rotate="%g" uuid="%s" mapLayer="%s" `+
-			`isFlipHorizontal="false" isFlipVertical="false" scale="%g" scaleHt="%g" `+
+			`isFlipHorizontal="false" isFlipVertical="false" scale="%g" scaleHt="-1.0" `+
 			`tags="%s" color="%s" ringcolor="null" isGMOnly="%t" isPlaceFreely="false" `+
-			`labelPosition="BOTTOM" labelDistance="0" isWorld="true" isContinent="true" `+
+			`labelPosition="6:00" labelDistance="0" isWorld="true" isContinent="true" `+
 			`isKingdom="true" isProvince="true" isFillHexBottom="false" isHideTerrainIcon="false">`+"\n"+
 			`<location viewLevel="WORLD" x="%g" y="%g"/>`+"\n",
 		wxxio.Escape(f.Kind), f.Rotation, wxxio.Escape(f.ID), wxxio.Escape(string(f.Layer)),
-		scale, scale,
+		scale,
 		wxxio.Escape(strings.Join(f.Tags, ",")),
 		wxxio.FormatFloatRGBA(f.Color),
 		f.GMOnly,

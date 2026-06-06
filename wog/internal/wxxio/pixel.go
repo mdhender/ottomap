@@ -1,33 +1,46 @@
 package wxxio
 
 import (
+	"math"
+
 	"github.com/mdhender/ottomap"
 	"github.com/mdhender/ottomap/hex"
 )
 
-// DefaultCellWidth and DefaultCellHeight are the conventional pixel
-// dimensions used by the pixel<->axial conversion. Worldographer's true
-// hex size depends on hexWidth/hexHeight on <map>; we approximate with a
-// fixed 40-pixel rectangular cell.
+// Worldographer stores feature and label coordinates against an "ideal"
+// hex of 300x300 units, independent of the hexWidth/hexHeight the editor
+// renders with. Flat-top columns advance 3/4 of a hex (225 units) and
+// stagger odd columns down by half a hex (150 units); pointy-top rows are
+// the mirror image. A feature anchored to a tile sits at that tile's
+// center, which is half a hex (150 units) in from the grid origin.
 const (
-	DefaultCellWidth  = 40.0
-	DefaultCellHeight = 40.0
+	idealHexSize = 300.0            // ideal tile width and height in file units
+	idealStep    = idealHexSize * 3 / 4 // 225: spacing along the staggered axis
+	idealHalf    = idealHexSize / 2  // 150: tile center offset and stagger
 )
 
+// parity returns n mod 2 in {0,1}, correct for negative n.
+func parity(n int) int { return ((n % 2) + 2) % 2 }
+
 // PixelToAxial converts on-disk pixel coordinates into an anchor hex plus
-// a sub-tile pixel offset. The result is approximate but symmetric with
-// AxialToPixel, so round-tripping a value produced by AxialToPixel
-// reconstructs the original pixel coordinates exactly.
+// a sub-tile pixel offset. Symmetric with AxialToPixel, so round-tripping
+// a value produced by AxialToPixel reconstructs the original coordinates.
 func PixelToAxial(px, py float64, orientation string) (hex.Axial, ottomap.Offset) {
-	col := int(px / DefaultCellWidth)
-	row := int(py / DefaultCellHeight)
-	ox := px - float64(col)*DefaultCellWidth
-	oy := py - float64(row)*DefaultCellHeight
+	var col, row int
+	if orientation == "ROWS" { // pointy-top: rows staggered
+		row = int(math.Round((py - idealHalf) / idealStep))
+		col = int(math.Round((px - idealHalf - idealHalf*float64(parity(row))) / idealHexSize))
+	} else { // COLUMNS flat-top: columns staggered
+		col = int(math.Round((px - idealHalf) / idealStep))
+		row = int(math.Round((py - idealHalf - idealHalf*float64(parity(col))) / idealHexSize))
+	}
+	cx, cy := offsetToPixel(col, row, orientation)
 	layout := hex.OddQ
 	if orientation == "ROWS" {
 		layout = hex.OddR
 	}
-	return hex.FromOffset(hex.OffsetCoord{Col: col, Row: row}, layout), ottomap.Offset{DX: ox, DY: oy}
+	return hex.FromOffset(hex.OffsetCoord{Col: col, Row: row}, layout),
+		ottomap.Offset{DX: px - cx, DY: py - cy}
 }
 
 // AxialToPixel converts a hex anchor plus sub-tile offset back into the
@@ -39,7 +52,22 @@ func AxialToPixel(a hex.Axial, off ottomap.Offset, orientation string) (float64,
 		layout = hex.OddR
 	}
 	oc := a.ToOffset(layout)
-	return float64(oc.Col)*DefaultCellWidth + off.DX, float64(oc.Row)*DefaultCellHeight + off.DY
+	cx, cy := offsetToPixel(oc.Col, oc.Row, orientation)
+	return cx + off.DX, cy + off.DY
+}
+
+// offsetToPixel returns the pixel center of the tile at (col, row) in the
+// ideal coordinate system Worldographer uses for features and labels.
+func offsetToPixel(col, row int, orientation string) (float64, float64) {
+	if orientation == "ROWS" { // pointy-top: rows staggered
+		x := float64(col)*idealHexSize + idealHalf*float64(parity(row)) + idealHalf
+		y := float64(row)*idealStep + idealHalf
+		return x, y
+	}
+	// COLUMNS flat-top: columns staggered
+	x := float64(col)*idealStep + idealHalf
+	y := float64(row)*idealHexSize + idealHalf*float64(parity(col)) + idealHalf
+	return x, y
 }
 
 // TileCoord converts an on-disk (rowIdx, tileIdx) position within a

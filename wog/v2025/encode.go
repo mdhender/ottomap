@@ -159,13 +159,13 @@ func writeFeature(b *strings.Builder, f ottomap.Feature, orientation string) {
 	}
 	fmt.Fprintf(b,
 		`<feature type="%s" rotate="%g" uuid="%s" mapLayer="%s" `+
-			`isFlipHorizontal="false" isFlipVertical="false" scale="%g" scaleHt="%g" `+
+			`isFlipHorizontal="false" isFlipVertical="false" scale="%g" scaleHt="-1.0" `+
 			`tags="%s" color="%s" ringcolor="null" isGMOnly="%t" isPlaceFreely="false" `+
-			`labelPosition="BOTTOM" labelDistance="0" isWorld="true" isContinent="true" `+
+			`labelPosition="180.0" labelDistance="-40" isWorld="true" isContinent="true" `+
 			`isKingdom="true" isProvince="true" isFillHexBottom="false" isHideTerrainIcon="false">`+"\n"+
 			`<location viewLevel="WORLD" x="%g" y="%g"/>`+"\n",
 		wxxio.Escape(f.Kind), f.Rotation, wxxio.Escape(f.ID), wxxio.Escape(string(f.Layer)),
-		scale, scale,
+		scale,
 		wxxio.Escape(strings.Join(f.Tags, ",")),
 		wxxio.FormatFloatRGBA(f.Color),
 		f.GMOnly,
@@ -173,10 +173,10 @@ func writeFeature(b *strings.Builder, f ottomap.Feature, orientation string) {
 	)
 	if f.Label != "" {
 		fmt.Fprintf(b,
-			`<label mapLayer="Labels" style="" fontFace="Arial" color="0.0,0.0,0.0,1.0" `+
+			`<label mapLayer="Labels" style="" fontFace="" color="0.0,0.0,0.0,1.0" `+
 				`outlineColor="null" outlineSize="0.0" rotate="0.0" isBold="false" isItalic="false" `+
 				`isWorld="true" isContinent="true" isKingdom="true" isProvince="true" isGMOnly="false" tags="">`+"\n"+
-				`<location viewLevel="WORLD" x="0.0" y="0.0" scale="55.0"/>%s</label>`+"\n",
+				`<location viewLevel="WORLD" x="0.0" y="0.0" scale="12.5"/>%s</label>`+"\n",
 			wxxio.XMLChars(f.Label),
 		)
 	}
